@@ -78,6 +78,7 @@ Users need the supply list to show the key supply details required for review an
 - **FR-007**: The application MUST be containerised so it can be packaged and deployed in a container-native environment.
 - **FR-008**: The application MUST handle API connectivity failures with retries and clear error feedback.
 - **FR-009**: The data sync flow MUST support reconciliation so updated Etainabl data overwrites stale values without losing existing valid records.
+- **FR-010**: The application MUST securely handle Etainabl API credentials and database connection strings using environment variables or secure secret management; credentials MUST NOT be stored in version control or hardcoded configuration files.
 
 ### Key Entities *(include if feature involves data)*
 

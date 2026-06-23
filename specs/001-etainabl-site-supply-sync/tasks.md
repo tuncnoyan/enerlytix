@@ -57,6 +57,10 @@
 - [ ] T016 Create `django_app/sitesync/apps.py` with AppConfig and ready() hook to trigger initial sync on app startup
 - [ ] T017 Create integration test in `tests/integration/test_etainabl_sync.py` to verify sync service can fetch, parse, and persist site/supply records
 - [ ] T018 Create unit test in `tests/unit/test_models.py` to verify Site and Supply model creation, uniqueness constraints, and relationships
+- [ ] T018b Create unit test in `tests/unit/test_deduplication.py` to verify that repeated sync calls do not create duplicate Site or Supply records when external_id matches
+- [ ] T018c [P] Create `django_app/sitesync/environment_config.py` to load and validate Etainabl API key, base URL, and other config from environment variables (ETAINABL_API_KEY, ETAINABL_API_URL); raise error if required env vars missing
+- [ ] T018d [P] Update `django_app/config/settings.py` to enforce HTTPS in production, configure Django session and CSRF security settings, and set database SSL requirement
+- [ ] T018e [P] Create `.env.example` in repository root with ETAINABL_API_KEY, ETAINABL_API_URL, DATABASE_URL, DEBUG, SECRET_KEY, ALLOWED_HOSTS placeholders (emphasize .env should NOT be committed)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -138,6 +142,10 @@
 - [ ] T048 Create validation summary in console output showing sync status, record counts, and any errors
 - [ ] T049 [P] Documentation: Update `specs/001-etainabl-site-supply-sync/quickstart.md` with actual Docker commands and validation steps
 - [ ] T050 Documentation: Create `django_app/README.md` with setup, development, and deployment instructions
+- [ ] T051 [P] Create performance test in `tests/integration/test_performance.py` to measure site list load time for 100+ sites and verify SC-001 (< 3 seconds) is met
+- [ ] T052 [P] Test Docker Compose startup on Windows (Docker Desktop or Windows Containers) to validate Windows-native compatibility and confirm app starts without admin privileges
+- [ ] T053 Document deployment approval workflow in `deployment/APPROVAL_PROCESS.md` describing: code review checklist, security sign-off, approver roles, and post-deployment validation steps
+- [ ] T054 [P] Add security hardening review: verify all credentials sourced from environment variables, database SSL enabled, no secrets in logs, and HTTPS enforced in Django settings
 
 ---
 
@@ -239,14 +247,14 @@ Task: "Create serializers in django_app/sitesync/serializers.py"
 
 ## Task Execution Summary
 
-- **Total Tasks**: 50
+- **Total Tasks**: 55 (original 50 + 5 remediation tasks for constitution alignment)
 - **Phase 1 (Setup)**: 9 tasks (1 critical path, 4 parallelizable)
-- **Phase 2 (Foundational)**: 9 tasks (4 parallelizable)
+- **Phase 2 (Foundational)**: 14 tasks (8 original + 5 remediation: T018b-T018e, environment config, security hardening) (7 parallelizable)
 - **Phase 3 (User Story 1 - P1)**: 8 tasks (MVP, highest priority)
 - **Phase 4 (User Story 2 - P2)**: 6 tasks (UI layer)
 - **Phase 5 (User Story 3 - P3)**: 7 tasks (Detail pane)
-- **Phase 6 (Polish)**: 11 tasks (Testing, docs, validation)
+- **Phase 6 (Polish)**: 15 tasks (11 original + 4 remediation: T051-T054 for performance, Windows validation, approval workflow, security review)
 
-**Suggested MVP Scope**: Phases 1 + 2 + 3 = 26 tasks (Sync and persist Etainabl data)
+**Suggested MVP Scope**: Phases 1 + 2 + 3 = 31 tasks (Sync, persist, security, and environment management)
 
-**Suggested Full Scope**: Phases 1-6 = 50 tasks (Complete searchable UI with supply details)
+**Suggested Full Scope**: Phases 1-6 = 55 tasks (Complete searchable UI with supply details, security hardening, Windows validation, approval workflow)

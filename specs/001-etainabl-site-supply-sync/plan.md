@@ -18,7 +18,7 @@ Implement a containerised Django web application that performs an initial sync o
 
 **Testing**: pytest, pytest-django, Django test runner
 
-**Target Platform**: Docker container environment running on Windows-compatible hosts
+**Target Platform**: Docker container environment (Docker Desktop on Windows or Windows Containers); app must be buildable and runnable without elevated system privileges
 
 **Project Type**: Web application with backend database and frontend rendering via Django templates
 
@@ -32,10 +32,39 @@ Implement a containerised Django web application that performs an initial sync o
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-- Containerized architecture must align with constitution principle V.
-- No admin-privilege requirements for normal operations aligns with principle II.
-- Data persistence and secure handling of API credentials aligns with principle III.
-- Production deployment and release approvals remain out of scope for this plan but are documented in governance.
+- Containerized architecture must align with constitution principle V. ✅ **ALIGNED**: Docker + Docker Compose is primary deployment model.
+- No admin-privilege requirements for normal operations aligns with principle II. ✅ **ALIGNED**: All tasks assume standard user execution.
+- Data persistence and secure handling of API credentials aligns with principle III. ⚠️ **PARTIAL**: See Governance section below.
+- Windows-native support aligns with principle I. ⚠️ **NEEDS VALIDATION**: Docker Compose must be tested on Windows (Docker Desktop or Windows Containers).
+- Production deployment approvals align with principle IV. ⚠️ **OUT OF SCOPE for MVP**: Approval workflow to be documented in governance; implementation tasks in Phase 6.
+
+## Governance & Approval Workflow
+
+### Production Deployment Approval (Constitution Principle IV)
+
+All production deployments MUST follow this approval workflow:
+
+1. **Pre-Deployment Review**:
+   - Code review: All changes reviewed against constitution principles and security requirements.
+   - Automated checks: Unit tests, integration tests, and security scanning pass.
+   - Migration validation: Database migrations reviewed for backward compatibility.
+
+2. **Approval Gate**:
+   - A designated approver (defined in project governance) reviews the deployment candidate.
+   - Approver confirms security checklist: encryption enabled, secrets managed, no hardcoded credentials.
+   - Approver documents approval in commit message or deployment log.
+
+3. **Post-Deployment Validation**:
+   - Automated smoke tests verify app health and API connectivity.
+   - Error logs monitored for anomalies during initial run.
+
+### Encryption & Secret Management (Constitution Principle III)
+
+All sensitive data (API credentials, database connection strings) MUST:
+- Be sourced from environment variables at runtime, never from version control.
+- Support optional database encryption at rest (PostgreSQL pgcrypto or OS-level encryption).
+- Use TLS/HTTPS for all external API calls and database connections.
+- Be rotated periodically per organizational security policy.
 
 ## Project Structure
 
