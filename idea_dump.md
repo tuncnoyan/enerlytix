@@ -2,8 +2,8 @@
 Idea dump file to consolidate ideas, design options and implementation plans prior to transferring to the spec-kit.
 -->
 ### Constitution
-Fill the constitution with requirements for a web app. The app should be windows native. The development should be carried out without admin privileges. Also, the app can be maintained and operated without admin privileges. The application should be containerised natively.
-The data security woulod be critical. The database layer should be secure enough to protect data from the unauthorised and external accesses.
+Fill the constitution with requirements for a web app. The app should be windows native. The development should be carried out without admin privileges. The app can be maintained and operated without admin privileges, too. The application should be containerised natively.
+The data security would be critical. The database layer should be secure enough to protect data from the unauthorised and external accesses.
 Deployments to the production environment should be approved. Similarly, new admin accounts can be added after approvals.
 
 ### Specifications

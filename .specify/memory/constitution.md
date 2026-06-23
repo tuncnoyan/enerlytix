@@ -1,50 +1,69 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+Sync Impact Report
+Version change: none -> 1.0.0
+Modified principles: I. Windows-Native Platform Alignment; II. Least-Privilege Development & Operations; III. Data Security and Database Isolation; IV. Approval-Governed Production Operations; V. Containerized Maintainability & Observability
+Added sections: Additional Constraints; Development Workflow & Approval
+Removed sections: none
+Templates requiring updates: ✅ Reviewed, no changes required: .specify/templates/plan-template.md
+✅ Reviewed, no changes required: .specify/templates/spec-template.md
+✅ Reviewed, no changes required: .specify/templates/tasks-template.md
+Follow-up TODOs: none
+-->
+
+# Enerlytix Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Windows-Native Platform Alignment
+The application MUST be designed as a Windows-native web property where client and deployment assumptions reflect Windows compatibility first.
+- Native Windows support is mandatory for the application runtime and the local maintenance tooling.
+- The design MUST avoid platform abstractions that would force non-Windows host assumptions or require elevated system access.
+- User experience, installation, and support guidance MUST target Windows deployment and operations.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### II. Least-Privilege Development & Operations
+Development, maintenance, and daily operations MUST be performed without administrator privileges.
+- Build, test, and deployment tooling MUST run under standard user accounts.
+- Administrative access MUST be restricted to explicit approval processes.
+- Runtime and maintenance operations MUST not require elevated privileges except for controlled, documented exceptions.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### III. Data Security and Database Isolation
+Data protection is critical and MUST be enforced at every application layer.
+- The database layer MUST prevent unauthorized access from external and local actors.
+- Sensitive data MUST be encrypted at rest and in transit when moving between application components.
+- Access controls MUST be role-based, auditable, and enforced consistently across the app and database.
+- Log data and audit records MUST preserve security and privacy, with only approved viewers able to access them.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### IV. Approval-Governed Production Operations
+Production deployments and administrative account changes MUST require explicit approval.
+- All production deployments MUST be reviewed and approved before execution.
+- New administrative accounts or privilege escalations MUST be granted only after approval by authorized owners.
+- Emergency changes MUST be documented, justified, and retroactively reviewed.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### V. Containerized Maintainability & Observability
+The application MUST be containerized natively and built for maintainable, observable operation.
+- Containerization MUST be the standard packaging and deployment model for application components.
+- Containers MUST be configured so the app can be deployed, maintained, and operated without admin privileges.
+- Operational observability MUST include structured logging, health checks, and security event monitoring.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+## Additional Constraints
+- The product MUST behave as a business-focused web application for electricity, gas, and water usage analysis.
+- The application MUST support Windows-native hosting and maintenance without depending on admin-level system changes.
+- Deployment tooling and runtime packaging MUST be container-native and compatible with Windows container ecosystems.
+- Data security requirements MUST include database hardening, secure configuration management, and protection from unauthorized external access.
+- Any external integration or API usage MUST be vetted for secure access and data privacy.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
-
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
-
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+## Development Workflow & Approval
+- All code changes MUST be reviewed against these constitution principles before merging.
+- Security, deployment, and administrative privilege changes MUST be documented with defined approval owners.
+- Production release candidates MUST pass an approval gate before deployment.
+- Admin account creation and privileged role changes MUST be processed through a documented approval workflow.
+- Compliance with security and least-privilege rules MUST be verified during planning, implementation, and deployment reviews.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
+This constitution supersedes ad hoc preferences and is the authoritative source for platform, security, and workflow decisions.
+- All work MUST map to one or more constitution principles.
+- Amendments MUST be documented, reviewed, and approved by the project’s governance owners before they are accepted.
+- Changes to this constitution MUST include a clear rationale, impact analysis, and version update.
+- Regular compliance review SHOULD occur whenever the project’s platform, security, or deployment context changes.
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
-
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.0.0 | **Ratified**: 2026-06-23 | **Last Amended**: 2026-06-23
