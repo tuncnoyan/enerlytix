@@ -1,0 +1,104 @@
+# Feature Specification: Etainabl Site & Supply Sync
+
+**Feature Branch**: `001-etainabl-site-supply-sync`
+
+**Created**: 2026-06-23
+
+**Status**: Draft
+
+**Input**: User description: "I am step by step building a modern web app to analyse electricity, gas and water usage data. In its initial version, the data should be downloaded from a data platform by using its API feature. I attached two sample working code samples, and an Excel file for the required API key and other details. These sample files can also be found in the \"sample_app\" subfolder. The new web app should use the same logic. It should first download all sites and supplies from the data platform (https://api.etainabl.com/2.0) and create or update the related tables in the database. Then, it can download the data for the site and supply in a format all selected by the user. The application should be containerised. The initial version should download site (asset) and supply (account) lists from the Etainabl platform, create and update sites and supplies tables in the database, then displays them on a web page. On the web page, promarily, sites names should be displayed. That list should be searchable. When user selects a site, the related supply list should be displayed just beside the site list. Supply list should include the name, utility type and device ID fields."
+
+## Clarifications
+
+- Q: Should the app sync site and supply data automatically on startup, manually only, or both? → A: Do an automatic initial sync, then allow a manual refresh button.
+
+## User Scenarios & Testing *(mandatory)*
+
+### User Story 1 - Load and Persist Etainabl Site/Supply Data (Priority: P1)
+
+Users need the application to fetch the current site and supply catalog from the Etainabl platform and persist it for display.
+
+**Why this priority**: The core value of the initial release is ensuring the web app has the latest site and supply data available locally for use.
+
+**Independent Test**: Verify the app can successfully fetch the full site and supply catalog from Etainabl and store or update the corresponding database tables.
+
+**Acceptance Scenarios**:
+
+1. **Given** valid Etainabl API credentials and connectivity, **When** the application performs initial sync, **Then** it creates or updates a persistent site table and a supply table with the latest records.
+2. **Given** a site or supply already exists in the database, **When** the same record is returned by the Etainabl API, **Then** the existing database row is updated rather than duplicated.
+
+---
+
+### User Story 2 - Searchable Site List Display (Priority: P2)
+
+Users need to see a searchable list of site names and be able to choose a site to reveal its related supplies.
+
+**Why this priority**: The primary user experience depends on easy discovery of sites and a direct view of associated supplies.
+
+**Independent Test**: On the web page, verify the site list is displayed first, supports text search, and selecting a site updates the supply list beside it.
+
+**Acceptance Scenarios**:
+
+1. **Given** a populated site list, **When** the user enters text into the search field, **Then** the list of visible sites narrows to matches.
+2. **Given** a user selects a site from the list, **When** the selection is made, **Then** the related supplies for that site appear adjacent to the site list.
+
+---
+
+### User Story 3 - Supply Detail Presentation (Priority: P3)
+
+Users need the supply list to show the key supply details required for review and selection.
+
+**Why this priority**: Users must understand the supply context before they can use the platform for report creation or further data selection.
+
+**Independent Test**: Confirm that each supply row includes supply name, utility type, and device ID when a site is selected.
+
+**Acceptance Scenarios**:
+
+1. **Given** a selected site with associated supplies, **When** the supply list renders, **Then** each supply displays its name, utility type, and device ID.
+
+---
+
+### Edge Cases
+
+- If the Etainabl API returns no sites, the application shows an empty site state with a clear message and does not crash.
+- If a selected site has no related supplies, the supply section displays a message that no supplies are available for that site.
+- If API pagination returns partial pages or repeated records, the sync process deduplicates and persists only the latest unique site and supply records.
+- If the API key or connection fails, the UI surfaces a recoverable error message and preserves the last known database state.
+
+## Requirements *(mandatory)*
+
+### Functional Requirements
+
+- **FR-001**: The application MUST fetch all site (asset) and supply (account) records from the Etainabl API at `https://api.etainabl.com/2.0`.
+- **FR-002**: The application MUST create or update a persistent `sites` table and a `supplies` table in the database.
+- **FR-003**: The application MUST use a unique stable key for each site and supply to avoid duplicate rows during repeated syncs.
+- **FR-004**: The site list MUST be displayed on the web page as the primary content element and support text search by site name.
+- **FR-005**: Selecting a site MUST display the related supplies immediately beside the site list.
+- **FR-006**: The supply list MUST include the supply name, utility type, and device ID fields.
+- **FR-007**: The application MUST be containerised so it can be packaged and deployed in a container-native environment.
+- **FR-008**: The application MUST handle API connectivity failures with retries and clear error feedback.
+- **FR-009**: The data sync flow MUST support reconciliation so updated Etainabl data overwrites stale values without losing existing valid records.
+
+### Key Entities *(include if feature involves data)*
+
+- **Site (Asset)**: Represents a customer property or location, including the site name and the Etainabl site identifier.
+- **Supply (Account)**: Represents a meter or service line associated with a site, including supply name, utility type, and device ID.
+- **API Configuration**: Represents the Etainabl API key and request parameters required to authenticate and fetch site/supply data.
+
+## Success Criteria *(mandatory)*
+
+### Measurable Outcomes
+
+- **SC-001**: A user can load the searchable site list in under 3 seconds for a catalog of up to 100 sites.
+- **SC-002**: At least 95% of valid Etainabl site and supply records are successfully persisted on the first sync attempt in a normal network environment.
+- **SC-003**: Users can find a site using search text and select it to show related supplies in the same view.
+- **SC-004**: When a site is selected, its related supplies render with name, utility type, and device ID visible on at least 90% of supported data rows.
+- **SC-005**: The application can be built and run as a container image in the initial version.
+
+## Assumptions
+
+- The initial release is intended as a web application with a local or remote database, not as a mobile app.
+- The Etainabl API supports paginated retrieval of assets and accounts and returns stable identifiers for sync.
+- The first version is focused on data synchronization and display; report generation and advanced filtering are out of scope.
+- The sample Python code and Excel-based configuration in `sample_app` provide the required API access patterns and field mappings.
+- The containerisation requirement means the application can be packaged and executed in a container environment, not necessarily orchestrated by Kubernetes in v1.
