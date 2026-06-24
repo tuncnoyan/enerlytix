@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:16-alpine
@@ -22,12 +20,12 @@ services:
 
   web:
     build:
-      context: ../
+      context: ../../
       dockerfile: django_app/docker/Dockerfile
     container_name: enerlytix_web
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
-      - ../django_app:/app
+      - ../../django_app:/app
     ports:
       - "8000:8000"
     environment:

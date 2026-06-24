@@ -166,21 +166,21 @@
 
 **Purpose**: Documentation, error handling, logging, and final validation
 
-- [ ] T054 [P] Add comprehensive logging to all services in `django_app/sitesync/`
-- [ ] T055 [P] Add error handling for empty site/supply states in templates and views
-- [ ] T056 Add manual sync refresh button to site list page in `django_app/sitesync/templates/sitesync/site_list.html`
-- [ ] T057 Implement API error response formatting in `django_app/sitesync/views.py`
-- [ ] T058 [P] Create README documentation in `django_app/README.md` with setup and configuration instructions
-- [ ] T059 [P] Create API documentation in `docs/API.md` describing all endpoints
-- [ ] T060 Run quickstart validation scenarios from `specs/001-etainabl-site-supply-sync/quickstart.md` and verify all acceptance criteria
-- [ ] T061 [P] Add unit tests for edge cases (no sites, API timeouts, malformed responses) in `tests/unit/`
-- [ ] T062 Create performance test for site list load in `tests/performance/test_load_time.py` (validate <3 second load time)
-- [ ] T063 [P] Create integration test in `tests/integration/test_sync_success_rate.py` to validate SC-002: at least 95% of records persisted on first sync (minimum 100 test records)
-- [ ] T064 Document .env fallback behavior and secret management approach in `docs/SECRET_MANAGEMENT.md` including supported platforms (Kubernetes, Azure, Docker Secrets)
-- [ ] T065 [P] Create TLS/HTTPS and database SSL configuration in `django_app/config/settings.py` to enforce encryption in transit and database SSL per Constitution III
-- [ ] T066 [P] Create deployment approval workflow documentation in `deployment/APPROVAL_PROCESS.md` requiring code review and security sign-off before any production deployment (Constitution IV)
-- [ ] T067 [P] Create security hardening checklist: verify secrets sourced from env vars, database SSL enabled, no secrets in logs, TLS/HTTPS enforced
-- [ ] T068 Test Docker Compose startup on Windows (Docker Desktop) to validate Windows-native compatibility and confirm no admin privileges required
+- [x] T054 [P] Add comprehensive logging to all services in `django_app/sitesync/`
+- [x] T055 [P] Add error handling for empty site/supply states in templates and views
+- [x] T056 Add manual sync refresh button to site list page in `django_app/sitesync/templates/sitesync/site_list.html`
+- [x] T057 Implement API error response formatting in `django_app/sitesync/views.py`
+- [x] T058 [P] Create README documentation in `django_app/README.md` with setup and configuration instructions
+- [x] T059 [P] Create API documentation in `docs/API.md` describing all endpoints
+- [x] T060 Run quickstart validation scenarios from `specs/001-etainabl-site-supply-sync/quickstart.md` and verify all acceptance criteria
+- [x] T061 [P] Add unit tests for edge cases (no sites, API timeouts, malformed responses) in `tests/unit/`
+- [x] T062 Create performance test for site list load in `tests/performance/test_load_time.py` (validate <3 second load time)
+- [x] T063 [P] Create integration test in `tests/integration/test_sync_success_rate.py` to validate SC-002: at least 95% of records persisted on first sync (minimum 100 test records)
+- [x] T064 Document .env fallback behavior and secret management approach in `docs/SECRET_MANAGEMENT.md` including supported platforms (Kubernetes, Azure, Docker Secrets)
+- [x] T065 [P] Create TLS/HTTPS and database SSL configuration in `django_app/config/settings.py` to enforce encryption in transit and database SSL per Constitution III
+- [x] T066 [P] Create deployment approval workflow documentation in `deployment/APPROVAL_PROCESS.md` requiring code review and security sign-off before any production deployment (Constitution IV)
+- [x] T067 [P] Create security hardening checklist: verify secrets sourced from env vars, database SSL enabled, no secrets in logs, TLS/HTTPS enforced
+- [x] T068 Test Docker Compose startup on Windows (Docker Desktop) to validate Windows-native compatibility and confirm no admin privileges required
 
 ---
 

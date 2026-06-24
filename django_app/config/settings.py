@@ -3,6 +3,7 @@ Django settings for Enerlytix project.
 """
 
 import os
+from urllib.parse import urlparse, unquote
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -70,35 +71,20 @@ DATABASES = {
     }
 }
 
-# Override with environment-specific database if provided
 database_url = os.getenv('DATABASE_URL')
 if database_url:
-    # Parse simple PostgreSQL URL: postgresql://user:password@host:port/dbname
-    if database_url.startswith('postgresql://'):
-        db_url = database_url.replace('postgresql://', '')
-        if '@' in db_url:
-            auth, host_db = db_url.split('@')
-            user, password = auth.split(':')
-            if ':' in host_db:
-                host, port_db = host_db.split(':')
-                port, dbname = port_db.split('/')
-            else:
-                host, dbname = host_db.split('/')
-                port = '5432'
-        else:
-            host_db = db_url
-            if ':' in host_db:
-                host, port_db = host_db.split(':')
-                port, dbname = port_db.split('/')
-            else:
-                host, dbname = host_db.split('/')
-                port = '5432'
-            user = 'postgres'
-            password = ''
-        
+    parsed_url = urlparse(database_url)
+    if parsed_url.scheme in ('postgresql', 'postgres'):
         DATABASES['default'] = {
-            'ENGINE': 'django.db.backends.sqlite3',  # Fallback to SQLite
-            'NAME': BASE_DIR / 'db.sqlite3',
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': parsed_url.path.lstrip('/'),
+            'USER': unquote(parsed_url.username or ''),
+            'PASSWORD': unquote(parsed_url.password or ''),
+            'HOST': parsed_url.hostname or '',
+            'PORT': parsed_url.port or 5432,
+            'OPTIONS': {
+                'sslmode': os.getenv('DATABASE_SSLMODE', 'require' if not DEBUG else 'prefer'),
+            },
         }
 
 # Password validation
@@ -202,6 +188,10 @@ API_TIMEOUT = int(os.getenv('API_TIMEOUT', 30))
 SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'False') == 'True'
 SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'False') == 'True'
 CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE', 'False') == 'True'
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = False
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = 'same-origin'
 
 # Enforce TLS/HTTPS in production when explicitly configured.
 # Keep the default disabled during tests and local development unless the environment requests it.
@@ -209,6 +199,9 @@ if not DEBUG:
     SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'False') == 'True'
     SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'False') == 'True'
     CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE', 'False') == 'True'
+    SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '31536000'))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = os.getenv('SECURE_HSTS_INCLUDE_SUBDOMAINS', 'True') == 'True'
+    SECURE_HSTS_PRELOAD = os.getenv('SECURE_HSTS_PRELOAD', 'True') == 'True'
 
 # Ensure logs directory exists
 os.makedirs(BASE_DIR / 'logs', exist_ok=True)

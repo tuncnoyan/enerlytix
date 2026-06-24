@@ -22,7 +22,6 @@ RUN pip install --upgrade pip && \
 
 # Copy project
 COPY django_app/ /app/
-COPY .env /app/.env 2>/dev/null || true
 
 # Create necessary directories
 RUN mkdir -p /app/static /app/media /app/logs
