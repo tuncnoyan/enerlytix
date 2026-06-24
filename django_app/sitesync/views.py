@@ -27,6 +27,23 @@ def site_list_view(request):
     })
 
 
+def supply_list_view(request):
+    """Display supplies for a selected site."""
+    site_id = request.GET.get('site_id')
+    supplies = []
+    
+    if site_id:
+        try:
+            supplies = Supply.objects.filter(site_id=int(site_id)).order_by('name')
+        except (ValueError, TypeError):
+            supplies = []
+    
+    return render(request, 'sitesync/supply_list.html', {
+        'supplies': supplies,
+        'site_id': site_id,
+    })
+
+
 class SiteViewSet(viewsets.ReadOnlyModelViewSet):
     """ViewSet for Site model."""
     queryset = Site.objects.all()

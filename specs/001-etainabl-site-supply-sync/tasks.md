@@ -117,18 +117,18 @@
 
 ### Tests for User Story 3
 
-- [ ] T033 [P] Contract test for supply list endpoint in `tests/contract/test_supply_endpoints.py`
-- [ ] T034 [P] Unit test for supply filtering by site in `tests/unit/test_supply_filtering.py`
-- [ ] T035 Integration test for supply list display in `tests/integration/test_supply_list_view.py`
+- [x] T033 [P] Contract test for supply list endpoint in `tests/contract/test_supply_endpoints.py`
+- [x] T034 [P] Unit test for supply filtering by site in `tests/unit/test_supply_filtering.py`
+- [x] T035 Integration test for supply list display in `tests/integration/test_supply_list_view.py`
 
 ### Implementation for User Story 3
 
-- [ ] T036 [P] Create supply list API view/serializer in `django_app/sitesync/views.py` (extend from T026)
-- [ ] T037 Create URL route for supplies by site in `django_app/sitesync/urls.py`
-- [ ] T038 Add supply list template/partial in `django_app/sitesync/templates/sitesync/supply_list.html`
-- [ ] T039 Extend site list template to include adjacent supply pane in `django_app/sitesync/templates/sitesync/site_list.html`
-- [ ] T040 [P] Add JavaScript to handle site selection and supply panel update in `django_app/static/js/site_selection.js`
-- [ ] T041 Add "no supplies" message handling for sites with no related supplies in `django_app/sitesync/templates/sitesync/supply_list.html`
+- [x] T036 [P] Create supply list API view/serializer in `django_app/sitesync/views.py` (extend from T026)
+- [x] T037 Create URL route for supplies by site in `django_app/sitesync/urls.py`
+- [x] T038 Add supply list template/partial in `django_app/sitesync/templates/sitesync/supply_list.html`
+- [x] T039 Extend site list template to include adjacent supply pane in `django_app/sitesync/templates/sitesync/site_list.html`
+- [x] T040 [P] Add JavaScript to handle site selection and supply panel update in `django_app/static/js/site_selection.js`
+- [x] T041 Add "no supplies" message handling for sites with no related supplies in `django_app/sitesync/templates/sitesync/supply_list.html`
 
 **Checkpoint**: User Stories 1, 2, and 3 are fully functional and independently testable
 

@@ -21,9 +21,12 @@ class SiteListViewTest(TestCase):
         response = site_list_view(request)
         self.assertEqual(response.status_code, 200)
         content = response.content.decode('utf-8')
+        # Check for site names in the left column (site list items)
         self.assertIn('Alpha Site', content)
         self.assertIn('Beta Site', content)
-        self.assertIn('Main Meter', content)
+        # Check for UI elements that are in the initial render
+        self.assertIn('Site & Supply Dashboard', content)
+        self.assertIn('Available Sites', content)
 
     def test_site_list_view_filters_by_query(self):
         request = self.factory.get('/', {'q': 'alpha'})

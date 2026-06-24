@@ -1,0 +1,21 @@
+{% if supplies %}
+    <div class="supply-list">
+        <h3>Supplies for This Site</h3>
+        <ul class="supply-items">
+            {% for supply in supplies %}
+                <li class="supply-item">
+                    <div class="supply-name"><strong>{{ supply.name }}</strong></div>
+                    <div class="supply-type">{{ supply.get_utility_type_display }}</div>
+                    {% if supply.device_id %}
+                        <div class="supply-device">Device: {{ supply.device_id }}</div>
+                    {% endif %}
+                    <div class="supply-id small">ID: {{ supply.external_id }}</div>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+{% else %}
+    <div class="supply-empty">
+        <p>No supplies for this site.</p>
+    </div>
+{% endif %}
