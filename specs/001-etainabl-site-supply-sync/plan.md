@@ -6,7 +6,7 @@
 
 ## Summary
 
-Implement a containerised Django web application that performs an initial sync of Etainabl assets and accounts, persists site and supply records in a SQL database, and displays a searchable site list with the selected site's supply details.
+Implement a containerised Django web application that performs an initial sync of Etainabl assets and accounts, persists site and supply records in a SQL database, and displays a searchable site list with the selected site's supply details. The initial version will also include an editable settings panel that displays and persists runtime configuration parameters such as the Etainabl base URL, download page size, timeout values, and secret-related settings.
 
 ## Technical Context
 
@@ -15,6 +15,8 @@ Implement a containerised Django web application that performs an initial sync o
 **Primary Dependencies**: Django 5.x, Django REST Framework (for internal API support), requests, psycopg2-binary, Docker, Docker Compose
 
 **Storage**: PostgreSQL in a container
+
+**Configuration Management**: `.env` for development/test; platform-native secret store preferred in production with `.env` as a documented fallback
 
 **Testing**: pytest, pytest-django, Django test runner
 
@@ -34,7 +36,7 @@ Implement a containerised Django web application that performs an initial sync o
 
 - Containerized architecture must align with constitution principle V. ✅ **ALIGNED**: Docker + Docker Compose is primary deployment model.
 - No admin-privilege requirements for normal operations aligns with principle II. ✅ **ALIGNED**: All tasks assume standard user execution.
-- Data persistence and secure handling of API credentials aligns with principle III. ⚠️ **PARTIAL**: See Governance section below.
+- Data persistence and secure handling of API credentials aligns with principle III. ⚠️ **PARTIAL**: Implementation must include `.env` secret loading for development/test and platform-native secret management for production.
 - Windows-native support aligns with principle I. ⚠️ **NEEDS VALIDATION**: Docker Compose must be tested on Windows (Docker Desktop or Windows Containers).
 - Production deployment approvals align with principle IV. ⚠️ **OUT OF SCOPE for MVP**: Approval workflow to be documented in governance; implementation tasks in Phase 6.
 
@@ -62,6 +64,8 @@ All production deployments MUST follow this approval workflow:
 
 All sensitive data (API credentials, database connection strings) MUST:
 - Be sourced from environment variables at runtime, never from version control.
+- Use `.env` files for development and test environments, and prefer platform-native secret management in production when available.
+- Allow `.env` as a documented fallback in production only when the deployment platform offers no stronger secret store.
 - Support optional database encryption at rest (PostgreSQL pgcrypto or OS-level encryption).
 - Use TLS/HTTPS for all external API calls and database connections.
 - Be rotated periodically per organizational security policy.
@@ -115,6 +119,7 @@ tests/
 2. Identify the exact response fields for asset and account records needed for `external_id`, site name, utility type, and device ID.
 3. Determine the simplest container configuration that works under Windows without admin privileges (Docker Desktop or Windows container support for Django/PostgreSQL).
 4. Validate secure handling of API keys via environment variables or mounted config files.
+5. Define the editable settings panel behavior and persistence model for runtime configuration values.
 
 ## Phase 1: Design & Contracts
 
@@ -127,6 +132,7 @@ tests/
 4. Design the UI template for:
    - searchable site list
    - adjacent supply list with name, utility type, and device ID
+   - editable settings panel displaying Etainabl base URL, download page size, timeout values, and other runtime parameters
 5. Document quickstart validation commands in `specs/001-etainabl-site-supply-sync/quickstart.md`.
 
 ## Phase 2: Implementation Plan Output
@@ -137,6 +143,7 @@ tests/
 - Implement `Site` and `Supply` models with unique `external_id` fields.
 - Add sync service and helper to call Etainabl, parse JSON responses, and persist site/supply records.
 - Implement a page that displays the searchable site list and selected site supplies.
+- Implement an editable settings panel that loads runtime configuration values and persists changes.
 - Add a manual refresh button and automatic initial sync hook.
 
 ### Complexity Tracking
