@@ -2,14 +2,16 @@
 
 **Input**: Design documents from `specs/001-etainabl-site-supply-sync/`
 
-**Prerequisites**: plan.md (required), spec.md (required for user stories), data-model.md, contracts/, quickstart.md
+**Prerequisites**: plan.md ✅, spec.md ✅, research.md ✅, data-model.md ✅, contracts/ ✅, quickstart.md ✅
+
+**Tests**: Contract and integration tests are included (TDD approach).
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
-## Format: `[ID] [P?] [Story] Description`
+## Format: `- [ ] [ID] [P?] [Story] Description with file path`
 
 - **[P]**: Can run in parallel (different files, no dependencies)
-- **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3)
+- **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3, US4)
 - Include exact file paths in descriptions
 
 ## Path Conventions
@@ -109,43 +111,74 @@
 
 ## Phase 5: User Story 3 - Supply Detail Presentation (Priority: P3)
 
-**Goal**: When a site is selected, display its related supplies with name, utility type, and device ID
+**Goal**: Display supply details (name, utility type, device ID) adjacent to selected site
 
-**Independent Test**: Select a site and verify supplies appear with required fields
+**Independent Test**: Verify supplies for a selected site display with all required fields
+
+### Tests for User Story 3
+
+- [ ] T032 [P] Contract test for supply list endpoint in `tests/contract/test_supply_endpoints.py`
+- [ ] T033 [P] Unit test for supply filtering by site in `tests/unit/test_supply_filtering.py`
+- [ ] T034 Integration test for supply list display in `tests/integration/test_supply_list_view.py`
 
 ### Implementation for User Story 3
 
-- [ ] T033 [P] [US3] Add supply list display section to `django_app/sitesync/templates/sitesync/site_supply_list.html` (right column)
-- [ ] T034 [US3] Add JavaScript event handler in template to fetch and display supplies when site is selected
-- [ ] T035 [P] [US3] Create AJAX endpoint in `django_app/sitesync/views.py` to return supplies for a selected site in JSON format
-- [ ] T036 [US3] Add supply table rendering with name, utility_type, and device_id columns in template
-- [ ] T037 [US3] Add messaging when a site has no supplies available
-- [ ] T038 [US3] Create unit test in `tests/unit/test_views.py` to verify supply detail endpoint returns correct fields
-- [ ] T039 [US3] Create integration test in `tests/integration/test_supply_display.py` to verify supply list renders for selected site
+- [ ] T035 [P] Create supply list API view/serializer in `django_app/sitesync/views.py` (extend from T026)
+- [ ] T036 Create URL route for supplies by site in `django_app/sitesync/urls.py`
+- [ ] T037 Add supply list template/partial in `django_app/sitesync/templates/sitesync/supply_list.html`
+- [ ] T038 Extend site list template to include adjacent supply pane in `django_app/sitesync/templates/sitesync/site_list.html`
+- [ ] T039 [P] Add JavaScript to handle site selection and supply panel update in `django_app/static/js/site_selection.js`
+- [ ] T040 Add "no supplies" message handling for sites with no related supplies in `django_app/sitesync/templates/sitesync/supply_list.html`
 
-**Checkpoint**: All user stories should now be independently functional
+**Checkpoint**: User Stories 1, 2, and 3 are fully functional and independently testable
 
 ---
 
-## Phase 6: Polish & Cross-Cutting Concerns
+## Phase 6: User Story 4 - Settings Panel for Runtime Configuration (Priority: P2)
 
-**Purpose**: Improvements that affect multiple user stories
+**Goal**: Display and allow editing of runtime configuration parameters on a single settings page
 
-- [ ] T040 [P] Add containerization validation: build Docker image in `django_app/docker/`
-- [ ] T041 [P] Add Docker Compose startup test: verify containers start and PostgreSQL is accessible
-- [ ] T042 Create `django_app/docker/.dockerignore` to exclude unnecessary files from image
-- [ ] T043 Add manual sync/refresh button to `django_app/sitesync/templates/sitesync/site_supply_list.html` to allow users to re-sync from Etainabl
-- [ ] T044 Create endpoint in `django_app/sitesync/views.py` to handle manual sync trigger
-- [ ] T045 Add comprehensive error handling UI in template to display API failures with recoverable message
-- [ ] T046 [P] Add pytest configuration in `tests/pytest.ini` or `pyproject.toml`
-- [ ] T047 Run full test suite in `tests/` (unit + integration) to ensure all user stories pass
-- [ ] T048 Create validation summary in console output showing sync status, record counts, and any errors
-- [ ] T049 [P] Documentation: Update `specs/001-etainabl-site-supply-sync/quickstart.md` with actual Docker commands and validation steps
-- [ ] T050 Documentation: Create `django_app/README.md` with setup, development, and deployment instructions
-- [ ] T051 [P] Create performance test in `tests/integration/test_performance.py` to measure site list load time for 100+ sites and verify SC-001 (< 3 seconds) is met
-- [ ] T052 [P] Test Docker Compose startup on Windows (Docker Desktop or Windows Containers) to validate Windows-native compatibility and confirm app starts without admin privileges
-- [ ] T053 Document deployment approval workflow in `deployment/APPROVAL_PROCESS.md` describing: code review checklist, security sign-off, approver roles, and post-deployment validation steps
-- [ ] T054 [P] Add security hardening review: verify all credentials sourced from environment variables, database SSL enabled, no secrets in logs, and HTTPS enforced in Django settings
+**Independent Test**: Verify settings page loads configuration values and persists user edits
+
+### Tests for User Story 4
+
+- [ ] T041 [P] Contract test for settings endpoint in `tests/contract/test_settings_endpoints.py`
+- [ ] T042 [P] Unit test for settings model save/load in `tests/unit/test_settings_model.py`
+- [ ] T043 Integration test for settings page flow in `tests/integration/test_settings_view.py`
+
+### Implementation for User Story 4
+
+- [ ] T044 Create AppSettings model in `django_app/sitesync/models.py` to persist edited configuration values (api_url, page_size, timeout, etc.)
+- [ ] T045 Create settings serializer and API view in `django_app/sitesync/serializers.py` and `django_app/sitesync/views.py`
+- [ ] T046 Create URL routes for GET and POST settings in `django_app/sitesync/urls.py`
+- [ ] T047 Create settings configuration loader in `django_app/sitesync/services/config_service.py` to load from `.env` in dev/test and from AppSettings model
+- [ ] T048 Create settings form in `django_app/sitesync/forms.py` with validation for configuration parameters
+- [ ] T049 Create settings page template in `django_app/sitesync/templates/sitesync/settings_panel.html` displaying Etainabl base URL, page sizes, timeout values
+- [ ] T050 [P] Add JavaScript for settings form submission in `django_app/static/js/settings.js`
+- [ ] T051 Add link to settings panel in site list template navigation in `django_app/sitesync/templates/sitesync/site_list.html`
+- [ ] T052 Implement settings persistence logic that saves user edits to the database in `django_app/sitesync/services/config_service.py`
+
+**Checkpoint**: All user stories 1-4 are complete and independently functional
+
+---
+
+## Phase 7: Polish & Cross-Cutting Concerns
+
+**Purpose**: Documentation, error handling, logging, and final validation
+
+- [ ] T053 [P] Add comprehensive logging to all services in `django_app/sitesync/`
+- [ ] T054 [P] Add error handling for empty site/supply states in templates and views
+- [ ] T055 Add manual sync refresh button to site list page in `django_app/sitesync/templates/sitesync/site_list.html`
+- [ ] T056 Implement API error response formatting in `django_app/sitesync/views.py`
+- [ ] T057 [P] Create README documentation in `django_app/README.md` with setup and configuration instructions
+- [ ] T058 [P] Create API documentation in `docs/API.md` describing all endpoints
+- [ ] T059 Run quickstart validation scenarios from `specs/001-etainabl-site-supply-sync/quickstart.md` and verify all acceptance criteria
+- [ ] T060 [P] Add unit tests for edge cases (no sites, API timeouts, malformed responses) in `tests/unit/`
+- [ ] T061 Create performance test for site list load in `tests/performance/test_load_time.py` (validate <3 second load time)
+- [ ] T062 Document .env fallback behavior and secret management approach in `docs/SECRET_MANAGEMENT.md`
+- [ ] T063 [P] Create deployment approval workflow documentation in `deployment/APPROVAL_PROCESS.md`
+- [ ] T064 [P] Create security hardening checklist: verify secrets sourced from env vars, database SSL enabled, no hardcoded credentials
+- [ ] T065 Test Docker Compose startup on Windows (Docker Desktop) to validate Windows-native compatibility
 
 ---
 
@@ -162,9 +195,10 @@
 
 ### User Story Dependencies
 
-- **User Story 1 (P1)**: Can start after Foundational (Phase 2) - No dependencies on other stories - MVP core functionality
-- **User Story 2 (P2)**: Can start after US1 is complete - Depends on populated Site table
-- **User Story 3 (P3)**: Can start after US2 is complete - Depends on populated Supply table and site selection
+- **User Story 1 (P1)**: No dependencies on other stories - can start immediately after Foundational
+- **User Story 2 (P2)**: Depends on US1 data being available - site list requires synced sites
+- **User Story 3 (P3)**: Depends on US2 UI - supply display is adjacent to site selection
+- **User Story 4 (P2)**: No dependencies on US1-3 - can be worked in parallel after Foundational
 
 ### Within Each User Story
 
@@ -233,28 +267,11 @@ Task: "Create serializers in django_app/sitesync/serializers.py"
 4. **STOP and VALIDATE**: Verify sync works, database populates, logs show success
 5. Test against quickstart.md scenarios
 
-### Full Feature (All User Stories)
+## Incremental Delivery Plan
 
-1. Complete Phase 1: Setup
-2. Complete Phase 2: Foundational
-3. Complete Phase 3: User Story 1 (P1)
-4. Complete Phase 4: User Story 2 (P2)
-5. Complete Phase 5: User Story 3 (P3)
-6. Complete Phase 6: Polish & testing
-7. Run full test suite and validate all user stories pass independently
+1. **Release 1.0 (MVP)**: US1 complete - automatic sync works, data persisted ✅ US1
+2. **Release 1.1**: Add US2 - searchable site display ✅ US1 + US2
+3. **Release 1.2**: Add US3 - supply details ✅ US1 + US2 + US3
+4. **Release 1.3**: Add US4 - settings panel ✅ US1 + US2 + US3 + US4
 
 ---
-
-## Task Execution Summary
-
-- **Total Tasks**: 55 (original 50 + 5 remediation tasks for constitution alignment)
-- **Phase 1 (Setup)**: 9 tasks (1 critical path, 4 parallelizable)
-- **Phase 2 (Foundational)**: 14 tasks (8 original + 5 remediation: T018b-T018e, environment config, security hardening) (7 parallelizable)
-- **Phase 3 (User Story 1 - P1)**: 8 tasks (MVP, highest priority)
-- **Phase 4 (User Story 2 - P2)**: 6 tasks (UI layer)
-- **Phase 5 (User Story 3 - P3)**: 7 tasks (Detail pane)
-- **Phase 6 (Polish)**: 15 tasks (11 original + 4 remediation: T051-T054 for performance, Windows validation, approval workflow, security review)
-
-**Suggested MVP Scope**: Phases 1 + 2 + 3 = 31 tasks (Sync, persist, security, and environment management)
-
-**Suggested Full Scope**: Phases 1-6 = 55 tasks (Complete searchable UI with supply details, security hardening, Windows validation, approval workflow)
