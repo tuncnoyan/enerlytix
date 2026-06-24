@@ -70,8 +70,8 @@ Users need a single settings page that displays application parameters and runti
 **Acceptance Scenarios**:
 
 1. **Given** a valid application configuration, **When** the user navigates to the settings page, **Then** the page displays Etainabl base URL, download page size, timeout values, and relevant API configuration settings.
-2. **Given** the application is running in development or test, **When** configuration values are loaded, **Then** secret keys and similar sensitive parameters are sourced from the `.env` file rather than hardcoded configuration.
-3. **Given** the application is deployed to production on a platform that supports secure secret management, **When** runtime configuration is resolved, **Then** the platform-native secret store is preferred over `.env` while still allowing `.env` as a fallback if no better method exists.
+2. **Given** the application is running in development or test, **When** configuration values are loaded, **Then** secret keys and similar sensitive parameters are sourced from the `.env` file and never displayed in plaintext on the settings panel (user edits override `.env` values only in the database, not in the file).
+3. **Given** the application is deployed to production on a platform that supports secure secret management, **When** runtime configuration is resolved, **Then** the platform-native secret store is preferred over `.env` while still allowing `.env` as a documented fallback if no better method exists.
 
 ---
 
@@ -95,9 +95,9 @@ Users need a single settings page that displays application parameters and runti
 - **FR-007**: The application MUST be containerised so it can be packaged and deployed in a container-native environment.
 - **FR-008**: The application MUST handle API connectivity failures with retries and clear error feedback.
 - **FR-009**: The data sync flow MUST support reconciliation so updated Etainabl data overwrites stale values without losing existing valid records.
-- **FR-010**: The application MUST securely handle Etainabl API credentials and database connection strings using environment variables or secure secret management; credentials MUST NOT be stored in version control or hardcoded configuration files.
+- **FR-010**: The application MUST securely handle Etainabl API credentials and database connection strings using environment variables or secure secret management; credentials MUST NOT be stored in version control or hardcoded configuration files. **Exception**: `.env` files are acceptable in development and test environments as a local configuration method, provided they are never committed to version control (enforced by .gitignore).
 - **FR-011**: In development and test environments, API keys and similar secret keys MUST be stored in a `.env` file and loaded from environment configuration.
-- **FR-012**: In production, the application MUST prefer a platform-provided secure secret store when available, while still allowing `.env` as a fallback if the target platform does not provide a better method.
+- **FR-012**: In production, the application MUST prefer a platform-provided secure secret store when available (e.g., Kubernetes Secrets, Azure Key Vault, Docker Secrets), while still allowing `.env` as a documented fallback if the target platform does not provide a better method.
 - **FR-013**: The application MUST include a settings page that displays key runtime parameters such as the Etainabl base URL, download page size, timeout values, and other configuration settings on a single panel.
 
 ### Key Entities *(include if feature involves data)*
@@ -111,11 +111,11 @@ Users need a single settings page that displays application parameters and runti
 ### Measurable Outcomes
 
 - **SC-001**: A user can load the searchable site list in under 3 seconds for a catalog of up to 100 sites.
-- **SC-002**: At least 95% of valid Etainabl site and supply records are successfully persisted on the first sync attempt in a normal network environment.
+- **SC-002**: At least 95% of valid Etainabl site and supply records are successfully persisted on the first sync attempt in a normal network environment. **Validation**: Integration test syncs a batch of known test records (minimum 100) and measures the percentage that successfully persist to the database.
 - **SC-003**: Users can find a site using search text and select it to show related supplies in the same view.
 - **SC-004**: When a site is selected, its related supplies render with name, utility type, and device ID visible on at least 90% of supported data rows.
 - **SC-005**: The application can be built and run as a container image in the initial version.
-- **SC-006**: The settings page displays the key configuration values within 2 seconds and makes the current runtime parameters visible in one place.
+- **SC-006**: The settings page displays the key configuration values within 2 seconds and makes the current runtime parameters visible in one place. **Note**: Sensitive values (API keys, passwords) are masked or hidden on display but may be edited. **Validation**: Performance test measures settings page load time on a standard development machine.
 
 ## Assumptions
 
@@ -124,3 +124,6 @@ Users need a single settings page that displays application parameters and runti
 - The first version is focused on data synchronization and display; report generation and advanced filtering are out of scope.
 - The sample Python code and Excel-based configuration in `sample_app` provide the required API access patterns and field mappings.
 - The containerisation requirement means the application can be packaged and executed in a container environment, not necessarily orchestrated by Kubernetes in v1.
+- **Retry Strategy**: API sync failures are retried up to 10 times with exponential backoff (initial 1s, max 120s interval). Transient errors (5xx, timeouts) trigger retries; permanent errors (4xx, auth failures) fail immediately.
+- **Platform-Native Secret Stores**: Supported in production: Kubernetes Secrets, Azure Key Vault, Docker Secrets (Swarm mode). Other platforms default to `.env` with documented fallback policy per FR-012.
+- **Security & Encryption**: All data in transit uses TLS/HTTPS; database connections require SSL; sensitive values in logs are redacted; credentials are never logged or exposed in error messages. Database encryption at rest is optional in v1 but supported via PostgreSQL pgcrypto extension.

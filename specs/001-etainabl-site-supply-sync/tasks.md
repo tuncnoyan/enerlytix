@@ -117,18 +117,18 @@
 
 ### Tests for User Story 3
 
-- [ ] T032 [P] Contract test for supply list endpoint in `tests/contract/test_supply_endpoints.py`
-- [ ] T033 [P] Unit test for supply filtering by site in `tests/unit/test_supply_filtering.py`
-- [ ] T034 Integration test for supply list display in `tests/integration/test_supply_list_view.py`
+- [ ] T033 [P] Contract test for supply list endpoint in `tests/contract/test_supply_endpoints.py`
+- [ ] T034 [P] Unit test for supply filtering by site in `tests/unit/test_supply_filtering.py`
+- [ ] T035 Integration test for supply list display in `tests/integration/test_supply_list_view.py`
 
 ### Implementation for User Story 3
 
-- [ ] T035 [P] Create supply list API view/serializer in `django_app/sitesync/views.py` (extend from T026)
-- [ ] T036 Create URL route for supplies by site in `django_app/sitesync/urls.py`
-- [ ] T037 Add supply list template/partial in `django_app/sitesync/templates/sitesync/supply_list.html`
-- [ ] T038 Extend site list template to include adjacent supply pane in `django_app/sitesync/templates/sitesync/site_list.html`
-- [ ] T039 [P] Add JavaScript to handle site selection and supply panel update in `django_app/static/js/site_selection.js`
-- [ ] T040 Add "no supplies" message handling for sites with no related supplies in `django_app/sitesync/templates/sitesync/supply_list.html`
+- [ ] T036 [P] Create supply list API view/serializer in `django_app/sitesync/views.py` (extend from T026)
+- [ ] T037 Create URL route for supplies by site in `django_app/sitesync/urls.py`
+- [ ] T038 Add supply list template/partial in `django_app/sitesync/templates/sitesync/supply_list.html`
+- [ ] T039 Extend site list template to include adjacent supply pane in `django_app/sitesync/templates/sitesync/site_list.html`
+- [ ] T040 [P] Add JavaScript to handle site selection and supply panel update in `django_app/static/js/site_selection.js`
+- [ ] T041 Add "no supplies" message handling for sites with no related supplies in `django_app/sitesync/templates/sitesync/supply_list.html`
 
 **Checkpoint**: User Stories 1, 2, and 3 are fully functional and independently testable
 
@@ -142,21 +142,21 @@
 
 ### Tests for User Story 4
 
-- [ ] T041 [P] Contract test for settings endpoint in `tests/contract/test_settings_endpoints.py`
-- [ ] T042 [P] Unit test for settings model save/load in `tests/unit/test_settings_model.py`
-- [ ] T043 Integration test for settings page flow in `tests/integration/test_settings_view.py`
+- [ ] T042 [P] Contract test for settings endpoint in `tests/contract/test_settings_endpoints.py`
+- [ ] T043 [P] Unit test for settings model save/load in `tests/unit/test_settings_model.py`
+- [ ] T044 Integration test for settings page flow in `tests/integration/test_settings_view.py`
 
 ### Implementation for User Story 4
 
-- [ ] T044 Create AppSettings model in `django_app/sitesync/models.py` to persist edited configuration values (api_url, page_size, timeout, etc.)
-- [ ] T045 Create settings serializer and API view in `django_app/sitesync/serializers.py` and `django_app/sitesync/views.py`
-- [ ] T046 Create URL routes for GET and POST settings in `django_app/sitesync/urls.py`
-- [ ] T047 Create settings configuration loader in `django_app/sitesync/services/config_service.py` to load from `.env` in dev/test and from AppSettings model
-- [ ] T048 Create settings form in `django_app/sitesync/forms.py` with validation for configuration parameters
-- [ ] T049 Create settings page template in `django_app/sitesync/templates/sitesync/settings_panel.html` displaying Etainabl base URL, page sizes, timeout values
-- [ ] T050 [P] Add JavaScript for settings form submission in `django_app/static/js/settings.js`
-- [ ] T051 Add link to settings panel in site list template navigation in `django_app/sitesync/templates/sitesync/site_list.html`
-- [ ] T052 Implement settings persistence logic that saves user edits to the database in `django_app/sitesync/services/config_service.py`
+- [ ] T045 Create AppSettings model in `django_app/sitesync/models.py` to persist edited configuration values (api_url, page_size, timeout, etc.)
+- [ ] T046 Create settings serializer and API view in `django_app/sitesync/serializers.py` and `django_app/sitesync/views.py`
+- [ ] T047 Create URL routes for GET and POST settings in `django_app/sitesync/urls.py`
+- [ ] T048 Create settings configuration loader in `django_app/sitesync/services/config_service.py` to load from `.env` in dev/test and from AppSettings model
+- [ ] T049 Create settings form in `django_app/sitesync/forms.py` with validation for configuration parameters
+- [ ] T050 Create settings page template in `django_app/sitesync/templates/sitesync/settings_panel.html` displaying Etainabl base URL, page sizes, timeout values
+- [ ] T051 [P] Add JavaScript for settings form submission in `django_app/static/js/settings.js`
+- [ ] T052 Add link to settings panel in site list template navigation in `django_app/sitesync/templates/sitesync/site_list.html`
+- [ ] T053 Implement settings persistence logic that saves user edits to the database in `django_app/sitesync/services/config_service.py`
 
 **Checkpoint**: All user stories 1-4 are complete and independently functional
 
@@ -166,19 +166,21 @@
 
 **Purpose**: Documentation, error handling, logging, and final validation
 
-- [ ] T053 [P] Add comprehensive logging to all services in `django_app/sitesync/`
-- [ ] T054 [P] Add error handling for empty site/supply states in templates and views
-- [ ] T055 Add manual sync refresh button to site list page in `django_app/sitesync/templates/sitesync/site_list.html`
-- [ ] T056 Implement API error response formatting in `django_app/sitesync/views.py`
-- [ ] T057 [P] Create README documentation in `django_app/README.md` with setup and configuration instructions
-- [ ] T058 [P] Create API documentation in `docs/API.md` describing all endpoints
-- [ ] T059 Run quickstart validation scenarios from `specs/001-etainabl-site-supply-sync/quickstart.md` and verify all acceptance criteria
-- [ ] T060 [P] Add unit tests for edge cases (no sites, API timeouts, malformed responses) in `tests/unit/`
-- [ ] T061 Create performance test for site list load in `tests/performance/test_load_time.py` (validate <3 second load time)
-- [ ] T062 Document .env fallback behavior and secret management approach in `docs/SECRET_MANAGEMENT.md`
-- [ ] T063 [P] Create deployment approval workflow documentation in `deployment/APPROVAL_PROCESS.md`
-- [ ] T064 [P] Create security hardening checklist: verify secrets sourced from env vars, database SSL enabled, no hardcoded credentials
-- [ ] T065 Test Docker Compose startup on Windows (Docker Desktop) to validate Windows-native compatibility
+- [ ] T054 [P] Add comprehensive logging to all services in `django_app/sitesync/`
+- [ ] T055 [P] Add error handling for empty site/supply states in templates and views
+- [ ] T056 Add manual sync refresh button to site list page in `django_app/sitesync/templates/sitesync/site_list.html`
+- [ ] T057 Implement API error response formatting in `django_app/sitesync/views.py`
+- [ ] T058 [P] Create README documentation in `django_app/README.md` with setup and configuration instructions
+- [ ] T059 [P] Create API documentation in `docs/API.md` describing all endpoints
+- [ ] T060 Run quickstart validation scenarios from `specs/001-etainabl-site-supply-sync/quickstart.md` and verify all acceptance criteria
+- [ ] T061 [P] Add unit tests for edge cases (no sites, API timeouts, malformed responses) in `tests/unit/`
+- [ ] T062 Create performance test for site list load in `tests/performance/test_load_time.py` (validate <3 second load time)
+- [ ] T063 [P] Create integration test in `tests/integration/test_sync_success_rate.py` to validate SC-002: at least 95% of records persisted on first sync (minimum 100 test records)
+- [ ] T064 Document .env fallback behavior and secret management approach in `docs/SECRET_MANAGEMENT.md` including supported platforms (Kubernetes, Azure, Docker Secrets)
+- [ ] T065 [P] Create TLS/HTTPS and database SSL configuration in `django_app/config/settings.py` to enforce encryption in transit and database SSL per Constitution III
+- [ ] T066 [P] Create deployment approval workflow documentation in `deployment/APPROVAL_PROCESS.md` requiring code review and security sign-off before any production deployment (Constitution IV)
+- [ ] T067 [P] Create security hardening checklist: verify secrets sourced from env vars, database SSL enabled, no secrets in logs, TLS/HTTPS enforced
+- [ ] T068 Test Docker Compose startup on Windows (Docker Desktop) to validate Windows-native compatibility and confirm no admin privileges required
 
 ---
 
