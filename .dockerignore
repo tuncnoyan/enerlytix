@@ -25,6 +25,7 @@ ENV/
 .DS_Store
 Thumbs.db
 *.log
+*.tmp
 
 # Python
 __pycache__/
@@ -37,6 +38,14 @@ build/
 .pytest_cache/
 .coverage
 htmlcov/
+coverage/
+
+# Node
+node_modules/
+
+# Docker
+Dockerfile*
+.dockerignore
 
 # Django
 db.sqlite3

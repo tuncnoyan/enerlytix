@@ -92,13 +92,13 @@ class EtainaibleSyncService:
         try:
             endpoint = f"{self.api_url}/assets"
             page_size = 50
-            skip = 0
+            page = 1
             
             while True:
                 # Fetch paginated results
                 params = {
-                    'skip': skip,
                     'limit': page_size,
+                    'page': page,
                 }
                 
                 data = self._fetch_from_api(endpoint, params)
@@ -109,7 +109,7 @@ class EtainaibleSyncService:
                     break
 
                 if not assets:
-                    logger.info(f"No more assets to fetch (skip={skip})")
+                    logger.info(f"No more assets to fetch (page={page})")
                     break
                 
                 # Process each asset
@@ -123,13 +123,22 @@ class EtainaibleSyncService:
                         skipped += 1
                 
                 # Check pagination
-                total = data.get('total') if isinstance(data, dict) else 0
-                if total is None:
-                    total = 0
-                skip += page_size
-                if skip >= total:
-                    logger.info(f"Reached end of assets (total={total})")
+                total = data.get('total') if isinstance(data, dict) else None
+                if total is not None:
+                    reported_skip = data.get('skip') if isinstance(data, dict) else None
+                    reported_limit = data.get('limit') if isinstance(data, dict) else None
+                    offset = reported_skip if isinstance(reported_skip, int) else (page - 1) * page_size
+                    limit_used = reported_limit if isinstance(reported_limit, int) else len(assets)
+                    downloaded = offset + limit_used
+                    if downloaded >= total:
+                        logger.info(f"Reached end of assets (total={total})")
+                        break
+
+                if len(assets) < page_size:
+                    logger.info("Reached final assets page by page size (page=%s)", page)
                     break
+
+                page += 1
             
             logger.info(
                 "Asset sync complete: %s created, %s updated, %s skipped",
@@ -158,13 +167,13 @@ class EtainaibleSyncService:
         try:
             endpoint = f"{self.api_url}/accounts"
             page_size = 50
-            skip = 0
+            page = 1
             
             while True:
                 # Fetch paginated results
                 params = {
-                    'skip': skip,
                     'limit': page_size,
+                    'page': page,
                 }
                 
                 data = self._fetch_from_api(endpoint, params)
@@ -175,7 +184,7 @@ class EtainaibleSyncService:
                     break
 
                 if not accounts:
-                    logger.info(f"No more accounts to fetch (skip={skip})")
+                    logger.info(f"No more accounts to fetch (page={page})")
                     break
                 
                 # Process each account
@@ -189,13 +198,22 @@ class EtainaibleSyncService:
                         skipped += 1
                 
                 # Check pagination
-                total = data.get('total') if isinstance(data, dict) else 0
-                if total is None:
-                    total = 0
-                skip += page_size
-                if skip >= total:
-                    logger.info(f"Reached end of accounts (total={total})")
+                total = data.get('total') if isinstance(data, dict) else None
+                if total is not None:
+                    reported_skip = data.get('skip') if isinstance(data, dict) else None
+                    reported_limit = data.get('limit') if isinstance(data, dict) else None
+                    offset = reported_skip if isinstance(reported_skip, int) else (page - 1) * page_size
+                    limit_used = reported_limit if isinstance(reported_limit, int) else len(accounts)
+                    downloaded = offset + limit_used
+                    if downloaded >= total:
+                        logger.info(f"Reached end of accounts (total={total})")
+                        break
+
+                if len(accounts) < page_size:
+                    logger.info("Reached final accounts page by page size (page=%s)", page)
                     break
+
+                page += 1
             
             logger.info(
                 "Account sync complete: %s created, %s updated, %s skipped",

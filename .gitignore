@@ -2,6 +2,7 @@
 venv/
 env/
 ENV/
+.venv/
 
 # Python
 __pycache__/
@@ -62,4 +63,5 @@ htmlcov/
 # OS
 .DS_Store
 Thumbs.db
+*.tmp
 .xlsx
