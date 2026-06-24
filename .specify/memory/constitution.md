@@ -1,8 +1,8 @@
 <!--
 Sync Impact Report
-Version change: none -> 1.0.0
-Modified principles: I. Windows-Native Platform Alignment; II. Least-Privilege Development & Operations; III. Data Security and Database Isolation; IV. Approval-Governed Production Operations; V. Containerized Maintainability & Observability
-Added sections: Additional Constraints; Development Workflow & Approval
+Version change: 1.0.0 -> 1.0.1
+Modified principles: none
+Added sections: none
 Removed sections: none
 Templates requiring updates: ✅ Reviewed, no changes required: .specify/templates/plan-template.md
 ✅ Reviewed, no changes required: .specify/templates/spec-template.md
@@ -50,6 +50,8 @@ The application MUST be containerized natively and built for maintainable, obser
 - The application MUST support Windows-native hosting and maintenance without depending on admin-level system changes.
 - Deployment tooling and runtime packaging MUST be container-native and compatible with Windows container ecosystems.
 - Data security requirements MUST include database hardening, secure configuration management, and protection from unauthorized external access.
+- API keys, secrets, and similar runtime parameters MUST be sourced from `.env` during development and test environments.
+- Production MAY also use `.env` if the deployment platform provides no stronger secret management mechanism, but a platform-native secure secret store MUST be preferred when available.
 - Any external integration or API usage MUST be vetted for secure access and data privacy.
 
 ## Development Workflow & Approval
@@ -66,4 +68,4 @@ This constitution supersedes ad hoc preferences and is the authoritative source 
 - Changes to this constitution MUST include a clear rationale, impact analysis, and version update.
 - Regular compliance review SHOULD occur whenever the project’s platform, security, or deployment context changes.
 
-**Version**: 1.0.0 | **Ratified**: 2026-06-23 | **Last Amended**: 2026-06-23
+**Version**: 1.0.1 | **Ratified**: 2026-06-23 | **Last Amended**: 2026-06-24
