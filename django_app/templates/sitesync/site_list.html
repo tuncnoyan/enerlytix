@@ -203,6 +203,11 @@
             color: #065f46;
             border: 1px solid #a7f3d0;
         }
+        .notice.warning {
+            background: #fffbeb;
+            color: #92400e;
+            border: 1px solid #fcd34d;
+        }
     </style>
 </head>
 <body>
@@ -220,6 +225,8 @@
         </div>
         {% if request.GET.sync == 'success' %}
             <div class="notice">Sync completed successfully.</div>
+        {% elif request.GET.sync == 'empty' %}
+            <div class="notice warning">Sync completed but returned no site records. Check Etainabl account permissions or API scope.</div>
         {% endif %}
         <div class="search-bar">
             <input id="site-search" type="search" value="{{ query|default_if_none:'' }}" placeholder="Filter sites..." aria-label="Search sites" />

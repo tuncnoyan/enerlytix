@@ -24,6 +24,8 @@ services:
       dockerfile: django_app/docker/Dockerfile
     container_name: enerlytix_web
     command: python manage.py runserver 0.0.0.0:8000
+    env_file:
+      - ../../.env
     volumes:
       - ../../django_app:/app
     ports:
@@ -32,8 +34,6 @@ services:
       DEBUG: "True"
       DATABASE_URL: postgresql://enerlytix_user:enerlytix_password@db:5432/enerlytix
       DJANGO_SETTINGS_MODULE: config.settings
-      ETAINABL_API_KEY: ${ETAINABL_API_KEY}
-      ETAINABL_API_URL: ${ETAINABL_API_URL:-https://api.etainabl.com/2.0}
     depends_on:
       db:
         condition: service_healthy

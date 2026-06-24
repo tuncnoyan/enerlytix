@@ -17,7 +17,7 @@ class EtainaibleSyncService:
     
     def __init__(self):
         """Initialize the sync service with API configuration."""
-        self.api_key = settings.ETAINABL_API_KEY
+        self.api_key = (settings.ETAINABL_API_KEY or '').strip()
         self.api_url = settings.ETAINABL_API_URL
         self.timeout = settings.API_TIMEOUT
         self.max_retries = 10
@@ -87,6 +87,7 @@ class EtainaibleSyncService:
         logger.info("Starting asset sync...")
         created = 0
         updated = 0
+        skipped = 0
         
         try:
             endpoint = f"{self.api_url}/assets"
@@ -102,11 +103,11 @@ class EtainaibleSyncService:
                 
                 data = self._fetch_from_api(endpoint, params)
                 
-                if not data or 'data' not in data:
+                assets = self._extract_data_items(data)
+                if assets is None:
                     logger.warning(f"No data in response from {endpoint}")
                     break
-                
-                assets = data.get('data', [])
+
                 if not assets:
                     logger.info(f"No more assets to fetch (skip={skip})")
                     break
@@ -114,20 +115,29 @@ class EtainaibleSyncService:
                 # Process each asset
                 for asset in assets:
                     site_created = self._upsert_site(asset)
-                    if site_created:
+                    if site_created is True:
                         created += 1
-                    else:
+                    elif site_created is False:
                         updated += 1
+                    else:
+                        skipped += 1
                 
                 # Check pagination
-                total = data.get('total', 0)
+                total = data.get('total') if isinstance(data, dict) else 0
+                if total is None:
+                    total = 0
                 skip += page_size
                 if skip >= total:
                     logger.info(f"Reached end of assets (total={total})")
                     break
             
-            logger.info(f"Asset sync complete: {created} created, {updated} updated")
-            return {'created': created, 'updated': updated}
+            logger.info(
+                "Asset sync complete: %s created, %s updated, %s skipped",
+                created,
+                updated,
+                skipped,
+            )
+            return {'created': created, 'updated': updated, 'skipped': skipped}
             
         except Exception as e:
             logger.error(f"Asset sync failed: {str(e)}", exc_info=True)
@@ -143,6 +153,7 @@ class EtainaibleSyncService:
         logger.info("Starting account sync...")
         created = 0
         updated = 0
+        skipped = 0
         
         try:
             endpoint = f"{self.api_url}/accounts"
@@ -158,11 +169,11 @@ class EtainaibleSyncService:
                 
                 data = self._fetch_from_api(endpoint, params)
                 
-                if not data or 'data' not in data:
+                accounts = self._extract_data_items(data)
+                if accounts is None:
                     logger.warning(f"No data in response from {endpoint}")
                     break
-                
-                accounts = data.get('data', [])
+
                 if not accounts:
                     logger.info(f"No more accounts to fetch (skip={skip})")
                     break
@@ -170,20 +181,29 @@ class EtainaibleSyncService:
                 # Process each account
                 for account in accounts:
                     supply_created = self._upsert_supply(account)
-                    if supply_created:
+                    if supply_created is True:
                         created += 1
-                    else:
+                    elif supply_created is False:
                         updated += 1
+                    else:
+                        skipped += 1
                 
                 # Check pagination
-                total = data.get('total', 0)
+                total = data.get('total') if isinstance(data, dict) else 0
+                if total is None:
+                    total = 0
                 skip += page_size
                 if skip >= total:
                     logger.info(f"Reached end of accounts (total={total})")
                     break
             
-            logger.info(f"Account sync complete: {created} created, {updated} updated")
-            return {'created': created, 'updated': updated}
+            logger.info(
+                "Account sync complete: %s created, %s updated, %s skipped",
+                created,
+                updated,
+                skipped,
+            )
+            return {'created': created, 'updated': updated, 'skipped': skipped}
             
         except Exception as e:
             logger.error(f"Account sync failed: {str(e)}", exc_info=True)
@@ -204,6 +224,7 @@ class EtainaibleSyncService:
             Exception if all retries are exhausted
         """
         headers = {
+            'x-api-key': self.api_key,
             'Authorization': f'Bearer {self.api_key}',
             'Content-Type': 'application/json',
         }
@@ -280,8 +301,24 @@ class EtainaibleSyncService:
                     raise
         
         raise Exception(f"Failed to fetch from {endpoint} after {self.max_retries} attempts")
+
+    def _extract_data_items(self, payload: object) -> Optional[List[Dict]]:
+        """Extract list-like data from known Etainabl response shapes."""
+        if payload is None:
+            return None
+        if isinstance(payload, list):
+            return payload
+        if not isinstance(payload, dict):
+            return None
+
+        for key in ('data', 'results', 'items'):
+            value = payload.get(key)
+            if isinstance(value, list):
+                return value
+
+        return None
     
-    def _upsert_site(self, asset_data: Dict) -> bool:
+    def _upsert_site(self, asset_data: Dict) -> Optional[bool]:
         """
         Create or update a Site from asset data.
         
@@ -292,16 +329,52 @@ class EtainaibleSyncService:
             True if created, False if updated
         """
         try:
-            external_id = asset_data.get('id')
+            external_id = (
+                asset_data.get('id')
+                or asset_data.get('_id')
+                or asset_data.get('assetId')
+            )
             if not external_id:
                 logger.warning(f"Asset missing id field: {asset_data}")
-                return False
+                return None
+
+            name_value = (
+                asset_data.get('name')
+                or asset_data.get('siteName')
+                or asset_data.get('siteCode')
+                or asset_data.get('label')
+            )
+            if isinstance(name_value, dict):
+                name_value = (
+                    name_value.get('name')
+                    or name_value.get('value')
+                    or name_value.get('label')
+                )
+
+            description_value = asset_data.get('description')
+            if not description_value:
+                address_data = asset_data.get('address')
+                if isinstance(address_data, dict):
+                    address_parts = [
+                        address_data.get('streetAddress'),
+                        address_data.get('locality'),
+                        address_data.get('region'),
+                        address_data.get('postCode'),
+                    ]
+                    description_value = ", ".join(
+                        str(part).strip() for part in address_parts if part
+                    )
+                elif address_data:
+                    description_value = str(address_data)
+
+            if isinstance(description_value, dict):
+                description_value = str(description_value)
             
             site, created = Site.objects.update_or_create(
                 external_id=external_id,
                 defaults={
-                    'name': asset_data.get('name', 'Unknown'),
-                    'description': asset_data.get('description', ''),
+                    'name': str(name_value or 'Unknown'),
+                    'description': str(description_value or ''),
                 }
             )
             
@@ -314,9 +387,9 @@ class EtainaibleSyncService:
             
         except Exception as e:
             logger.error(f"Failed to upsert site from {asset_data}: {str(e)}")
-            return False
+            return None
     
-    def _upsert_supply(self, account_data: Dict) -> bool:
+    def _upsert_supply(self, account_data: Dict) -> Optional[bool]:
         """
         Create or update a Supply from account data.
         
@@ -327,12 +400,22 @@ class EtainaibleSyncService:
             True if created, False if updated
         """
         try:
-            external_id = account_data.get('id')
-            site_external_id = account_data.get('asset_id')
+            external_id = account_data.get('id') or account_data.get('_id')
+            site_external_id = (
+                account_data.get('asset_id')
+                or account_data.get('assetId')
+                or account_data.get('asset')
+            )
+            if isinstance(site_external_id, dict):
+                site_external_id = (
+                    site_external_id.get('id')
+                    or site_external_id.get('_id')
+                    or site_external_id.get('assetId')
+                )
             
             if not external_id or not site_external_id:
                 logger.warning(f"Account missing id or asset_id: {account_data}")
-                return False
+                return None
             
             # Find associated site
             try:
@@ -342,7 +425,7 @@ class EtainaibleSyncService:
                     f"Site not found for account {external_id} "
                     f"(site_id={site_external_id})"
                 )
-                return False
+                return None
             
             # Map utility type
             utility_type_map = {
@@ -352,16 +435,24 @@ class EtainaibleSyncService:
                 'water': 'water',
                 'thermal': 'other',
             }
-            utility_raw = account_data.get('type', 'other').lower()
+            utility_raw = str(account_data.get('type', account_data.get('utility_type', 'other'))).lower()
             utility_type = utility_type_map.get(utility_raw, 'other')
+
+            device_id = account_data.get('device_id') or account_data.get('deviceId') or ''
+            if not device_id:
+                third_parties = account_data.get('thirdParties') or []
+                if isinstance(third_parties, list) and third_parties:
+                    first_tp = third_parties[0]
+                    if isinstance(first_tp, dict):
+                        device_id = first_tp.get('deviceId') or ''
             
             supply, created = Supply.objects.update_or_create(
                 external_id=external_id,
                 defaults={
                     'site': site,
-                    'name': account_data.get('name', 'Unknown'),
+                    'name': str(account_data.get('name') or account_data.get('label') or 'Unknown'),
                     'utility_type': utility_type,
-                    'device_id': account_data.get('device_id', ''),
+                    'device_id': device_id,
                 }
             )
             
@@ -374,4 +465,4 @@ class EtainaibleSyncService:
             
         except Exception as e:
             logger.error(f"Failed to upsert supply from {account_data}: {str(e)}")
-            return False
+            return None

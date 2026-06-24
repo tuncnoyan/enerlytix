@@ -9,7 +9,8 @@
 ## Setup
 
 1. Copy or mount the Etainabl API configuration into the app environment.
-   - Example: set `ETAINABL_API_KEY` and `ETAINABL_API_URL` in `.env`.
+   - Example: set `ETAINABL_API_KEY` and `ETAINABL_API_URL` in repository root `.env`.
+   - Run Docker Compose commands from `django_app/docker` so the compose file and paths resolve correctly.
 2. Build the container image:
 
 ```bash
@@ -19,7 +20,8 @@ docker build -t enerlytix-webapp .
 3. Run the application container with the database container.
 
 ```bash
-docker compose up -d
+cd django_app/docker
+docker compose up -d --build
 ```
 
 4. Apply database migrations.
