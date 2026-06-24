@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: enerlytix_db
+    environment:
+      POSTGRES_DB: enerlytix
+      POSTGRES_USER: enerlytix_user
+      POSTGRES_PASSWORD: enerlytix_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U enerlytix_user -d enerlytix"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - enerlytix_network
+
+  web:
+    build:
+      context: ../
+      dockerfile: django_app/docker/Dockerfile
+    container_name: enerlytix_web
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ../django_app:/app
+    ports:
+      - "8000:8000"
+    environment:
+      DEBUG: "True"
+      DATABASE_URL: postgresql://enerlytix_user:enerlytix_password@db:5432/enerlytix
+      DJANGO_SETTINGS_MODULE: config.settings
+      ETAINABL_API_KEY: ${ETAINABL_API_KEY}
+      ETAINABL_API_URL: ${ETAINABL_API_URL:-https://api.etainabl.com/2.0}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - enerlytix_network
+
+volumes:
+  postgres_data:
+
+networks:
+  enerlytix_network:
+    driver: bridge

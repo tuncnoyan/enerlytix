@@ -27,15 +27,15 @@
 
 **Purpose**: Project initialization and Docker containerization
 
-- [ ] T001 Create Django project structure per implementation plan at `django_app/`
-- [ ] T002 Create `django_app/requirements.txt` with Django 5.x, djangorestframework, requests, psycopg2-binary, pytest, pytest-django dependencies
-- [ ] T003 [P] Create `django_app/docker/Dockerfile` for Python 3.12 + Django application
-- [ ] T004 [P] Create `django_app/docker/docker-compose.yml` with Django web service and PostgreSQL database service
-- [ ] T005 Create `.env.example` in repository root with ETAINABL_API_KEY, DATABASE_URL, DEBUG, ALLOWED_HOSTS placeholders
-- [ ] T006 Create `django_app/config/settings.py` with database configuration, installed apps (sitesync, rest_framework), logging, and secret key setup
-- [ ] T007 [P] Create `django_app/config/urls.py` with root URL routing for sitesync app
-- [ ] T008 [P] Create `django_app/config/wsgi.py` for WSGI application
-- [ ] T009 Create `django_app/manage.py` Django management script
+- [x] T001 Create Django project structure per implementation plan at `django_app/`
+- [x] T002 Create `django_app/requirements.txt` with Django 5.x, djangorestframework, requests, psycopg2-binary, pytest, pytest-django dependencies
+- [x] T003 [P] Create `django_app/docker/Dockerfile` for Python 3.12 + Django application
+- [x] T004 [P] Create `django_app/docker/docker-compose.yml` with Django web service and PostgreSQL database service
+- [x] T005 Create `.env.example` in repository root with ETAINABL_API_KEY, DATABASE_URL, DEBUG, ALLOWED_HOSTS placeholders
+- [x] T006 Create `django_app/config/settings.py` with database configuration, installed apps (sitesync, rest_framework), logging, and secret key setup
+- [x] T007 [P] Create `django_app/config/urls.py` with root URL routing for sitesync app
+- [x] T008 [P] Create `django_app/config/wsgi.py` for WSGI application
+- [x] T009 Create `django_app/manage.py` Django management script
 
 ---
 
@@ -45,24 +45,24 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T010 Create Django sitesync app structure in `django_app/sitesync/` with __init__.py, admin.py, apps.py
-- [ ] T011 [P] Create `django_app/sitesync/models.py` with Site model (id, external_id, name, description, created_at, updated_at) and Supply model (id, site_id, external_id, name, utility_type, device_id, created_at, updated_at)
-- [ ] T012 [P] Create `django_app/sitesync/serializers.py` with SiteSerializer and SupplySerializer for JSON response formatting
-- [ ] T013 Create database migrations for Site and Supply models
-- [ ] T014 Create `django_app/sitesync/services.py` with EtainaibleSyncService class that:
+- [x] T010 Create Django sitesync app structure in `django_app/sitesync/` with __init__.py, admin.py, apps.py
+- [x] T011 [P] Create `django_app/sitesync/models.py` with Site model (id, external_id, name, description, created_at, updated_at) and Supply model (id, site_id, external_id, name, utility_type, device_id, created_at, updated_at)
+- [x] T012 [P] Create `django_app/sitesync/serializers.py` with SiteSerializer and SupplySerializer for JSON response formatting
+- [x] T013 Create database migrations for Site and Supply models
+- [x] T014 Create `django_app/sitesync/services.py` with EtainaibleSyncService class that:
   - Fetches assets from Etainabl API endpoint
   - Fetches accounts from Etainabl API endpoint
   - Handles pagination and retries on failures
   - Deduplicates records by external_id
   - Performs upsert (create or update) operations for Site and Supply models
-- [ ] T015 [P] Create `django_app/sitesync/admin.py` to register Site and Supply models in Django admin for debugging
-- [ ] T016 Create `django_app/sitesync/apps.py` with AppConfig and ready() hook to trigger initial sync on app startup
+- [x] T015 [P] Create `django_app/sitesync/admin.py` to register Site and Supply models in Django admin for debugging
+- [x] T016 Create `django_app/sitesync/apps.py` with AppConfig and ready() hook to trigger initial sync on app startup
 - [ ] T017 Create integration test in `tests/integration/test_etainabl_sync.py` to verify sync service can fetch, parse, and persist site/supply records
 - [ ] T018 Create unit test in `tests/unit/test_models.py` to verify Site and Supply model creation, uniqueness constraints, and relationships
 - [ ] T018b Create unit test in `tests/unit/test_deduplication.py` to verify that repeated sync calls do not create duplicate Site or Supply records when external_id matches
-- [ ] T018c [P] Create `django_app/sitesync/environment_config.py` to load and validate Etainabl API key, base URL, and other config from environment variables (ETAINABL_API_KEY, ETAINABL_API_URL); raise error if required env vars missing
-- [ ] T018d [P] Update `django_app/config/settings.py` to enforce HTTPS in production, configure Django session and CSRF security settings, and set database SSL requirement
-- [ ] T018e [P] Create `.env.example` in repository root with ETAINABL_API_KEY, ETAINABL_API_URL, DATABASE_URL, DEBUG, SECRET_KEY, ALLOWED_HOSTS placeholders (emphasize .env should NOT be committed)
+- [x] T018c [P] Create `django_app/sitesync/environment_config.py` to load and validate Etainabl API key, base URL, and other config from environment variables (ETAINABL_API_KEY, ETAINABL_API_URL); raise error if required env vars missing
+- [x] T018d [P] Update `django_app/config/settings.py` to enforce HTTPS in production, configure Django session and CSRF security settings, and set database SSL requirement
+- [x] T018e [P] Create `.env.example` in repository root with ETAINABL_API_KEY, ETAINABL_API_URL, DATABASE_URL, DEBUG, SECRET_KEY, ALLOWED_HOSTS placeholders (emphasize .env should NOT be committed)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -76,14 +76,14 @@
 
 ### Implementation for User Story 1
 
-- [ ] T019 [US1] Create API client helper in `django_app/sitesync/services.py` to authenticate with Etainabl using API key from environment
-- [ ] T020 [US1] Implement asset sync method in `django_app/sitesync/services.py` to fetch all assets from Etainabl endpoint
-- [ ] T021 [US1] Implement account sync method in `django_app/sitesync/services.py` to fetch all accounts from Etainabl endpoint
-- [ ] T022 [US1] Add deduplication logic in `django_app/sitesync/services.py` to prevent duplicate Site and Supply records by external_id
-- [ ] T023 [US1] Add error handling and logging in `django_app/sitesync/services.py` for API failures and sync exceptions
-- [ ] T024 [US1] Implement automatic sync trigger on application startup in `django_app/sitesync/apps.py`
-- [ ] T025 [US1] Create integration test in `tests/integration/test_initial_sync.py` to verify full sync flow end-to-end
-- [ ] T026 [US1] Add logging output to console and file to verify sync completion with record counts
+- [x] T019 [US1] Create API client helper in `django_app/sitesync/services.py` to authenticate with Etainabl using API key from environment (implemented as `api_client.py`)
+- [x] T020 [US1] Implement asset sync method in `django_app/sitesync/services.py` to fetch all assets from Etainabl endpoint
+- [x] T021 [US1] Implement account sync method in `django_app/sitesync/services.py` to fetch all accounts from Etainabl endpoint
+- [x] T022 [US1] Add deduplication logic in `django_app/sitesync/services.py` to prevent duplicate Site and Supply records by external_id
+- [x] T023 [US1] Add error handling and logging in `django_app/sitesync/services.py` for API failures and sync exceptions
+- [x] T024 [US1] Implement automatic sync trigger on application startup in `django_app/sitesync/apps.py`
+- [x] T025 [US1] Create integration test in `tests/integration/test_initial_sync.py` to verify full sync flow end-to-end
+- [x] T026 [US1] Add logging output to console and file to verify sync completion with record counts
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 

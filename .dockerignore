@@ -1,0 +1,60 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Development
+.venv
+venv/
+env/
+ENV/
+.env
+.env.local
+.env.*.local
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# System
+.DS_Store
+Thumbs.db
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Django
+db.sqlite3
+db.sqlite3-journal
+local_settings.py
+/static/
+/media/
+
+# Spec-Kit
+.specify/
+specs/
+
+# Sample app
+sample_app/
+
+# Documentation & Misc
+README.md
+idea_dump.md
+*.md
+.github/
+Pipfile
