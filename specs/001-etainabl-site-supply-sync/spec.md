@@ -58,6 +58,22 @@ Users need the supply list to show the key supply details required for review an
 
 ---
 
+### User Story 4 - Settings Panel for Runtime Configuration (Priority: P2)
+
+Users need a single settings page that displays application parameters and runtime configuration values in one place.
+
+**Why this priority**: Centralized visibility of integration settings and operational parameters reduces configuration errors and makes troubleshooting easier.
+
+**Independent Test**: Verify the settings page loads and shows the configured Etainabl base URL, download page size, timeout values, and other runtime parameters.
+
+**Acceptance Scenarios**:
+
+1. **Given** a valid application configuration, **When** the user navigates to the settings page, **Then** the page displays Etainabl base URL, download page size, timeout values, and relevant API configuration settings.
+2. **Given** the application is running in development or test, **When** configuration values are loaded, **Then** secret keys and similar sensitive parameters are sourced from the `.env` file rather than hardcoded configuration.
+3. **Given** the application is deployed to production on a platform that supports secure secret management, **When** runtime configuration is resolved, **Then** the platform-native secret store is preferred over `.env` while still allowing `.env` as a fallback if no better method exists.
+
+---
+
 ### Edge Cases
 
 - If the Etainabl API returns no sites, the application shows an empty site state with a clear message and does not crash.
@@ -79,15 +95,18 @@ Users need the supply list to show the key supply details required for review an
 - **FR-008**: The application MUST handle API connectivity failures with retries and clear error feedback.
 - **FR-009**: The data sync flow MUST support reconciliation so updated Etainabl data overwrites stale values without losing existing valid records.
 - **FR-010**: The application MUST securely handle Etainabl API credentials and database connection strings using environment variables or secure secret management; credentials MUST NOT be stored in version control or hardcoded configuration files.
+- **FR-011**: In development and test environments, API keys and similar secret keys MUST be stored in a `.env` file and loaded from environment configuration.
+- **FR-012**: In production, the application MUST prefer a platform-provided secure secret store when available, while still allowing `.env` as a fallback if the target platform does not provide a better method.
+- **FR-013**: The application MUST include a settings page that displays key runtime parameters such as the Etainabl base URL, download page size, timeout values, and other configuration settings on a single panel.
 
 ### Key Entities *(include if feature involves data)*
 
 - **Site (Asset)**: Represents a customer property or location, including the site name and the Etainabl site identifier.
 - **Supply (Account)**: Represents a meter or service line associated with a site, including supply name, utility type, and device ID.
 - **API Configuration**: Represents the Etainabl API key and request parameters required to authenticate and fetch site/supply data.
+- **Application Settings**: Represents runtime parameters such as the Etainabl base URL, download page sizes, timeout values, and other operational configuration values.
 
 ## Success Criteria *(mandatory)*
-
 ### Measurable Outcomes
 
 - **SC-001**: A user can load the searchable site list in under 3 seconds for a catalog of up to 100 sites.
@@ -95,6 +114,7 @@ Users need the supply list to show the key supply details required for review an
 - **SC-003**: Users can find a site using search text and select it to show related supplies in the same view.
 - **SC-004**: When a site is selected, its related supplies render with name, utility type, and device ID visible on at least 90% of supported data rows.
 - **SC-005**: The application can be built and run as a container image in the initial version.
+- **SC-006**: The settings page displays the key configuration values within 2 seconds and makes the current runtime parameters visible in one place.
 
 ## Assumptions
 
