@@ -11,6 +11,7 @@
 ## Clarifications
 
 - Q: Should the app sync site and supply data automatically on startup, manually only, or both? → A: Do an automatic initial sync, then allow a manual refresh button.
+- Q: Should the settings page allow editing and saving configuration values, or only display them? → A: Editable settings page where users can change and save settings.
 
 ## User Scenarios & Testing *(mandatory)*
 
