@@ -7,6 +7,8 @@ from django.shortcuts import render
 from rest_framework import viewsets
 from rest_framework.response import Response
 from .models import Site, Supply, AppSettings
+from .forms import SettingsForm
+from .config_service import SettingsConfigService
 from .serializers import SiteSerializer, SupplySerializer, AppSettingsSerializer
 
 
@@ -41,6 +43,24 @@ def supply_list_view(request):
     return render(request, 'sitesync/supply_list.html', {
         'supplies': supplies,
         'site_id': site_id,
+    })
+
+
+def settings_panel_view(request):
+    """Display and update runtime configuration settings."""
+    settings_instance = SettingsConfigService.get_settings()
+
+    if request.method == 'POST':
+        form = SettingsForm(request.POST, instance=settings_instance)
+        if form.is_valid():
+            SettingsConfigService.update_settings(form)
+    else:
+        form = SettingsForm(instance=settings_instance)
+
+    return render(request, 'sitesync/settings_panel.html', {
+        'form': form,
+        'settings': settings_instance,
+        'save_success': request.method == 'POST' and form.is_valid(),
     })
 
 

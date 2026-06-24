@@ -1,0 +1,152 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Settings</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 2rem;
+            font-family: Arial, sans-serif;
+            background: #f7f8fb;
+            color: #111827;
+        }
+        .page {
+            max-width: 52rem;
+            margin: 0 auto;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+        }
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+        .topbar a {
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .notice {
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            background: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+        .field {
+            margin-bottom: 1rem;
+        }
+        label {
+            display: block;
+            margin-bottom: 0.35rem;
+            font-weight: 600;
+        }
+        input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+        }
+        .help {
+            color: #6b7280;
+            font-size: 0.85rem;
+            margin-top: 0.35rem;
+        }
+        .errors {
+            color: #b91c1c;
+            font-size: 0.9rem;
+            margin-top: 0.35rem;
+        }
+        .actions {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            padding: 0.8rem 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #1d4ed8;
+        }
+        .summary {
+            padding: 1rem;
+            background: #f9fafb;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="topbar">
+            <div>
+                <h1>Settings</h1>
+                <p>Update Etainabl connection settings and runtime defaults.</p>
+            </div>
+            <a href="{% url 'sitesync:site_list' %}">Back to sites</a>
+        </div>
+
+        {% if save_success %}
+            <div class="notice">Settings saved successfully.</div>
+        {% endif %}
+
+        <div class="summary">
+            <strong>Current base URL:</strong> {{ settings.etainabl_api_url }}<br />
+            <strong>Current page size:</strong> {{ settings.page_size }}<br />
+            <strong>Current timeout:</strong> {{ settings.api_timeout }} seconds
+        </div>
+
+        <form id="settings-form" method="post" novalidate>
+            {% csrf_token %}
+            <div class="field">
+                <label for="id_etainabl_api_url">Etainabl API URL</label>
+                {{ form.etainabl_api_url }}
+                {% if form.etainabl_api_url.errors %}
+                    <div class="errors">{{ form.etainabl_api_url.errors|striptags }}</div>
+                {% else %}
+                    <div class="help">Base URL used by the sync service.</div>
+                {% endif %}
+            </div>
+            <div class="field">
+                <label for="id_page_size">Page size</label>
+                {{ form.page_size }}
+                {% if form.page_size.errors %}
+                    <div class="errors">{{ form.page_size.errors|striptags }}</div>
+                {% else %}
+                    <div class="help">Number of records fetched per request.</div>
+                {% endif %}
+            </div>
+            <div class="field">
+                <label for="id_api_timeout">API timeout</label>
+                {{ form.api_timeout }}
+                {% if form.api_timeout.errors %}
+                    <div class="errors">{{ form.api_timeout.errors|striptags }}</div>
+                {% else %}
+                    <div class="help">Timeout in seconds for Etainabl requests.</div>
+                {% endif %}
+            </div>
+            <div class="actions">
+                <button type="submit">Save settings</button>
+            </div>
+        </form>
+    </div>
+
+    <script src="{% static 'sitesync/js/settings.js' %}"></script>
+</body>
+</html>

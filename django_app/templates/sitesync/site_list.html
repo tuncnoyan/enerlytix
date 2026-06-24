@@ -27,6 +27,17 @@
             margin: 0.25rem 0;
             color: #4b5563;
         }
+        .header-links {
+            margin-top: 0.75rem;
+        }
+        .header-links a {
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .header-links a:hover {
+            text-decoration: underline;
+        }
         .search-bar {
             margin-top: 1rem;
             display: flex;
@@ -168,6 +179,9 @@
     <div class="header">
         <h1>Site & Supply Dashboard</h1>
         <p>Select a site to view its associated supplies and details.</p>
+        <div class="header-links">
+            <a href="{% url 'sitesync:settings_panel' %}">Settings</a>
+        </div>
         <div class="search-bar">
             <input id="site-search" type="search" value="{{ query|default_if_none:'' }}" placeholder="Filter sites..." aria-label="Search sites" />
             <button type="button" onclick="document.getElementById('site-search').value=''; filterSites();">Clear</button>

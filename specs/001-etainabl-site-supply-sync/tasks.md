@@ -142,21 +142,21 @@
 
 ### Tests for User Story 4
 
-- [ ] T042 [P] Contract test for settings endpoint in `tests/contract/test_settings_endpoints.py`
-- [ ] T043 [P] Unit test for settings model save/load in `tests/unit/test_settings_model.py`
-- [ ] T044 Integration test for settings page flow in `tests/integration/test_settings_view.py`
+- [x] T042 [P] Contract test for settings endpoint in `tests/contract/test_settings_endpoints.py`
+- [x] T043 [P] Unit test for settings model save/load in `tests/unit/test_settings_model.py`
+- [x] T044 Integration test for settings page flow in `tests/integration/test_settings_view.py`
 
 ### Implementation for User Story 4
 
-- [ ] T045 Create AppSettings model in `django_app/sitesync/models.py` to persist edited configuration values (api_url, page_size, timeout, etc.)
-- [ ] T046 Create settings serializer and API view in `django_app/sitesync/serializers.py` and `django_app/sitesync/views.py`
-- [ ] T047 Create URL routes for GET and POST settings in `django_app/sitesync/urls.py`
-- [ ] T048 Create settings configuration loader in `django_app/sitesync/services/config_service.py` to load from `.env` in dev/test and from AppSettings model
-- [ ] T049 Create settings form in `django_app/sitesync/forms.py` with validation for configuration parameters
-- [ ] T050 Create settings page template in `django_app/sitesync/templates/sitesync/settings_panel.html` displaying Etainabl base URL, page sizes, timeout values
-- [ ] T051 [P] Add JavaScript for settings form submission in `django_app/static/js/settings.js`
-- [ ] T052 Add link to settings panel in site list template navigation in `django_app/sitesync/templates/sitesync/site_list.html`
-- [ ] T053 Implement settings persistence logic that saves user edits to the database in `django_app/sitesync/services/config_service.py`
+- [x] T045 Create AppSettings model in `django_app/sitesync/models.py` to persist edited configuration values (api_url, page_size, timeout, etc.)
+- [x] T046 Create settings serializer and API view in `django_app/sitesync/serializers.py` and `django_app/sitesync/views.py`
+- [x] T047 Create URL routes for GET and POST settings in `django_app/sitesync/urls.py`
+- [x] T048 Create settings configuration loader in `django_app/sitesync/services/config_service.py` to load from `.env` in dev/test and from AppSettings model
+- [x] T049 Create settings form in `django_app/sitesync/forms.py` with validation for configuration parameters
+- [x] T050 Create settings page template in `django_app/sitesync/templates/sitesync/settings_panel.html` displaying Etainabl base URL, page sizes, timeout values
+- [x] T051 [P] Add JavaScript for settings form submission in `django_app/static/js/settings.js`
+- [x] T052 Add link to settings panel in site list template navigation in `django_app/sitesync/templates/sitesync/site_list.html`
+- [x] T053 Implement settings persistence logic that saves user edits to the database in `django_app/sitesync/services/config_service.py`
 
 **Checkpoint**: All user stories 1-4 are complete and independently functional
 
