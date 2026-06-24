@@ -35,3 +35,22 @@ class SiteListViewTest(TestCase):
         content = response.content.decode('utf-8')
         self.assertIn('Alpha Site', content)
         self.assertNotIn('Beta Site', content)
+
+    def test_site_list_view_renders_statistics(self):
+        Supply.objects.create(
+            site=self.site1,
+            external_id='supply-2',
+            name='Lighting Submeter',
+            utility_type='electricity',
+            parent_account_id='supply-1',
+        )
+
+        request = self.factory.get('/')
+        response = site_list_view(request)
+        content = response.content.decode('utf-8')
+
+        self.assertIn('Available Sites', content)
+        self.assertIn('Fiscal Meters', content)
+        self.assertIn('Submeters', content)
+        self.assertIn('>2<', content)
+        self.assertIn('>1<', content)

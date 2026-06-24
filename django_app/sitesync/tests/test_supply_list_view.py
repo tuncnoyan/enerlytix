@@ -150,3 +150,37 @@ class SupplyListViewIntegrationTest(TestCase):
         self.assertIn('Main (Fiscal)', content)
         self.assertIn('Submeter', content)
         self.assertIn('Level 1 Lighting Submeter', content)
+
+    def test_supply_list_filters_by_utility_type(self):
+        """Verify utility type filter only shows matching supplies."""
+        request = self.factory.get('/', {'site_id': self.site1.id, 'utility_type': 'gas'})
+        response = supply_list_view(request)
+        content = response.content.decode('utf-8')
+
+        self.assertIn('Primary Gas Meter', content)
+        self.assertNotIn('Main Electricity Meter', content)
+        self.assertNotIn('Water Supply', content)
+        self.assertIn('Site: <strong>Main Distribution Center</strong>', content)
+        self.assertIn('Utility: <strong>Gas</strong>', content)
+        self.assertIn('Meter Type: <strong>All</strong>', content)
+
+    def test_supply_list_filters_by_meter_type_sub_and_updates_counts(self):
+        """Verify submeter filter applies and reports filtered fiscal/sub counts."""
+        Supply.objects.create(
+            site=self.site1,
+            external_id='supply-elec-sub-002',
+            name='Ground Floor Lighting Submeter',
+            utility_type='electricity',
+            device_id='meter-elec-sub-002',
+            parent_account_id='supply-elec-001',
+        )
+
+        request = self.factory.get('/', {'site_id': self.site1.id, 'meter_type': 'sub'})
+        response = supply_list_view(request)
+        content = response.content.decode('utf-8')
+
+        self.assertIn('Ground Floor Lighting Submeter', content)
+        self.assertIn('data-fiscal-count="0"', content)
+        self.assertIn('data-submeter-count="1"', content)
+        self.assertIn('Meter Type: <strong>Submeter</strong>', content)
+        self.assertNotIn('Main (Fiscal)', content)

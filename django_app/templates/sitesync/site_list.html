@@ -208,6 +208,36 @@
             color: #92400e;
             border: 1px solid #fcd34d;
         }
+        .stats-row {
+            margin-top: 1rem;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.75rem;
+        }
+        @media (max-width: 1024px) {
+            .stats-row {
+                grid-template-columns: 1fr;
+            }
+        }
+        .stats-card {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.6rem;
+            padding: 0.75rem 1rem;
+        }
+        .stats-label {
+            color: #4b5563;
+            font-size: 0.82rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            margin-bottom: 0.2rem;
+        }
+        .stats-value {
+            color: #111827;
+            font-weight: 700;
+            font-size: 1.25rem;
+            line-height: 1.2;
+        }
     </style>
 </head>
 <body>
@@ -231,6 +261,21 @@
         <div class="search-bar">
             <input id="site-search" type="search" value="{{ query|default_if_none:'' }}" placeholder="Filter sites..." aria-label="Search sites" />
             <button type="button" onclick="document.getElementById('site-search').value=''; filterSites();">Clear</button>
+        </div>
+
+        <div class="stats-row" aria-label="portfolio statistics">
+            <div class="stats-card">
+                <div class="stats-label">Available Sites</div>
+                <div class="stats-value" id="stats-site-count" data-default="{{ site_count }}">{{ site_count }}</div>
+            </div>
+            <div class="stats-card">
+                <div class="stats-label">Fiscal Meters</div>
+                <div class="stats-value" id="stats-fiscal-count" data-default="{{ fiscal_meter_count }}">{{ fiscal_meter_count }}</div>
+            </div>
+            <div class="stats-card">
+                <div class="stats-label">Submeters</div>
+                <div class="stats-value" id="stats-submeter-count" data-default="{{ submeter_count }}">{{ submeter_count }}</div>
+            </div>
         </div>
     </div>
 

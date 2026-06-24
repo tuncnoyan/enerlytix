@@ -21,6 +21,16 @@ logger = logging.getLogger(__name__)
 
 def site_list_view(request):
     query = request.GET.get('q', '').strip()
+    all_sites_qs = Site.objects.all()
+    all_supplies_qs = Supply.objects.all()
+    site_count = all_sites_qs.count()
+    fiscal_meter_count = all_supplies_qs.filter(
+        Q(parent_account_id__isnull=True) | Q(parent_account_id='')
+    ).count()
+    submeter_count = all_supplies_qs.exclude(
+        Q(parent_account_id__isnull=True) | Q(parent_account_id='')
+    ).count()
+
     sites = Site.objects.prefetch_related('supplies').order_by('name')
     if query:
         logger.info("Filtering sites by query: %s", query)
@@ -34,23 +44,74 @@ def site_list_view(request):
     return render(request, 'sitesync/site_list.html', {
         'sites': sites,
         'query': query,
+        'site_count': site_count,
+        'fiscal_meter_count': fiscal_meter_count,
+        'submeter_count': submeter_count,
     })
 
 
 def supply_list_view(request):
     """Display supplies for a selected site."""
     site_id = request.GET.get('site_id')
+    utility_type = (request.GET.get('utility_type') or 'all').strip().lower()
+    meter_type = (request.GET.get('meter_type') or 'all').strip().lower()
     supplies = []
     fiscal_supplies = []
     orphan_submeters = []
+    filtered_fiscal_count = 0
+    filtered_submeter_count = 0
+    selected_site_count = 0
+    selected_site_name = ''
+
+    utility_label_map = {
+        'all': 'All',
+        'electricity': 'Electricity',
+        'gas': 'Gas',
+        'water': 'Water',
+        'other': 'Other',
+    }
+    meter_label_map = {
+        'all': 'All',
+        'fiscal': 'Fiscal',
+        'sub': 'Submeter',
+    }
     
     if site_id:
         try:
-            supplies = Supply.objects.filter(site_id=int(site_id)).order_by('name')
+            selected_site_id = int(site_id)
+            selected_site_count = 1
+
+            selected_site = Site.objects.filter(id=selected_site_id).first()
+            selected_site_name = selected_site.name if selected_site else str(site_id)
+
+            site_supplies = Supply.objects.filter(site_id=selected_site_id)
+            filtered_supplies = site_supplies
+
+            if utility_type in {'electricity', 'gas', 'water', 'other'}:
+                filtered_supplies = filtered_supplies.filter(utility_type=utility_type)
+
+            if meter_type == 'fiscal':
+                filtered_supplies = filtered_supplies.filter(
+                    Q(parent_account_id__isnull=True) | Q(parent_account_id='')
+                )
+            elif meter_type == 'sub':
+                filtered_supplies = filtered_supplies.exclude(
+                    Q(parent_account_id__isnull=True) | Q(parent_account_id='')
+                )
+
+            supplies = filtered_supplies.order_by('name')
             logger.info("Loaded supplies for site_id=%s", site_id)
 
-            supplies_by_external_id = {
-                supply.external_id: supply for supply in supplies
+            filtered_fiscal_count = supplies.filter(
+                Q(parent_account_id__isnull=True) | Q(parent_account_id='')
+            ).count()
+            filtered_submeter_count = supplies.exclude(
+                Q(parent_account_id__isnull=True) | Q(parent_account_id='')
+            ).count()
+
+            all_site_supplies = list(site_supplies.order_by('name'))
+            all_supplies_by_external_id = {
+                supply.external_id: supply for supply in all_site_supplies
             }
             children_by_parent = {}
             for supply in supplies:
@@ -61,13 +122,30 @@ def supply_list_view(request):
             for submeter_list in children_by_parent.values():
                 submeter_list.sort(key=lambda item: (item.name or '').lower())
 
-            for supply in supplies:
-                parent_id = (supply.parent_account_id or '').strip()
-                if not parent_id:
+            if meter_type == 'sub':
+                fiscal_seen = set()
+                for submeter in supplies:
+                    parent_id = (submeter.parent_account_id or '').strip()
+                    if not parent_id:
+                        continue
+                    parent_supply = all_supplies_by_external_id.get(parent_id)
+                    if not parent_supply:
+                        continue
+                    if parent_supply.external_id in fiscal_seen:
+                        continue
+                    fiscal_seen.add(parent_supply.external_id)
                     fiscal_supplies.append({
-                        'supply': supply,
-                        'submeters': children_by_parent.get(supply.external_id, []),
+                        'supply': parent_supply,
+                        'submeters': children_by_parent.get(parent_supply.external_id, []),
                     })
+            else:
+                for supply in supplies:
+                    parent_id = (supply.parent_account_id or '').strip()
+                    if not parent_id:
+                        fiscal_supplies.append({
+                            'supply': supply,
+                            'submeters': [] if meter_type == 'fiscal' else children_by_parent.get(supply.external_id, []),
+                        })
 
             fiscal_supplies.sort(key=lambda item: (item['supply'].name or '').lower())
 
@@ -77,7 +155,7 @@ def supply_list_view(request):
                 supply
                 for supply in supplies
                 if (supply.parent_account_id or '').strip()
-                and (supply.parent_account_id or '').strip() not in supplies_by_external_id
+                and (supply.parent_account_id or '').strip() not in all_supplies_by_external_id
             ]
             orphan_submeters.sort(key=lambda item: (item.name or '').lower())
         except (ValueError, TypeError):
@@ -89,6 +167,14 @@ def supply_list_view(request):
         'fiscal_supplies': fiscal_supplies,
         'orphan_submeters': orphan_submeters,
         'site_id': site_id,
+        'selected_site_count': selected_site_count,
+        'selected_site_name': selected_site_name,
+        'filtered_fiscal_count': filtered_fiscal_count,
+        'filtered_submeter_count': filtered_submeter_count,
+        'selected_utility_type': utility_type,
+        'selected_meter_type': meter_type,
+        'selected_utility_label': utility_label_map.get(utility_type, 'All'),
+        'selected_meter_label': meter_label_map.get(meter_type, 'All'),
     })
 
 
