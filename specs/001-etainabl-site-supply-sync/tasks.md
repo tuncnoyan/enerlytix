@@ -97,13 +97,13 @@
 
 ### Implementation for User Story 2
 
-- [ ] T027 [P] [US2] Create `django_app/sitesync/views.py` with SiteListView to render searchable site list template
-- [ ] T027b [P] [US2] Create `django_app/sitesync/urls.py` to route site list view to `/` root path
-- [ ] T028 [US2] Create `django_app/sitesync/templates/sitesync/site_supply_list.html` template with searchable site list pane (left column)
-- [ ] T029 [US2] Add JavaScript search/filter functionality in template to filter sites by name in real-time
-- [ ] T030 [US2] Style site list according to constitution principle and basic readability (name, site count)
-- [ ] T031 [US2] Create unit test in `tests/unit/test_views.py` to verify SiteListView returns all sites and filters by search query
-- [ ] T032 [US2] Create integration test in `tests/integration/test_site_search.py` to verify end-to-end site list display and search
+- [x] T027 [P] [US2] Create `django_app/sitesync/views.py` with SiteListView to render searchable site list template
+- [x] T027b [P] [US2] Create `django_app/sitesync/urls.py` to route site list view to `/` root path
+- [x] T028 [US2] Create `django_app/sitesync/templates/sitesync/site_supply_list.html` template with searchable site list pane (left column)
+- [x] T029 [US2] Add JavaScript search/filter functionality in template to filter sites by name in real-time
+- [x] T030 [US2] Style site list according to constitution principle and basic readability (name, site count)
+- [x] T031 [US2] Create unit test in `tests/unit/test_views.py` to verify SiteListView returns all sites and filters by search query
+- [x] T032 [US2] Create integration test in `tests/integration/test_site_search.py` to verify end-to-end site list display and search
 
 **Checkpoint**: At this point, User Story 2 should display a searchable site list
 

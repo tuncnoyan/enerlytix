@@ -1,0 +1,147 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Site list</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css" integrity="sha512-NhSCkB+YbzPh/M+QqUFCrj9+JfIUq8+HQ/Ju1qoZYY2+ZRi+R0QO7Iy+I6gk5beO8e4P5ZfReVIjz7XQeS+eUw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 1.5rem;
+            background-color: #f7f8fb;
+            color: #111827;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 1.75rem;
+        }
+        .search-bar {
+            width: min(100%, 28rem);
+            display: flex;
+            gap: 0.5rem;
+        }
+        .search-bar input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+        }
+        .search-bar button {
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .search-bar button:hover {
+            background-color: #1d4ed8;
+        }
+        .summary {
+            margin-top: 0.5rem;
+            color: #4b5563;
+        }
+        .site-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+            gap: 1rem;
+        }
+        .site-card {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+            padding: 1rem;
+        }
+        .site-card h2 {
+            margin: 0 0 0.5rem;
+            font-size: 1.25rem;
+            color: #111827;
+        }
+        .site-card p {
+            margin: 0.35rem 0;
+            line-height: 1.5;
+            color: #4b5563;
+        }
+        .site-card .tag {
+            display: inline-block;
+            margin-top: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.85rem;
+            color: #111827;
+            background: #e0f2fe;
+            border-radius: 9999px;
+        }
+        .empty-state {
+            padding: 2rem;
+            background: white;
+            border: 1px dashed #d1d5db;
+            border-radius: 0.75rem;
+            text-align: center;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>Searchable Site List</h1>
+            <p class="summary">Browse all sites and supplies synced from Etainabl. Use the search box to filter by site name, city, or supply reference.</p>
+        </div>
+        <div class="search-bar">
+            <input id="site-search" type="search" value="{{ query|default_if_none:'' }}" placeholder="Type to filter sites by name, external ID, description, or supply name" aria-label="Search sites" />
+            <button type="button" onclick="document.getElementById('site-search').value=''; filterSites();">Clear</button>
+        </div>
+    </div>
+
+    {% if sites %}
+        <div class="site-grid" id="site-grid">
+            {% for site in sites %}
+                <article class="site-card">
+                    <h2>{{ site.name }}</h2>
+                    {% if site.description %}<p>{{ site.description }}</p>{% endif %}
+                    <p><strong>Etainabl external ID:</strong> {{ site.external_id }}</p>
+
+                    {% if site.supplies.exists %}
+                        <p><strong>Supplies:</strong></p>
+                        <ul>
+                            {% for supply in site.supplies.all %}
+                                <li>
+                                    <strong>{{ supply.name }}</strong>
+                                    {% if supply.utility_type %} — {{ supply.get_utility_type_display }}{% endif %}
+                                    {% if supply.device_id %} (Device: {{ supply.device_id }}){% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p>No supplies attached to this site.</p>
+                    {% endif %}
+
+                    <div class="tag">Last updated: {{ site.updated_at|date:'M d, Y H:i' }}</div>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state" id="empty-state">
+            {% if query %}
+                <p>No sites match your search for “{{ query }}”. Try a broader term.</p>
+            {% else %}
+                <p>No sites are available yet. Run the Etainabl sync to populate site data.</p>
+            {% endif %}
+        </div>
+    {% endif %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.8.3/modernizr.min.js" integrity="sha512-xG5zfYcQ4WGNiXfMKakgR2cf0QZUMprh3Nn6sVFmw2WwbN3yg5Q3kA/97N3ehpM2ia7x2OnEjmz4vnHem5q0ng==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="{% static 'sitesync/js/site_search.js' %}"></script>
+</body>
+</html>

@@ -8,5 +8,5 @@ from . import views
 app_name = 'sitesync'
 
 urlpatterns = [
-    # Placeholder URLs - will be populated during implementation
+    path('', views.site_list_view, name='site_list'),
 ]
