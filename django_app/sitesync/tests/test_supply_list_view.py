@@ -131,3 +131,22 @@ class SupplyListViewIntegrationTest(TestCase):
         content = response.content.decode('utf-8')
         
         self.assertIn('No supplies', content)
+
+    def test_supply_list_groups_submeters_under_fiscal_meter(self):
+        """Verify fiscal meters are shown with nested submeters."""
+        Supply.objects.create(
+            site=self.site1,
+            external_id='supply-elec-sub-001',
+            name='Level 1 Lighting Submeter',
+            utility_type='electricity',
+            device_id='meter-elec-sub-001',
+            parent_account_id='supply-elec-001',
+        )
+
+        request = self.factory.get('/', {'site_id': self.site1.id})
+        response = supply_list_view(request)
+        content = response.content.decode('utf-8')
+
+        self.assertIn('Main (Fiscal)', content)
+        self.assertIn('Submeter', content)
+        self.assertIn('Level 1 Lighting Submeter', content)

@@ -33,7 +33,7 @@ class SupplyEndpointContractTest(TestCase):
         # Verify required fields exist
         required_fields = [
             'id', 'external_id', 'name', 'utility_type',
-            'utility_type_display', 'device_id', 'created_at', 'updated_at'
+            'utility_type_display', 'device_id', 'parent_account_id', 'created_at', 'updated_at'
         ]
         for field in required_fields:
             self.assertIn(field, data)
@@ -49,6 +49,7 @@ class SupplyEndpointContractTest(TestCase):
         self.assertIsInstance(data['utility_type'], str)
         self.assertIsInstance(data['utility_type_display'], str)
         self.assertIsInstance(data['device_id'], str)
+        self.assertIn('parent_account_id', data)
 
     def test_supply_serializer_field_values(self):
         """Verify serialized field values match model data."""
@@ -60,6 +61,7 @@ class SupplyEndpointContractTest(TestCase):
         self.assertEqual(data['utility_type'], 'electricity')
         self.assertEqual(data['utility_type_display'], 'Electricity')
         self.assertEqual(data['device_id'], 'device-123')
+        self.assertIsNone(data['parent_account_id'])
 
     def test_supply_list_contract_multiple_supplies(self):
         """Verify serializer handles multiple supplies correctly."""

@@ -424,11 +424,22 @@ class EtainaibleSyncService:
                 or account_data.get('assetId')
                 or account_data.get('asset')
             )
+            parent_account_id = (
+                account_data.get('parentAccountId')
+                or account_data.get('parent_account_id')
+                or account_data.get('parentAccount')
+            )
             if isinstance(site_external_id, dict):
                 site_external_id = (
                     site_external_id.get('id')
                     or site_external_id.get('_id')
                     or site_external_id.get('assetId')
+                )
+            if isinstance(parent_account_id, dict):
+                parent_account_id = (
+                    parent_account_id.get('id')
+                    or parent_account_id.get('_id')
+                    or parent_account_id.get('accountId')
                 )
             
             if not external_id or not site_external_id:
@@ -471,6 +482,7 @@ class EtainaibleSyncService:
                     'name': str(account_data.get('name') or account_data.get('label') or 'Unknown'),
                     'utility_type': utility_type,
                     'device_id': device_id,
+                    'parent_account_id': str(parent_account_id) if parent_account_id else None,
                 }
             )
             

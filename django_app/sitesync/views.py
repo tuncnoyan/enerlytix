@@ -41,17 +41,53 @@ def supply_list_view(request):
     """Display supplies for a selected site."""
     site_id = request.GET.get('site_id')
     supplies = []
+    fiscal_supplies = []
+    orphan_submeters = []
     
     if site_id:
         try:
             supplies = Supply.objects.filter(site_id=int(site_id)).order_by('name')
             logger.info("Loaded supplies for site_id=%s", site_id)
+
+            supplies_by_external_id = {
+                supply.external_id: supply for supply in supplies
+            }
+            children_by_parent = {}
+            for supply in supplies:
+                parent_id = (supply.parent_account_id or '').strip()
+                if parent_id:
+                    children_by_parent.setdefault(parent_id, []).append(supply)
+
+            for submeter_list in children_by_parent.values():
+                submeter_list.sort(key=lambda item: (item.name or '').lower())
+
+            for supply in supplies:
+                parent_id = (supply.parent_account_id or '').strip()
+                if not parent_id:
+                    fiscal_supplies.append({
+                        'supply': supply,
+                        'submeters': children_by_parent.get(supply.external_id, []),
+                    })
+
+            fiscal_supplies.sort(key=lambda item: (item['supply'].name or '').lower())
+
+            # Keep visibility for malformed imports where parentAccountId points to
+            # an account outside the selected site.
+            orphan_submeters = [
+                supply
+                for supply in supplies
+                if (supply.parent_account_id or '').strip()
+                and (supply.parent_account_id or '').strip() not in supplies_by_external_id
+            ]
+            orphan_submeters.sort(key=lambda item: (item.name or '').lower())
         except (ValueError, TypeError):
             logger.warning("Invalid site_id provided to supply_list_view: %s", site_id)
             supplies = []
     
     return render(request, 'sitesync/supply_list.html', {
         'supplies': supplies,
+        'fiscal_supplies': fiscal_supplies,
+        'orphan_submeters': orphan_submeters,
         'site_id': site_id,
     })
 

@@ -1,18 +1,58 @@
 {% if supplies %}
     <div class="supply-list">
         <h3>Supplies for This Site</h3>
-        <ul class="supply-items">
-            {% for supply in supplies %}
-                <li class="supply-item">
-                    <div class="supply-name"><strong>{{ supply.name }}</strong></div>
-                    <div class="supply-type">{{ supply.get_utility_type_display }}</div>
-                    {% if supply.device_id %}
-                        <div class="supply-device">Device: {{ supply.device_id }}</div>
-                    {% endif %}
-                    <div class="supply-id small">ID: {{ supply.external_id }}</div>
-                </li>
-            {% endfor %}
-        </ul>
+        {% if fiscal_supplies %}
+            <ul class="supply-items">
+                {% for fiscal in fiscal_supplies %}
+                    <li class="supply-item">
+                        <div class="supply-name"><strong>{{ fiscal.supply.name }}</strong></div>
+                        <div class="supply-type">{{ fiscal.supply.get_utility_type_display }} • Main (Fiscal)</div>
+                        {% if fiscal.supply.device_id %}
+                            <div class="supply-device">Device: {{ fiscal.supply.device_id }}</div>
+                        {% endif %}
+                        <div class="supply-id small">ID: {{ fiscal.supply.external_id }}</div>
+
+                        {% if fiscal.submeters %}
+                            <ul class="supply-items" style="margin-top: 0.6rem; padding-left: 1rem; border-left: 2px solid #dbeafe;">
+                                {% for submeter in fiscal.submeters %}
+                                    <li class="supply-item" style="border-left-color: #0f766e; background: #f0fdf4;">
+                                        <div class="supply-name"><strong>{{ submeter.name }}</strong></div>
+                                        <div class="supply-type">{{ submeter.get_utility_type_display }} • Submeter</div>
+                                        {% if submeter.device_id %}
+                                            <div class="supply-device">Device: {{ submeter.device_id }}</div>
+                                        {% endif %}
+                                        <div class="supply-id small">ID: {{ submeter.external_id }}</div>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <div class="supply-empty">
+                <p>No main (fiscal) meters found for this site.</p>
+            </div>
+        {% endif %}
+
+        {% if orphan_submeters %}
+            <div class="supply-empty" style="margin-top: 0.8rem;">
+                <p>Submeters with missing parent fiscal meter for this site:</p>
+            </div>
+            <ul class="supply-items">
+                {% for submeter in orphan_submeters %}
+                    <li class="supply-item" style="border-left-color: #f59e0b;">
+                        <div class="supply-name"><strong>{{ submeter.name }}</strong></div>
+                        <div class="supply-type">{{ submeter.get_utility_type_display }} • Submeter</div>
+                        {% if submeter.device_id %}
+                            <div class="supply-device">Device: {{ submeter.device_id }}</div>
+                        {% endif %}
+                        <div class="supply-id small">ID: {{ submeter.external_id }}</div>
+                        <div class="supply-id small">Parent ID: {{ submeter.parent_account_id }}</div>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
     </div>
 {% else %}
     <div class="supply-empty">

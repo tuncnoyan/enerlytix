@@ -22,6 +22,7 @@ class SupplySerializer(serializers.ModelSerializer):
             'utility_type',
             'utility_type_display',
             'device_id',
+            'parent_account_id',
             'created_at',
             'updated_at',
         ]

@@ -79,6 +79,13 @@ class Supply(models.Model):
         null=True,
         help_text="Device ID (meter/sensor identifier)"
     )
+    parent_account_id = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        db_index=True,
+        help_text="Parent fiscal meter account ID from Etainabl parentAccountId"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -87,6 +94,7 @@ class Supply(models.Model):
         indexes = [
             models.Index(fields=['external_id']),
             models.Index(fields=['site', 'name']),
+            models.Index(fields=['site', 'parent_account_id']),
         ]
 
     def __str__(self):

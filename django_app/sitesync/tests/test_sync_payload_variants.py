@@ -38,6 +38,7 @@ class SyncPayloadVariantsTest(TestCase):
                             'name': 'Variant Supply',
                             'type': 'electricity',
                             'deviceId': 'device-variant',
+                            'parentAccountId': 'fiscal-001',
                         }
                     ],
                     'total': 1,
@@ -59,3 +60,4 @@ class SyncPayloadVariantsTest(TestCase):
         self.assertEqual(Supply.objects.count(), 1)
         self.assertEqual(Site.objects.first().external_id, 'site-abc')
         self.assertEqual(Supply.objects.first().external_id, 'acc-abc')
+        self.assertEqual(Supply.objects.first().parent_account_id, 'fiscal-001')
