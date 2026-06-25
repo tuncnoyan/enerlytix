@@ -23,13 +23,13 @@ services:
       context: ../../
       dockerfile: django_app/docker/Dockerfile
     container_name: enerlytix_web
-    command: python manage.py runserver 0.0.0.0:8000
+    command: python manage.py runserver 0.0.0.0:8008
     env_file:
       - ../../.env
     volumes:
       - ../../django_app:/app
     ports:
-      - "8000:8000"
+      - "8008:8008"
     environment:
       DEBUG: "True"
       DATABASE_URL: postgresql://enerlytix_user:enerlytix_password@db:5432/enerlytix

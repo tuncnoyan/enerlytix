@@ -30,7 +30,7 @@ RUN mkdir -p /app/static /app/media /app/logs
 RUN python manage.py collectstatic --noinput 2>/dev/null || true
 
 # Expose port
-EXPOSE 8000
+EXPOSE 8008
 
 # Run gunicorn
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8008"]
