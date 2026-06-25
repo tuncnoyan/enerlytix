@@ -4,147 +4,256 @@
 <head>
     <meta charset="UTF-8">
     <title>Settings</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --cxg-bg-10: #F2F2F3;
+            --cxg-bg-25: #DEE0E3;
+            --cxg-primary-430: #7C878E;
+            --cxg-primary-432: #333F48;
+            --cxg-highlight-376: #7AB800;
+            --cxg-highlight-349: #00693C;
+            --cxg-border: #C6D0D7;
+            --cxg-white: #FFFFFF;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             margin: 0;
-            padding: 2rem;
-            font-family: Arial, sans-serif;
-            background: #f7f8fb;
-            color: #111827;
+            padding: 0;
+            font-family: 'Manrope', 'Segoe UI', sans-serif;
+            background: var(--cxg-bg-10);
+            color: var(--cxg-primary-432);
         }
-        .page {
-            max-width: 52rem;
-            margin: 0 auto;
-            background: white;
-            border: 1px solid #e5e7eb;
-            border-radius: 0.75rem;
-            padding: 1.5rem;
-            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
-        }
+
         .topbar {
             display: flex;
             justify-content: space-between;
             align-items: center;
             gap: 1rem;
-            flex-wrap: wrap;
-            margin-bottom: 1rem;
+            padding: 0.85rem 1.4rem;
+            border-bottom: 1px solid var(--cxg-border);
+            background: var(--cxg-white);
+            box-shadow: 0 1px 0 rgba(51, 63, 72, 0.06);
         }
-        .topbar a {
-            color: #2563eb;
+
+        .brand {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: var(--cxg-primary-432);
+            letter-spacing: 0.02em;
+        }
+
+        .topbar-links {
+            display: flex;
+            align-items: center;
+            gap: 1.1rem;
+        }
+
+        .topbar-links a {
+            color: var(--cxg-primary-430);
             text-decoration: none;
+            font-size: 0.78rem;
+            font-weight: 600;
+            padding: 0.3rem 0.15rem;
+            border-bottom: 2px solid transparent;
+            transition: color 0.2s ease, border-color 0.2s ease;
+        }
+
+        .topbar-links a:hover {
+            color: var(--cxg-highlight-349);
+        }
+
+        .topbar-links a.is-active {
+            color: var(--cxg-primary-432);
+            border-bottom-color: var(--cxg-primary-430);
+        }
+
+        .content-wrap {
+            max-width: 58rem;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        .page {
+            background: var(--cxg-white);
+            border: 1px solid var(--cxg-border);
+            border-radius: 0.45rem;
+            padding: 1rem;
+            box-shadow: 0 1px 2px rgba(51, 63, 72, 0.08);
+        }
+
+        .page h1 {
+            margin: 0;
+            font-size: 1.42rem;
+            font-weight: 800;
+            color: var(--cxg-primary-432);
+        }
+
+        .page p {
+            margin: 0.25rem 0 0;
+            color: #5b7080;
+            font-size: 0.86rem;
+        }
+
+        .notice {
+            padding: 0.6rem 0.8rem;
+            border-radius: 0.35rem;
+            margin-bottom: 1rem;
+            background: #cdffe9;
+            color: var(--cxg-highlight-349);
+            border: 1px solid #9affd3;
+            font-size: 0.83rem;
             font-weight: 600;
         }
-        .notice {
-            padding: 0.75rem 1rem;
-            border-radius: 0.5rem;
-            margin-bottom: 1rem;
-            background: #ecfdf5;
-            color: #065f46;
-            border: 1px solid #a7f3d0;
-        }
+
         .field {
-            margin-bottom: 1rem;
+            margin-bottom: 0.9rem;
         }
+
         label {
             display: block;
-            margin-bottom: 0.35rem;
+            margin-bottom: 0.28rem;
             font-weight: 600;
+            font-size: 0.8rem;
+            color: #5b7080;
         }
+
         input {
             width: 100%;
-            padding: 0.75rem 1rem;
-            border: 1px solid #d1d5db;
-            border-radius: 0.5rem;
-            font-size: 1rem;
+            padding: 0.55rem 0.7rem;
+            border: 1px solid var(--cxg-border);
+            border-radius: 0.3rem;
+            font-size: 0.86rem;
+            color: var(--cxg-primary-432);
+            background: var(--cxg-white);
         }
+
         .help {
-            color: #6b7280;
-            font-size: 0.85rem;
-            margin-top: 0.35rem;
+            color: var(--cxg-primary-430);
+            font-size: 0.76rem;
+            margin-top: 0.22rem;
         }
+
         .errors {
             color: #b91c1c;
-            font-size: 0.9rem;
-            margin-top: 0.35rem;
+            font-size: 0.78rem;
+            margin-top: 0.22rem;
         }
+
         .actions {
             display: flex;
-            gap: 0.75rem;
+            gap: 0.55rem;
             align-items: center;
         }
+
         button {
-            background: #2563eb;
-            color: white;
+            background: var(--cxg-highlight-376);
+            color: var(--cxg-primary-432);
             border: none;
-            border-radius: 0.5rem;
-            padding: 0.8rem 1.2rem;
+            border-radius: 0.3rem;
+            padding: 0.55rem 0.85rem;
             font-weight: 600;
+            font-size: 0.82rem;
             cursor: pointer;
         }
+
         button:hover {
-            background: #1d4ed8;
+            background: #96e000;
         }
+
         .summary {
-            padding: 1rem;
-            background: #f9fafb;
-            border-radius: 0.5rem;
+            padding: 0.75rem 0.8rem;
+            background: #f7f8f9;
+            border: 1px solid var(--cxg-border);
+            border-top: 2px solid var(--cxg-highlight-376);
+            border-radius: 0.35rem;
             margin-bottom: 1rem;
+            font-size: 0.8rem;
+            color: #5b7080;
+            line-height: 1.6;
+        }
+
+        @media (max-width: 760px) {
+            .topbar {
+                padding: 0.8rem 0.95rem;
+            }
+
+            .content-wrap {
+                padding: 0.8rem;
+            }
+
+            .page {
+                padding: 0.8rem;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="page">
-        <div class="topbar">
+    <div class="topbar">
+        <div class="brand">Enerlytix</div>
+        <div class="topbar-links">
+            <a href="{% url 'sitesync:site_list' %}">Dashboard</a>
+            <a href="{% url 'sitesync:settings_panel' %}" class="is-active">Settings</a>
+        </div>
+    </div>
+
+    <div class="content-wrap">
+        <div class="page">
             <div>
                 <h1>Settings</h1>
                 <p>Update Etainabl connection settings and runtime defaults.</p>
             </div>
-            <a href="{% url 'sitesync:site_list' %}">Back to sites</a>
+
+            {% if save_success %}
+                <div class="notice">Settings saved successfully.</div>
+            {% endif %}
+
+            <div class="summary">
+                <strong>Current base URL:</strong> {{ settings.etainabl_api_url }}<br />
+                <strong>Current page size:</strong> {{ settings.page_size }}<br />
+                <strong>Current timeout:</strong> {{ settings.api_timeout }} seconds
+            </div>
+
+            <form id="settings-form" method="post" novalidate>
+                {% csrf_token %}
+                <div class="field">
+                    <label for="id_etainabl_api_url">Etainabl API URL</label>
+                    {{ form.etainabl_api_url }}
+                    {% if form.etainabl_api_url.errors %}
+                        <div class="errors">{{ form.etainabl_api_url.errors|striptags }}</div>
+                    {% else %}
+                        <div class="help">Base URL used by the sync service.</div>
+                    {% endif %}
+                </div>
+                <div class="field">
+                    <label for="id_page_size">Page size</label>
+                    {{ form.page_size }}
+                    {% if form.page_size.errors %}
+                        <div class="errors">{{ form.page_size.errors|striptags }}</div>
+                    {% else %}
+                        <div class="help">Number of records fetched per request.</div>
+                    {% endif %}
+                </div>
+                <div class="field">
+                    <label for="id_api_timeout">API timeout</label>
+                    {{ form.api_timeout }}
+                    {% if form.api_timeout.errors %}
+                        <div class="errors">{{ form.api_timeout.errors|striptags }}</div>
+                    {% else %}
+                        <div class="help">Timeout in seconds for Etainabl requests.</div>
+                    {% endif %}
+                </div>
+                <div class="actions">
+                    <button type="submit">Save settings</button>
+                </div>
+            </form>
         </div>
-
-        {% if save_success %}
-            <div class="notice">Settings saved successfully.</div>
-        {% endif %}
-
-        <div class="summary">
-            <strong>Current base URL:</strong> {{ settings.etainabl_api_url }}<br />
-            <strong>Current page size:</strong> {{ settings.page_size }}<br />
-            <strong>Current timeout:</strong> {{ settings.api_timeout }} seconds
-        </div>
-
-        <form id="settings-form" method="post" novalidate>
-            {% csrf_token %}
-            <div class="field">
-                <label for="id_etainabl_api_url">Etainabl API URL</label>
-                {{ form.etainabl_api_url }}
-                {% if form.etainabl_api_url.errors %}
-                    <div class="errors">{{ form.etainabl_api_url.errors|striptags }}</div>
-                {% else %}
-                    <div class="help">Base URL used by the sync service.</div>
-                {% endif %}
-            </div>
-            <div class="field">
-                <label for="id_page_size">Page size</label>
-                {{ form.page_size }}
-                {% if form.page_size.errors %}
-                    <div class="errors">{{ form.page_size.errors|striptags }}</div>
-                {% else %}
-                    <div class="help">Number of records fetched per request.</div>
-                {% endif %}
-            </div>
-            <div class="field">
-                <label for="id_api_timeout">API timeout</label>
-                {{ form.api_timeout }}
-                {% if form.api_timeout.errors %}
-                    <div class="errors">{{ form.api_timeout.errors|striptags }}</div>
-                {% else %}
-                    <div class="help">Timeout in seconds for Etainabl requests.</div>
-                {% endif %}
-            </div>
-            <div class="actions">
-                <button type="submit">Save settings</button>
-            </div>
-        </form>
     </div>
 
     <script src="{% static 'sitesync/js/settings.js' %}"></script>

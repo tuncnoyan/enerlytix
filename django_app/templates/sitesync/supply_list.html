@@ -7,19 +7,17 @@
      data-meter-label="{{ selected_meter_label|default:'All' }}"></div>
 
 {% if selected_site_count %}
-    <div class="supply-list" style="margin-bottom: 0.65rem;">
-        <div style="font-size: 0.85rem; color: #4b5563; background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 0.4rem; padding: 0.45rem 0.6rem;">
+    <div class="supply-summary">
             Site: <strong>{{ selected_site_name }}</strong>
             | Utility: <strong>{{ selected_utility_label }}</strong>
             | Meter Type: <strong>{{ selected_meter_label }}</strong>
-        </div>
     </div>
 
-    <div class="supply-list" style="margin-bottom: 0.9rem;">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;">
-            <label style="font-size: 0.85rem; color: #4b5563;">
+    <div class="supply-filters">
+        <div class="supply-filter-grid">
+            <label class="supply-filter-label">
                 Utility Type
-                <select id="supply-filter-utility" onchange="applySupplyFilters()" style="width: 100%; margin-top: 0.25rem; padding: 0.45rem; border: 1px solid #d1d5db; border-radius: 0.4rem;">
+                <select id="supply-filter-utility" onchange="applySupplyFilters()" class="supply-filter-select">
                     <option value="all" {% if selected_utility_type == 'all' %}selected{% endif %}>All</option>
                     <option value="electricity" {% if selected_utility_type == 'electricity' %}selected{% endif %}>Electricity</option>
                     <option value="gas" {% if selected_utility_type == 'gas' %}selected{% endif %}>Gas</option>
@@ -27,9 +25,9 @@
                     <option value="other" {% if selected_utility_type == 'other' %}selected{% endif %}>Other</option>
                 </select>
             </label>
-            <label style="font-size: 0.85rem; color: #4b5563;">
+            <label class="supply-filter-label">
                 Meter Type
-                <select id="supply-filter-meter" onchange="applySupplyFilters()" style="width: 100%; margin-top: 0.25rem; padding: 0.45rem; border: 1px solid #d1d5db; border-radius: 0.4rem;">
+                <select id="supply-filter-meter" onchange="applySupplyFilters()" class="supply-filter-select">
                     <option value="all" {% if selected_meter_type == 'all' %}selected{% endif %}>All</option>
                     <option value="fiscal" {% if selected_meter_type == 'fiscal' %}selected{% endif %}>Fiscal</option>
                     <option value="sub" {% if selected_meter_type == 'sub' %}selected{% endif %}>Submeter</option>
@@ -41,19 +39,19 @@
 
 {% if supplies %}
     <div class="supply-list">
-        <h3>Supplies for This Site</h3>
+        <h3 class="supply-section-title">Supplies for This Site</h3>
         {% if fiscal_supplies %}
             <ul class="supply-items">
                 {% for fiscal in fiscal_supplies %}
                     {% if selected_meter_type == 'sub' %}
                         {% if fiscal.submeters %}
-                            <li class="supply-item" style="border-left-color: #0f766e; background: #f0fdf4;">
-                                <div class="supply-id small" style="margin-bottom: 0.35rem;">
+                            <li class="supply-item" style="border-left-color: #00693c; background: #cdffe9;">
+                                <div class="supply-id small" style="margin-bottom: 0.35rem; color: #333f48; font-weight: 600;">
                                     Connected Fiscal Meter: {{ fiscal.supply.name }} ({{ fiscal.supply.external_id }})
                                 </div>
-                                <ul class="supply-items" style="padding-left: 0;">
+                                <ul class="supply-items" style="padding-left: 0; margin-top: 0;">
                                     {% for submeter in fiscal.submeters %}
-                                        <li class="supply-item" style="border-left-color: #0f766e; background: #f0fdf4;">
+                                        <li class="supply-item" style="border-left-color: #00693c; background: #f2f2f3;">
                                             <div class="supply-name"><strong>{{ submeter.name }}</strong></div>
                                             <div class="supply-type">{{ submeter.get_utility_type_display }} • Submeter</div>
                                             {% if submeter.device_id %}
@@ -75,9 +73,9 @@
                             <div class="supply-id small">ID: {{ fiscal.supply.external_id }}</div>
 
                             {% if fiscal.submeters %}
-                                <ul class="supply-items" style="margin-top: 0.6rem; padding-left: 1rem; border-left: 2px solid #dbeafe;">
+                                <ul class="supply-items" style="margin-top: 0.55rem; padding-left: 0.75rem; border-left: 2px solid #dee0e3;">
                                     {% for submeter in fiscal.submeters %}
-                                        <li class="supply-item" style="border-left-color: #0f766e; background: #f0fdf4;">
+                                        <li class="supply-item" style="border-left-color: #00693c; background: #f2f2f3;">
                                             <div class="supply-name"><strong>{{ submeter.name }}</strong></div>
                                             <div class="supply-type">{{ submeter.get_utility_type_display }} • Submeter</div>
                                             {% if submeter.device_id %}
@@ -99,12 +97,12 @@
         {% endif %}
 
         {% if orphan_submeters %}
-            <div class="supply-empty" style="margin-top: 0.8rem;">
+            <div class="supply-empty" style="margin-top: 0.7rem; border-color: #c9ff5c; background: #f1ffd6;">
                 <p>Submeters with missing parent fiscal meter for this site:</p>
             </div>
             <ul class="supply-items">
                 {% for submeter in orphan_submeters %}
-                    <li class="supply-item" style="border-left-color: #f59e0b;">
+                    <li class="supply-item" style="border-left-color: #7ab800; background: #f1ffd6;">
                         <div class="supply-name"><strong>{{ submeter.name }}</strong></div>
                         <div class="supply-type">{{ submeter.get_utility_type_display }} • Submeter</div>
                         {% if submeter.device_id %}

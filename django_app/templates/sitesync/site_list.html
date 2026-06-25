@@ -4,114 +4,242 @@
 <head>
     <meta charset="UTF-8">
     <title>Site & Supply Dashboard</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css" integrity="sha512-NhSCkB+YbzPh/M+QqUFCrj9+JfIUq8+HQ/Ju1qoZYY2+ZRi+R0QO7Iy+I6gk5beO8e4P5ZfReVIjz7XQeS+eUw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --cxg-bg-10: #F2F2F3;
+            --cxg-bg-25: #DEE0E3;
+            --cxg-primary-430: #7C878E;
+            --cxg-primary-432: #333F48;
+            --cxg-highlight-376: #7AB800;
+            --cxg-highlight-349: #00693C;
+            --cxg-border: #C6D0D7;
+            --cxg-white: #FFFFFF;
+        }
+
         * {
             box-sizing: border-box;
         }
+
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Manrope', 'Segoe UI', sans-serif;
             margin: 0;
-            padding: 1.5rem;
-            background-color: #f7f8fb;
-            color: #111827;
+            padding: 0;
+            background: var(--cxg-bg-10);
+            color: var(--cxg-primary-432);
         }
+
+        .page-shell {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 0.85rem 1.4rem;
+            background: var(--cxg-white);
+            border-bottom: 1px solid var(--cxg-border);
+            box-shadow: 0 1px 0 rgba(51, 63, 72, 0.06);
+        }
+
+        .brand {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--cxg-primary-432);
+            letter-spacing: 0.02em;
+        }
+
+        .topbar-links {
+            display: flex;
+            align-items: center;
+            gap: 1.1rem;
+        }
+
+        .topbar-links a {
+            color: var(--cxg-primary-430);
+            text-decoration: none;
+            font-size: 0.78rem;
+            font-weight: 600;
+            padding: 0.3rem 0.15rem;
+            border-bottom: 2px solid transparent;
+            transition: color 0.2s ease, border-color 0.2s ease;
+        }
+
+        .topbar-links a:hover {
+            color: var(--cxg-highlight-349);
+        }
+
+        .topbar-links a.is-active {
+            color: var(--cxg-primary-432);
+            border-bottom-color: var(--cxg-primary-430);
+        }
+
+        .content-wrap {
+            width: min(1400px, 100%);
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
         .header {
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem;
+            background: var(--cxg-white);
+            border: 1px solid var(--cxg-border);
+            border-radius: 0.45rem;
+            padding: 0.9rem;
+            box-shadow: 0 1px 2px rgba(51, 63, 72, 0.08);
         }
+
         .header h1 {
             margin: 0 0 0.5rem;
-            font-size: 1.75rem;
+            font-size: 1.55rem;
+            font-weight: 800;
+            color: var(--cxg-primary-432);
         }
+
         .header p {
-            margin: 0.25rem 0;
-            color: #4b5563;
+            margin: 0;
+            color: #5b7080;
+            font-size: 0.88rem;
+            font-weight: 500;
         }
-        .header-links {
-            margin-top: 0.75rem;
-        }
-        .header-links a {
-            color: #2563eb;
-            text-decoration: none;
-            font-weight: 600;
-        }
-        .header-links a:hover {
-            text-decoration: underline;
-        }
+
         .toolbar {
-            margin-top: 0.75rem;
+            margin-top: 0.9rem;
             display: flex;
             gap: 0.75rem;
             flex-wrap: wrap;
             align-items: center;
         }
+
         .toolbar form {
             margin: 0;
         }
+
         .toolbar button {
-            background-color: #0f766e;
-            color: white;
+            background: var(--cxg-highlight-376);
+            color: var(--cxg-primary-432);
             border: none;
-            border-radius: 0.5rem;
-            padding: 0.75rem 1rem;
+            border-radius: 0.35rem;
+            padding: 0.52rem 0.78rem;
             cursor: pointer;
             font-weight: 600;
+            font-size: 0.82rem;
+            box-shadow: 0 1px 0 rgba(0, 105, 60, 0.15);
         }
+
         .toolbar button:hover {
-            background-color: #115e59;
+            background: #96E000;
         }
+
+        .notice {
+            margin-top: 0.75rem;
+            padding: 0.6rem 0.8rem;
+            border-radius: 0.35rem;
+            background: #CDFFE9;
+            color: var(--cxg-highlight-349);
+            border: 1px solid #9AFFD3;
+            font-size: 0.84rem;
+            font-weight: 600;
+        }
+
+        .notice.warning {
+            background: #F1FFD6;
+            color: #5C8A00;
+            border: 1px solid #C9FF5C;
+        }
+
         .search-bar {
-            margin-top: 1rem;
+            margin-top: 0.9rem;
             display: flex;
             gap: 0.5rem;
-            width: min(100%, 28rem);
+            width: min(100%, 30rem);
         }
+
         .search-bar input {
             flex: 1;
-            padding: 0.75rem 1rem;
-            border: 1px solid #d1d5db;
-            border-radius: 0.5rem;
-            font-size: 1rem;
+            padding: 0.6rem 0.8rem;
+            border: 1px solid var(--cxg-border);
+            border-radius: 0.35rem;
+            font-size: 0.86rem;
+            color: var(--cxg-primary-432);
+            background: var(--cxg-white);
         }
+
         .search-bar button {
-            background-color: #2563eb;
-            color: white;
+            background: var(--cxg-primary-432);
+            color: var(--cxg-white);
             border: none;
-            border-radius: 0.5rem;
-            padding: 0.75rem 1rem;
+            border-radius: 0.35rem;
+            padding: 0.6rem 0.8rem;
             cursor: pointer;
             font-weight: 600;
+            font-size: 0.8rem;
         }
+
         .search-bar button:hover {
-            background-color: #1d4ed8;
+            background: #475764;
         }
+
+        .stats-row {
+            margin-top: 1rem;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.75rem;
+        }
+
+        .stats-card {
+            background: var(--cxg-white);
+            border: 1px solid var(--cxg-border);
+            border-radius: 0.35rem;
+            padding: 0.55rem 0.75rem;
+            box-shadow: 0 1px 2px rgba(51, 63, 72, 0.06);
+        }
+
+        .stats-label {
+            color: var(--cxg-primary-430);
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 0.09em;
+            margin-bottom: 0.08rem;
+            font-weight: 700;
+        }
+
+        .stats-value {
+            color: var(--cxg-primary-432);
+            font-weight: 700;
+            font-size: 1.35rem;
+            line-height: 1.2;
+        }
+
         .content-layout {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
-            margin-top: 1.5rem;
+            gap: 0.8rem;
+            margin-top: 0.7rem;
         }
-        @media (max-width: 1024px) {
-            .content-layout {
-                grid-template-columns: 1fr;
-            }
-        }
-        .site-column {
-            display: flex;
-            flex-direction: column;
-        }
+
         .site-list {
-            border: 1px solid #e5e7eb;
-            border-radius: 0.75rem;
+            border: 1px solid var(--cxg-border);
+            border-radius: 0.35rem;
             overflow: hidden;
-            background: white;
+            background: var(--cxg-white);
+            box-shadow: 0 1px 2px rgba(51, 63, 72, 0.06);
         }
+
         .site-list-header {
-            padding: 1rem;
-            background: #f3f4f6;
-            border-bottom: 1px solid #e5e7eb;
-            font-weight: 600;
+            padding: 0.75rem 0.85rem;
+            background: var(--cxg-white);
+            border-bottom: 1px solid var(--cxg-border);
+            font-weight: 700;
+            font-size: 0.92rem;
         }
+
         .site-list-controls {
             display: flex;
             justify-content: space-between;
@@ -119,269 +247,354 @@
             gap: 0.75rem;
             flex-wrap: wrap;
         }
+
         .site-list-actions {
             display: flex;
             gap: 0.5rem;
             align-items: center;
         }
+
         .site-selection-count {
-            font-size: 0.85rem;
-            color: #4b5563;
+            font-size: 0.76rem;
+            color: #5b7080;
             white-space: nowrap;
         }
+
         .site-list-actions button {
-            background: white;
-            color: #2563eb;
-            border: 1px solid #bfdbfe;
-            border-radius: 0.45rem;
-            padding: 0.4rem 0.65rem;
+            background: var(--cxg-bg-10);
+            color: var(--cxg-primary-432);
+            border: 1px solid var(--cxg-border);
+            border-radius: 0.3rem;
+            padding: 0.32rem 0.56rem;
             cursor: pointer;
-            font-size: 0.85rem;
+            font-size: 0.75rem;
             font-weight: 600;
         }
+
         .site-list-actions button:hover {
-            background: #eff6ff;
+            background: var(--cxg-bg-25);
         }
+
         .site-items {
-            max-height: 70vh;
+            max-height: 64vh;
             overflow-y: auto;
             list-style: none;
             margin: 0;
             padding: 0;
         }
+
         .site-item {
-            padding: 1rem;
-            border-bottom: 1px solid #e5e7eb;
+            padding: 0.78rem 0.85rem;
+            border-bottom: 1px solid var(--cxg-bg-25);
             cursor: pointer;
             transition: background-color 0.2s;
             display: flex;
             gap: 0.75rem;
             align-items: flex-start;
         }
+
         .site-item:hover {
-            background-color: #f9fafb;
+            background-color: #EEF0F1;
         }
+
         .site-item.selected {
-            background-color: #dbeafe;
-            border-left: 4px solid #2563eb;
-            padding-left: calc(1rem - 4px);
+            background-color: #DEE1E3;
+            border-left: 3px solid var(--cxg-highlight-349);
+            padding-left: calc(0.85rem - 3px);
         }
-        .site-item-name {
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-        }
-        .site-item-id {
-            font-size: 0.85rem;
-            color: #6b7280;
-        }
+
         .site-item-checkbox {
             margin-top: 0.15rem;
             width: 1rem;
             height: 1rem;
             flex: 0 0 auto;
+            accent-color: var(--cxg-highlight-349);
         }
+
         .site-item-content {
             min-width: 0;
         }
-        .supply-column {
-            display: flex;
-            flex-direction: column;
+
+        .site-item-name {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            font-size: 0.92rem;
+            color: var(--cxg-primary-432);
         }
+
+        .site-item-id {
+            font-size: 0.74rem;
+            color: var(--cxg-primary-430);
+        }
+
         .supply-panel {
-            border: 1px solid #e5e7eb;
-            border-radius: 0.75rem;
-            background: white;
-            padding: 1rem;
+            border: 1px solid var(--cxg-border);
+            border-radius: 0.35rem;
+            background: var(--cxg-white);
+            padding: 0.8rem;
             min-height: 20rem;
+            box-shadow: 0 1px 2px rgba(51, 63, 72, 0.06);
         }
+
         .supply-panel h3 {
-            margin: 0 0 1rem;
-            font-size: 1.1rem;
-            color: #111827;
+            margin: 0 0 0.7rem;
+            font-size: 1.02rem;
+            color: var(--cxg-primary-432);
         }
-        .supply-list {
+
+        .supply-summary {
+            margin-bottom: 0.62rem;
+            font-size: 0.78rem;
+            color: #5b7080;
+            background: #f7f8f9;
+            border: 1px solid var(--cxg-border);
+            border-radius: 0.3rem;
+            padding: 0.38rem 0.52rem;
+        }
+
+        .supply-filters {
+            margin-bottom: 0.72rem;
+            border: 1px solid var(--cxg-border);
+            border-top: 2px solid var(--cxg-highlight-376);
+            border-radius: 0.35rem;
+            background: #fbfcfc;
+            padding: 0.6rem;
+        }
+
+        .supply-filter-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.58rem;
+        }
+
+        .supply-filter-label {
+            font-size: 0.77rem;
+            color: #5b7080;
+            font-weight: 600;
+            display: block;
+        }
+
+        .supply-filter-select {
+            width: 100%;
+            margin-top: 0.22rem;
+            padding: 0.4rem;
+            border: 1px solid var(--cxg-border);
+            border-radius: 0.3rem;
+            font-size: 0.81rem;
+            color: var(--cxg-primary-432);
+            background: var(--cxg-white);
+        }
+
+        .supply-section-title {
+            margin: 0 0 0.5rem;
+            font-size: 0.98rem;
+            color: var(--cxg-primary-432);
+        }
+
+        .supply-items {
             list-style: none;
             margin: 0;
             padding: 0;
         }
+
         .supply-item {
-            padding: 0.75rem;
-            margin-bottom: 0.5rem;
-            background: #f9fafb;
-            border-radius: 0.5rem;
-            border-left: 3px solid #2563eb;
+            margin-bottom: 0.44rem;
+            padding: 0.56rem 0.58rem;
+            border: 1px solid #d7dde2;
+            border-left: 2px solid var(--cxg-primary-430);
+            border-radius: 0.3rem;
+            background: #fafbfc;
         }
+
         .supply-name {
-            font-weight: 600;
-            color: #111827;
-            margin-bottom: 0.25rem;
+            font-size: 0.87rem;
+            font-weight: 700;
+            color: var(--cxg-primary-432);
         }
+
         .supply-type {
-            font-size: 0.9rem;
-            color: #4b5563;
+            font-size: 0.76rem;
+            color: #5b7080;
+            margin-top: 0.12rem;
         }
-        .supply-device {
-            font-size: 0.85rem;
-            color: #6b7280;
-        }
+
+        .supply-device,
         .supply-id {
-            font-size: 0.75rem;
-            color: #9ca3af;
-            margin-top: 0.25rem;
+            font-size: 0.73rem;
+            color: var(--cxg-primary-430);
+            margin-top: 0.1rem;
         }
+
+        .supply-id.small {
+            font-size: 0.71rem;
+        }
+
+        .supply-empty {
+            padding: 0.65rem 0.7rem;
+            border: 1px solid #d7dde2;
+            border-radius: 0.32rem;
+            font-size: 0.8rem;
+            color: #5b7080;
+            background: #f8fafb;
+            margin-bottom: 0.55rem;
+        }
+
+        .supply-empty p {
+            margin: 0;
+        }
+
         .empty-state {
-            padding: 2rem;
+            padding: 1.2rem;
             text-align: center;
-            color: #6b7280;
-            border: 1px dashed #d1d5db;
-            border-radius: 0.5rem;
-            background: #fafafa;
+            color: #5b7080;
+            border: 1px dashed var(--cxg-border);
+            border-radius: 0.35rem;
+            background: var(--cxg-bg-10);
+            font-size: 0.86rem;
         }
-        .notice {
-            margin-top: 0.75rem;
-            padding: 0.75rem 1rem;
-            border-radius: 0.5rem;
-            background: #ecfdf5;
-            color: #065f46;
-            border: 1px solid #a7f3d0;
-        }
-        .notice.warning {
-            background: #fffbeb;
-            color: #92400e;
-            border: 1px solid #fcd34d;
-        }
-        .stats-row {
-            margin-top: 1rem;
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 0.75rem;
-        }
+
         @media (max-width: 1024px) {
-            .stats-row {
+            .stats-row,
+            .content-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .supply-filter-grid {
                 grid-template-columns: 1fr;
             }
         }
-        .stats-card {
-            background: white;
-            border: 1px solid #e5e7eb;
-            border-radius: 0.6rem;
-            padding: 0.75rem 1rem;
-        }
-        .stats-label {
-            color: #4b5563;
-            font-size: 0.82rem;
-            text-transform: uppercase;
-            letter-spacing: 0.03em;
-            margin-bottom: 0.2rem;
-        }
-        .stats-value {
-            color: #111827;
-            font-weight: 700;
-            font-size: 1.25rem;
-            line-height: 1.2;
+
+        @media (max-width: 760px) {
+            body {
+                padding: 0.5rem;
+            }
+
+            .content-wrap {
+                padding: 0.4rem;
+            }
+
+            .header {
+                padding: 0.8rem;
+            }
+
+            .header h1 {
+                font-size: 1.3rem;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>Site & Supply Dashboard</h1>
-        <p>Select a site to view its associated supplies and details.</p>
-        <div class="header-links">
-            <a href="{% url 'sitesync:settings_panel' %}">Settings</a>
-        </div>
-        <div class="toolbar">
-            <form method="post" action="{% url 'sitesync:manual_sync' %}">
-                {% csrf_token %}
-                <button type="submit">Refresh data</button>
-            </form>
-        </div>
-        {% if request.GET.sync == 'success' %}
-            <div class="notice">Sync completed successfully.</div>
-        {% elif request.GET.sync == 'empty' %}
-            <div class="notice warning">Sync completed but returned no site records. Check Etainabl account permissions or API scope.</div>
-        {% endif %}
-        <div class="search-bar">
-            <input id="site-search" type="search" value="{{ query|default_if_none:'' }}" placeholder="Filter sites..." aria-label="Search sites" />
-            <button type="button" onclick="document.getElementById('site-search').value=''; filterSites();">Clear</button>
+    <div class="page-shell">
+        <div class="topbar">
+            <div class="brand">Enerlytix</div>
+            <div class="topbar-links">
+                <a href="{% url 'sitesync:site_list' %}" class="is-active">Dashboard</a>
+                <a href="{% url 'sitesync:settings_panel' %}">Settings</a>
+            </div>
         </div>
 
-        <div class="stats-row" aria-label="portfolio statistics">
-            <div class="stats-card">
-                <div class="stats-label">Available Sites</div>
-                <div class="stats-value" id="stats-site-count" data-default="{{ site_count }}">{{ site_count }}</div>
-            </div>
-            <div class="stats-card">
-                <div class="stats-label">Fiscal Meters</div>
-                <div class="stats-value" id="stats-fiscal-count" data-default="{{ fiscal_meter_count }}">{{ fiscal_meter_count }}</div>
-            </div>
-            <div class="stats-card">
-                <div class="stats-label">Submeters</div>
-                <div class="stats-value" id="stats-submeter-count" data-default="{{ submeter_count }}">{{ submeter_count }}</div>
-            </div>
-        </div>
-    </div>
+        <div class="content-wrap">
+            <div class="header">
+                <h1>Site & Supply Dashboard</h1>
+                <p>Select one or more sites to view associated supplies and details.</p>
 
-    <div class="content-layout">
-        <div class="site-column">
-            {% if sites %}
-                <div class="site-list">
-                    <div class="site-list-header">
-                        <div class="site-list-controls">
-                            <span>Available Sites</span>
-                            <div class="site-list-actions">
-                                <span class="site-selection-count" id="selected-sites-count">Selected Sites: 0</span>
-                                <button type="button" onclick="selectAllSites()">Select all</button>
-                                <button type="button" onclick="deselectAllSites()">Deselect all</button>
-                            </div>
-                        </div>
-                    </div>
-                    <ul class="site-items" id="site-items">
-                        {% for site in sites %}
-                            <li class="site-item"
-                                data-site-id="{{ site.id }}"
-                                data-site-count="1"
-                                data-fiscal-total="{{ site.fiscal_meter_count }}"
-                                data-submeter-total="{{ site.submeter_count }}"
-                                data-fiscal-electricity="{{ site.electricity_fiscal_count }}"
-                                data-submeter-electricity="{{ site.electricity_submeter_count }}"
-                                data-fiscal-gas="{{ site.gas_fiscal_count }}"
-                                data-submeter-gas="{{ site.gas_submeter_count }}"
-                                data-fiscal-water="{{ site.water_fiscal_count }}"
-                                data-submeter-water="{{ site.water_submeter_count }}"
-                                data-fiscal-other="{{ site.other_fiscal_count }}"
-                                data-submeter-other="{{ site.other_submeter_count }}"
-                                onclick="selectSite({{ site.id }}, event)">
-                                <input
-                                    class="site-item-checkbox site-selector"
-                                    type="checkbox"
-                                    aria-label="Select {{ site.name }}"
-                                    onclick="event.stopPropagation()"
-                                    onchange="toggleSiteSelection(event)"
-                                />
-                                <div class="site-item-content">
-                                    <div class="site-item-name">{{ site.name }}</div>
-                                    <div class="site-item-id">{{ site.external_id }}</div>
-                                </div>
-                            </li>
-                        {% endfor %}
-                    </ul>
+                <div class="toolbar">
+                    <form method="post" action="{% url 'sitesync:manual_sync' %}">
+                        {% csrf_token %}
+                        <button type="submit">Refresh data</button>
+                    </form>
                 </div>
-            {% else %}
-                <div class="empty-state">
-                    {% if query %}
-                        <p>No sites match your search. Try a different term.</p>
+
+                {% if request.GET.sync == 'success' %}
+                    <div class="notice">Sync completed successfully.</div>
+                {% elif request.GET.sync == 'empty' %}
+                    <div class="notice warning">Sync completed but returned no site records. Check Etainabl account permissions or API scope.</div>
+                {% endif %}
+
+                <div class="search-bar">
+                    <input id="site-search" type="search" value="{{ query|default_if_none:'' }}" placeholder="Filter sites..." aria-label="Search sites" />
+                    <button type="button" onclick="document.getElementById('site-search').value=''; filterSites();">Clear</button>
+                </div>
+
+                <div class="stats-row" aria-label="portfolio statistics">
+                    <div class="stats-card">
+                        <div class="stats-label">Available Sites</div>
+                        <div class="stats-value" id="stats-site-count" data-default="{{ site_count }}">{{ site_count }}</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stats-label">Fiscal Meters</div>
+                        <div class="stats-value" id="stats-fiscal-count" data-default="{{ fiscal_meter_count }}">{{ fiscal_meter_count }}</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stats-label">Submeters</div>
+                        <div class="stats-value" id="stats-submeter-count" data-default="{{ submeter_count }}">{{ submeter_count }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-layout">
+                <div class="site-column">
+                    {% if sites %}
+                        <div class="site-list">
+                            <div class="site-list-header">
+                                <div class="site-list-controls">
+                                    <span>Available Sites</span>
+                                    <div class="site-list-actions">
+                                        <span class="site-selection-count" id="selected-sites-count">Selected Sites: 0</span>
+                                        <button type="button" onclick="selectAllSites()">Select all</button>
+                                        <button type="button" onclick="deselectAllSites()">Deselect all</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <ul class="site-items" id="site-items">
+                                {% for site in sites %}
+                                    <li class="site-item"
+                                        data-site-id="{{ site.id }}"
+                                        data-site-count="1"
+                                        data-fiscal-total="{{ site.fiscal_meter_count }}"
+                                        data-submeter-total="{{ site.submeter_count }}"
+                                        data-fiscal-electricity="{{ site.electricity_fiscal_count }}"
+                                        data-submeter-electricity="{{ site.electricity_submeter_count }}"
+                                        data-fiscal-gas="{{ site.gas_fiscal_count }}"
+                                        data-submeter-gas="{{ site.gas_submeter_count }}"
+                                        data-fiscal-water="{{ site.water_fiscal_count }}"
+                                        data-submeter-water="{{ site.water_submeter_count }}"
+                                        data-fiscal-other="{{ site.other_fiscal_count }}"
+                                        data-submeter-other="{{ site.other_submeter_count }}"
+                                        onclick="selectSite({{ site.id }}, event)">
+                                        <input
+                                            class="site-item-checkbox site-selector"
+                                            type="checkbox"
+                                            aria-label="Select {{ site.name }}"
+                                            onclick="event.stopPropagation()"
+                                            onchange="toggleSiteSelection(event)"
+                                        />
+                                        <div class="site-item-content">
+                                            <div class="site-item-name">{{ site.name }}</div>
+                                            <div class="site-item-id">{{ site.external_id }}</div>
+                                        </div>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
                     {% else %}
-                        <p>No sites available. Please sync data first.</p>
+                        <div class="empty-state">
+                            {% if query %}
+                                <p>No sites match your search. Try a different term.</p>
+                            {% else %}
+                                <p>No sites available. Please sync data first.</p>
+                            {% endif %}
+                        </div>
                     {% endif %}
                 </div>
-            {% endif %}
-        </div>
 
-        <div class="supply-column">
-            <div class="supply-panel" id="supply-panel">
-                <h3>Supply Details</h3>
-                <div class="empty-state">
-                    <p>Select a site to view its supplies.</p>
+                <div class="supply-column">
+                    <div class="supply-panel" id="supply-panel">
+                        <h3>Supply Details</h3>
+                        <div class="empty-state">
+                            <p>Select one or more sites to view supplies.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
