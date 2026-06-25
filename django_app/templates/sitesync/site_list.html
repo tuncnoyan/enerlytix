@@ -112,6 +112,36 @@
             border-bottom: 1px solid #e5e7eb;
             font-weight: 600;
         }
+        .site-list-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        .site-list-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .site-selection-count {
+            font-size: 0.85rem;
+            color: #4b5563;
+            white-space: nowrap;
+        }
+        .site-list-actions button {
+            background: white;
+            color: #2563eb;
+            border: 1px solid #bfdbfe;
+            border-radius: 0.45rem;
+            padding: 0.4rem 0.65rem;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .site-list-actions button:hover {
+            background: #eff6ff;
+        }
         .site-items {
             max-height: 70vh;
             overflow-y: auto;
@@ -124,6 +154,9 @@
             border-bottom: 1px solid #e5e7eb;
             cursor: pointer;
             transition: background-color 0.2s;
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-start;
         }
         .site-item:hover {
             background-color: #f9fafb;
@@ -140,6 +173,15 @@
         .site-item-id {
             font-size: 0.85rem;
             color: #6b7280;
+        }
+        .site-item-checkbox {
+            margin-top: 0.15rem;
+            width: 1rem;
+            height: 1rem;
+            flex: 0 0 auto;
+        }
+        .site-item-content {
+            min-width: 0;
         }
         .supply-column {
             display: flex;
@@ -283,12 +325,43 @@
         <div class="site-column">
             {% if sites %}
                 <div class="site-list">
-                    <div class="site-list-header">Available Sites</div>
+                    <div class="site-list-header">
+                        <div class="site-list-controls">
+                            <span>Available Sites</span>
+                            <div class="site-list-actions">
+                                <span class="site-selection-count" id="selected-sites-count">Selected Sites: 0</span>
+                                <button type="button" onclick="selectAllSites()">Select all</button>
+                                <button type="button" onclick="deselectAllSites()">Deselect all</button>
+                            </div>
+                        </div>
+                    </div>
                     <ul class="site-items" id="site-items">
                         {% for site in sites %}
-                            <li class="site-item" data-site-id="{{ site.id }}" onclick="selectSite({{ site.id }}, event)">
-                                <div class="site-item-name">{{ site.name }}</div>
-                                <div class="site-item-id">{{ site.external_id }}</div>
+                            <li class="site-item"
+                                data-site-id="{{ site.id }}"
+                                data-site-count="1"
+                                data-fiscal-total="{{ site.fiscal_meter_count }}"
+                                data-submeter-total="{{ site.submeter_count }}"
+                                data-fiscal-electricity="{{ site.electricity_fiscal_count }}"
+                                data-submeter-electricity="{{ site.electricity_submeter_count }}"
+                                data-fiscal-gas="{{ site.gas_fiscal_count }}"
+                                data-submeter-gas="{{ site.gas_submeter_count }}"
+                                data-fiscal-water="{{ site.water_fiscal_count }}"
+                                data-submeter-water="{{ site.water_submeter_count }}"
+                                data-fiscal-other="{{ site.other_fiscal_count }}"
+                                data-submeter-other="{{ site.other_submeter_count }}"
+                                onclick="selectSite({{ site.id }}, event)">
+                                <input
+                                    class="site-item-checkbox site-selector"
+                                    type="checkbox"
+                                    aria-label="Select {{ site.name }}"
+                                    onclick="event.stopPropagation()"
+                                    onchange="toggleSiteSelection(event)"
+                                />
+                                <div class="site-item-content">
+                                    <div class="site-item-name">{{ site.name }}</div>
+                                    <div class="site-item-id">{{ site.external_id }}</div>
+                                </div>
                             </li>
                         {% endfor %}
                     </ul>

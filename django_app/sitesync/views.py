@@ -4,7 +4,7 @@ Views for the sitesync app.
 
 import logging
 
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.urls import reverse
@@ -21,7 +21,58 @@ logger = logging.getLogger(__name__)
 
 def site_list_view(request):
     query = request.GET.get('q', '').strip()
-    all_sites_qs = Site.objects.all()
+    all_sites_qs = Site.objects.annotate(
+        fiscal_meter_count=Count(
+            'supplies',
+            filter=Q(supplies__parent_account_id__isnull=True) | Q(supplies__parent_account_id=''),
+            distinct=True,
+        ),
+        submeter_count=Count(
+            'supplies',
+            filter=~(Q(supplies__parent_account_id__isnull=True) | Q(supplies__parent_account_id='')),
+            distinct=True,
+        ),
+        electricity_fiscal_count=Count(
+            'supplies',
+            filter=(Q(supplies__utility_type='electricity') & (Q(supplies__parent_account_id__isnull=True) | Q(supplies__parent_account_id=''))),
+            distinct=True,
+        ),
+        electricity_submeter_count=Count(
+            'supplies',
+            filter=(Q(supplies__utility_type='electricity') & ~(Q(supplies__parent_account_id__isnull=True) | Q(supplies__parent_account_id=''))),
+            distinct=True,
+        ),
+        gas_fiscal_count=Count(
+            'supplies',
+            filter=(Q(supplies__utility_type='gas') & (Q(supplies__parent_account_id__isnull=True) | Q(supplies__parent_account_id=''))),
+            distinct=True,
+        ),
+        gas_submeter_count=Count(
+            'supplies',
+            filter=(Q(supplies__utility_type='gas') & ~(Q(supplies__parent_account_id__isnull=True) | Q(supplies__parent_account_id=''))),
+            distinct=True,
+        ),
+        water_fiscal_count=Count(
+            'supplies',
+            filter=(Q(supplies__utility_type='water') & (Q(supplies__parent_account_id__isnull=True) | Q(supplies__parent_account_id=''))),
+            distinct=True,
+        ),
+        water_submeter_count=Count(
+            'supplies',
+            filter=(Q(supplies__utility_type='water') & ~(Q(supplies__parent_account_id__isnull=True) | Q(supplies__parent_account_id=''))),
+            distinct=True,
+        ),
+        other_fiscal_count=Count(
+            'supplies',
+            filter=(Q(supplies__utility_type='other') & (Q(supplies__parent_account_id__isnull=True) | Q(supplies__parent_account_id=''))),
+            distinct=True,
+        ),
+        other_submeter_count=Count(
+            'supplies',
+            filter=(Q(supplies__utility_type='other') & ~(Q(supplies__parent_account_id__isnull=True) | Q(supplies__parent_account_id=''))),
+            distinct=True,
+        ),
+    )
     all_supplies_qs = Supply.objects.all()
     site_count = all_sites_qs.count()
     fiscal_meter_count = all_supplies_qs.filter(
@@ -31,7 +82,7 @@ def site_list_view(request):
         Q(parent_account_id__isnull=True) | Q(parent_account_id='')
     ).count()
 
-    sites = Site.objects.prefetch_related('supplies').order_by('name')
+    sites = all_sites_qs.prefetch_related('supplies').order_by('name')
     if query:
         logger.info("Filtering sites by query: %s", query)
         sites = sites.filter(
@@ -53,6 +104,21 @@ def site_list_view(request):
 def supply_list_view(request):
     """Display supplies for a selected site."""
     site_id = request.GET.get('site_id')
+    raw_site_ids = request.GET.getlist('site_ids')
+    if len(raw_site_ids) == 1 and ',' in raw_site_ids[0]:
+        raw_site_ids = [value.strip() for value in raw_site_ids[0].split(',')]
+
+    if not raw_site_ids and site_id:
+        raw_site_ids = [str(site_id)]
+
+    selected_site_ids = []
+    for raw_value in raw_site_ids:
+        try:
+            selected_site_ids.append(int(raw_value))
+        except (TypeError, ValueError):
+            continue
+
+    selected_site_ids = list(dict.fromkeys(selected_site_ids))
     utility_type = (request.GET.get('utility_type') or 'all').strip().lower()
     meter_type = (request.GET.get('meter_type') or 'all').strip().lower()
     supplies = []
@@ -76,15 +142,17 @@ def supply_list_view(request):
         'sub': 'Submeter',
     }
     
-    if site_id:
+    if selected_site_ids:
         try:
-            selected_site_id = int(site_id)
-            selected_site_count = 1
+            selected_site_count = len(selected_site_ids)
 
-            selected_site = Site.objects.filter(id=selected_site_id).first()
-            selected_site_name = selected_site.name if selected_site else str(site_id)
+            selected_sites = list(Site.objects.filter(id__in=selected_site_ids).order_by('name'))
+            if selected_site_count == 1 and selected_sites:
+                selected_site_name = selected_sites[0].name
+            else:
+                selected_site_name = f"{selected_site_count} sites selected"
 
-            site_supplies = Supply.objects.filter(site_id=selected_site_id)
+            site_supplies = Supply.objects.filter(site_id__in=selected_site_ids)
             filtered_supplies = site_supplies
 
             if utility_type in {'electricity', 'gas', 'water', 'other'}:
@@ -100,7 +168,7 @@ def supply_list_view(request):
                 )
 
             supplies = filtered_supplies.order_by('name')
-            logger.info("Loaded supplies for site_id=%s", site_id)
+            logger.info("Loaded supplies for site_ids=%s", selected_site_ids)
 
             filtered_fiscal_count = supplies.filter(
                 Q(parent_account_id__isnull=True) | Q(parent_account_id='')
@@ -159,7 +227,7 @@ def supply_list_view(request):
             ]
             orphan_submeters.sort(key=lambda item: (item.name or '').lower())
         except (ValueError, TypeError):
-            logger.warning("Invalid site_id provided to supply_list_view: %s", site_id)
+            logger.warning("Invalid site ids provided to supply_list_view: %s", raw_site_ids)
             supplies = []
     
     return render(request, 'sitesync/supply_list.html', {

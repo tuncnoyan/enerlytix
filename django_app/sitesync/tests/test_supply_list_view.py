@@ -184,3 +184,14 @@ class SupplyListViewIntegrationTest(TestCase):
         self.assertIn('data-submeter-count="1"', content)
         self.assertIn('Meter Type: <strong>Submeter</strong>', content)
         self.assertNotIn('Main (Fiscal)', content)
+
+    def test_supply_list_combines_supplies_from_multiple_selected_sites(self):
+        """Verify site_ids includes supplies across all selected sites."""
+        request = self.factory.get('/', {'site_ids': f'{self.site1.id},{self.site2.id}'})
+        response = supply_list_view(request)
+        content = response.content.decode('utf-8')
+
+        self.assertIn('Main Electricity Meter', content)
+        self.assertIn('Secondary Electricity', content)
+        self.assertIn('Site: <strong>2 sites selected</strong>', content)
+        self.assertIn('data-site-count="2"', content)

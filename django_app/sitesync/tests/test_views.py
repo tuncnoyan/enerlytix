@@ -54,3 +54,15 @@ class SiteListViewTest(TestCase):
         self.assertIn('Submeters', content)
         self.assertIn('>2<', content)
         self.assertIn('>1<', content)
+
+    def test_site_list_view_renders_selection_controls(self):
+        request = self.factory.get('/')
+        response = site_list_view(request)
+        content = response.content.decode('utf-8')
+
+        self.assertIn('Select all', content)
+        self.assertIn('Deselect all', content)
+        self.assertIn('Selected Sites: 0', content)
+        self.assertIn('site-selector', content)
+        self.assertIn('data-fiscal-total=', content)
+        self.assertIn('data-submeter-total=', content)

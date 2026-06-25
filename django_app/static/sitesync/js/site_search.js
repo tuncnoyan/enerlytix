@@ -15,6 +15,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const visible = !query || text.includes(query);
             item.style.display = visible ? '' : 'none';
         });
+
+        if (typeof updateTopStatsFromCheckedSites === 'function') {
+            updateTopStatsFromCheckedSites();
+        }
     };
 
     searchInput.addEventListener('input', filterSites);
