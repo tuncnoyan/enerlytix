@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: enerlytix_user
       POSTGRES_PASSWORD: enerlytix_password
     ports:
-      - "5432:5432"
+      - "54322:54322"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -23,13 +23,13 @@ services:
       context: ../../
       dockerfile: django_app/docker/Dockerfile
     container_name: enerlytix_web
-    command: python manage.py runserver 0.0.0.0:8008
+    command: python manage.py runserver 0.0.0.0:8080
     env_file:
       - ../../.env
     volumes:
       - ../../django_app:/app
     ports:
-      - "8008:8008"
+      - "8008:8080"
     environment:
       DEBUG: "True"
       DATABASE_URL: postgresql://enerlytix_user:enerlytix_password@db:5432/enerlytix
