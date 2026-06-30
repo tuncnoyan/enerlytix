@@ -1,4 +1,4 @@
-# Implementation Plan: Usage Invoice Import
+﻿# Implementation Plan: Usage Invoice Import
 
 **Branch**: `002-usage-invoice-import` | **Date**: 2026-06-30 | **Spec**: [spec.md](spec.md)
 
@@ -32,17 +32,17 @@ Extend Enerlytix to download usage and invoice consumption data from Xcelerate's
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-✅ **Windows-Native Platform Alignment**: Existing Django+SQLite architecture already aligns.
+PASS **Windows-Native Platform Alignment**: Existing Django+SQLite architecture already aligns.
 
-✅ **Least-Privilege Development & Operations**: No elevated privileges needed for import operations; data fetch and storage run under standard user.
+PASS **Least-Privilege Development & Operations**: No elevated privileges needed for import operations; data fetch and storage run under standard user.
 
-✅ **Data Security and Database Isolation**: Imported records stored in authenticated database; API keys managed via `.env`; sensitive timestamps and account IDs audited.
+PASS **Data Security and Database Isolation**: Imported records stored in authenticated database; API keys managed via `.env`; sensitive timestamps and account IDs audited.
 
-✅ **Approval-Governed Production Operations**: Deployment follows existing approval gates; data retention configs subject to change control.
+PASS **Approval-Governed Production Operations**: Deployment follows existing approval gates; data retention configs subject to change control.
 
-✅ **Containerized Maintainability & Observability**: Existing Docker setup; new models and endpoints follow established patterns.
+PASS **Containerized Maintainability & Observability**: Existing Docker setup; new models and endpoints follow established patterns.
 
-**GATE RESULT**: ✅ PASS — No constitution violations identified.
+**GATE RESULT**: PASS - No constitution violations identified.
 
 ---
 
@@ -81,7 +81,7 @@ Extend Enerlytix to download usage and invoice consumption data from Xcelerate's
 **Key Findings**:
 - Monthly data returns canonical `date` field (YYYY-MM format) alongside source start/end timestamps
 - `combinedBreakdown` breaks consumption by source (hh, reading, invoice, custom)
-- Half-hourly responses can return large datasets (potentially 48 values per day × ~730 days = 35k+ records for 24-month window)
+- Half-hourly responses can return large datasets (potentially 48 values per day x ~730 days = 35k+ records for 24-month window)
 - Pagination not required but response size dictates streaming strategy for half-hourly imports
 - API uses ISO 8601 UTC timestamps consistently
 
@@ -107,22 +107,23 @@ Extend Enerlytix to download usage and invoice consumption data from Xcelerate's
 - Canonical month key derived from period end date rounded down to month start in UTC
 - Example: Invoice period 2025-01-15 to 2025-02-14 maps to canonical month "2025-02" (includes most of February)
 
-**Rationale**: Aligns with billing periods and monthly reporting; consistent with spec requirement for UTF timezones.
+**Rationale**: Aligns with billing periods and monthly reporting; consistent with spec requirement for UTC timezones.
 
 ### Upsert and Deduplication
 
-**Decision**: Use Django `update_or_create()` with unique key (supply_id, data_type, source_period_start, source_period_end):
+**Decision**: Use Django `update_or_create()` with unique key (supply_id, source_period_start, source_period_end):
 ```python
 obj, created = Model.objects.update_or_create(
   defaults={'consumption': value, 'canonical_month_key': key},
   supply_id=supply_id,
-  data_type='monthly',  # or 'halfhourly', 'invoice'
   source_period_start=start,
   source_period_end=end
 )
 ```
 
-**Rationale**: Enforces one canonical record per (supply, type, period); updates reflect latest source values; no duplicate records after repeated imports.
+**Rationale**: Enforces one canonical record per (supply, period) within each data table; updates reflect latest source values; no duplicate records after repeated imports.
+
+Because half-hourly, monthly, and invoice records are stored in separate tables, data type is implicit in table selection.
 
 ### Data Retention
 
@@ -151,11 +152,12 @@ Removes records where `import_date + retention_period < now()`.
 
 1. **ImportRun**
    - `id` (UUID)
-   - `supply` (ForeignKey to existing Supply model)
+  - `selected_supply_ids` (JSONField: list of requested supply IDs)
    - `reporting_month` (CharField, YYYY-MM format)
    - `status` (CharField: pending, in_progress, success, partial_failure, failed)
    - `started_at` (DateTimeField)
    - `completed_at` (DateTimeField, nullable)
+  - `affected_supply_count` (IntegerField)
    - `records_imported` (IntegerField)
    - `records_failed` (IntegerField)
    - `retry_count` (IntegerField)
@@ -255,23 +257,23 @@ Removes records where `import_date + retention_period < now()`.
 
 ```text
 django_app/sitesync/
-├── models.py                           # NEW: ImportRun, HalfHourlyConsumption, MonthlyConsumption, InvoiceCost
-├── api_client.py                       # UPDATE: add consumption() and invoices() methods
-├── services.py                         # NEW: ConsumptionImportService class
-├── views.py                            # UPDATE: add import_consumption and display_consumption views
-├── serializers.py                      # UPDATE: add consumption serializers
-├── urls.py                             # UPDATE: add /api/consumption-* routes
-├── admin.py                            # UPDATE: register new models
-├── management/commands/
-│   └── cleanup_expired_consumption.py   # NEW: retention policy enforcement
-└── tests/
-    ├── test_consumption_models.py
-    ├── test_consumption_import.py
-    ├── test_consumption_api.py
-    └── test_consumption_display.py
+|- models.py                           # NEW: ImportRun, HalfHourlyConsumption, MonthlyConsumption, InvoiceCost
+|- api_client.py                       # UPDATE: add consumption() and invoices() methods
+|- services.py                         # NEW: ConsumptionImportService class
+|- views.py                            # UPDATE: add import_consumption and display_consumption views
+|- serializers.py                      # UPDATE: add consumption serializers
+|- urls.py                             # UPDATE: add /api/consumption-* routes
+|- admin.py                            # UPDATE: register new models
+|- management/commands/
+|  `- cleanup_expired_consumption.py   # NEW: retention policy enforcement
+`- tests/
+   |- test_consumption_models.py
+   |- test_consumption_import.py
+   |- test_consumption_api.py
+   `- test_consumption_display.py
 
 templates/sitesync/
-└── consumption_display.html            # NEW: table page template
+`- consumption_display.html            # NEW: table page template
 ```
 
 ### Complexity Tracking
@@ -280,7 +282,7 @@ templates/sitesync/
 |---|---|---|
 | Period keying (source dates + canonical month) | Add `canonical_month_key` + `source_period_start`, `source_period_end` to models | Allows month-based filtering while preserving source billing details |
 | UTC normalization across boundaries | All timestamps stored in UTC; canonical month always YYYY-MM format | Avoids timezone confusion at month boundaries |
-| Upsert semantics for repeated imports | Django `.update_or_create()` keyed on (supply, data_type, source_period) | Prevents duplicates while allowing refresh |
+| Upsert semantics for repeated imports | Django `.update_or_create()` keyed on (supply, source_period_start, source_period_end) in each data table | Prevents duplicates while allowing refresh |
 | Retry policy (one automatic retry) | Implement in ConsumptionImportService with exponential backoff | Handles transient source failures |
 | Data retention (configurable, 36-month default) | Add `retention_months` setting + management command | Balances data minimization with compliance |
 | Pagination for large datasets | Half-hourly streaming/chunked processing | Prevents memory exhaustion |
@@ -305,7 +307,7 @@ curl -X POST http://localhost:8000/api/consumption-import/ \
 - Fetches half-hourly data for May 2026 and May 2025 from Xcelerate
 - Fetches monthly consumption for Jun 2024 - May 2026
 - Fetches invoice data for Jun 2025 - May 2026
-- All records stored with canonical_month_key = "2026-05"
+- Each stored record uses canonical_month_key derived from its own source period in UTC (YYYY-MM). Reporting month controls which windows are imported and displayed, not a single shared key value.
 - Import run marked as `success` after completion
 - Records viewable on display page immediately
 
@@ -434,17 +436,17 @@ assert not HalfHourlyConsumption.objects.filter(id=old_record.id).exists()
 
 ## Post-Design Constitution Re-check
 
-✅ **Windows-Native Platform Alignment**: Implementation uses Django ORM with standard database libraries; no platform-specific assumptions.
+PASS **Windows-Native Platform Alignment**: Implementation uses Django ORM with standard database libraries; no platform-specific assumptions.
 
-✅ **Least-Privilege Development & Operations**: All operations (import, display, cleanup) run under authenticated user context; no admin elevation required.
+PASS **Least-Privilege Development & Operations**: All operations (import, display, cleanup) run under authenticated user context; no admin elevation required.
 
-✅ **Data Security and Database Isolation**: New models integrate with existing Django authentication; API keys stored in `.env`; sensitive periods and account IDs audited via ImportRun logs.
+PASS **Data Security and Database Isolation**: New models integrate with existing Django authentication; API keys stored in `.env`; sensitive periods and account IDs audited via ImportRun logs.
 
-✅ **Approval-Governed Production Operations**: Data retention config (36-month default) can be changed via Django settings; retention cleanup runs on schedule without manual approval per sprint scope.
+PASS **Approval-Governed Production Operations**: Data retention config (36-month default) can be changed via Django settings; retention cleanup runs on schedule without manual approval per sprint scope.
 
-✅ **Containerized Maintainability & Observability**: New code follows existing sitesync patterns; ImportRun model provides audit trail; Docker deployment unchanged.
+PASS **Containerized Maintainability & Observability**: New code follows existing sitesync patterns; ImportRun model provides audit trail; Docker deployment unchanged.
 
-**GATE RESULT**: ✅ PASS — Design complies with all constitution principles.
+**GATE RESULT**: PASS - Design complies with all constitution principles.
 
 ---
 
@@ -453,10 +455,12 @@ assert not HalfHourlyConsumption.objects.filter(id=old_record.id).exists()
 **Phase 2**: Execute `/speckit.tasks` command to generate detailed task list for implementation.
 
 **Artifacts Generated This Phase**:
-- ✅ plan.md (this file)
-- ✅ research.md (embedded in Phase 0 section)
-- ✅ data-model.md (embedded in Phase 1 section)
-- ✅ contracts/ (embedded in Phase 1 section)
-- ✅ quickstart.md (embedded in Phase 1 section)
+- PASS plan.md (this file)
+- PASS research.md (embedded in Phase 0 section)
+- PASS data-model.md (embedded in Phase 1 section)
+- PASS contracts/ (embedded in Phase 1 section)
+- PASS quickstart.md (embedded in Phase 1 section)
 
 **Ready for**: `/speckit.tasks` to generate implementation task breakdown
+
+

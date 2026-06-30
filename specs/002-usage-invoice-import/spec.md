@@ -1,4 +1,4 @@
-# Feature Specification: Usage Invoice Import
+﻿# Feature Specification: Usage Invoice Import
 
 **Feature Branch**: `002-usage-invoice-import`
 
@@ -15,11 +15,11 @@ Could you please create spec documents for this sprint, now?"
 
 ### Session 2026-06-30
 
-- Q: Which update behavior should Enerlytix use when records already exist for the same supply-period scope? → A: Upsert per key: update existing matching records and insert only missing ones (no delete).
-- Q: How should monthly consumption and invoice periods be represented for filtering and storage? → A: Store source billing period dates plus canonical month key; filter by canonical month key.
-- Q: Which timezone should define period boundaries and canonical month keys? → A: Use UTC for all period boundaries and keys.
-- Q: How should import runs behave when some supplies or periods fail? → A: Continue-on-error with one automatic retry per failed supply or period before finalizing run results.
-- Q: What data retention policy should apply to imported usage and invoice records? → A: Configurable retention with a default of 36 months.
+- Q: Which update behavior should Enerlytix use when records already exist for the same supply-period scope? -> A: Upsert per key: update existing matching records and insert only missing ones (no delete).
+- Q: How should monthly consumption and invoice periods be represented for filtering and storage? -> A: Store source billing period dates plus canonical month key; filter by canonical month key.
+- Q: Which timezone should define period boundaries and canonical month keys? -> A: Use UTC for all period boundaries and keys.
+- Q: How should import runs behave when some supplies or periods fail? -> A: Continue-on-error with one automatic retry per failed supply or period before finalizing run results.
+- Q: What data retention policy should apply to imported usage and invoice records? -> A: Configurable retention with a default of 36 months.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -92,7 +92,7 @@ As an operations user, I can open a separate page, choose a month for reporting,
 - **FR-005**: System MUST retrieve invoice cost data for each selected supply for the previous 12 months ending with the selected month.
 - **FR-006**: System MUST store imported half-hourly consumption, monthly consumption, and invoice cost values in Enerlytix data storage with clear linkage to supply, selected reporting month, source period, and canonical month key.
 - **FR-007**: System MUST support user-initiated update requests using upsert behavior: update matching records and insert only missing records for the selected month windows.
-- **FR-008**: System MUST prevent duplicate records by enforcing a unique record identity of supply, data type, and source period when running repeated imports.
+- **FR-008**: System MUST prevent duplicate records by enforcing one record per supply and source period within each usage or invoice record type when running repeated imports.
 - **FR-009**: System MUST preserve an auditable import outcome for each run, including selected month, start time, completion status, and affected supply count.
 - **FR-010**: System MUST provide a separate page that displays imported values in a table format.
 - **FR-011**: Users MUST be able to distinguish value type (half-hourly consumption, monthly consumption, invoice cost), selected month context, canonical month key, source period dates, and associated supply within the table page.
@@ -133,3 +133,4 @@ As an operations user, I can open a separate page, choose a month for reporting,
 - Visualization and charting are explicitly out of scope; table-based display only is required.
 - Import scope for this sprint is limited to half-hourly consumption, monthly consumption, and invoice costs from Xcelerate.
 - Sample code to be provided later will inform implementation planning details, but does not change this sprint-level scope.
+

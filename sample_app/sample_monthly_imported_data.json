@@ -1,0 +1,232 @@
+{
+  "startDate": "2025-01-01T00:00:00.000Z",
+  "endDate": "2026-01-01T00:00:00.000Z",
+  "granularity": "monthly",
+  "isMissing": false,
+  "consumption": 15770.287244623647,
+  "estimatedConsumption": 1192.399999999989,
+  "combinedBreakdown": {
+    "hh": 12521.785000000003,
+    "reading": 0,
+    "invoice": 3248.5022446236717,
+    "custom": 0
+  },
+  "data": [
+    {
+      "startDate": "2025-01-01T00:00:00.000Z",
+      "endDate": "2025-02-01T00:00:00.000Z",
+      "date": "2025-01",
+      "isMissing": false,
+      "consumption": 2078.1150000000025,
+      "estimatedConsumption": 0,
+      "combinedBreakdown": {
+        "hh": 2078.1150000000025,
+        "reading": 0,
+        "invoice": 0,
+        "custom": 0
+      },
+      "sources": [
+        "hh"
+      ]
+    },
+    {
+      "startDate": "2025-02-01T00:00:00.000Z",
+      "endDate": "2025-03-01T00:00:00.000Z",
+      "date": "2025-02",
+      "isMissing": false,
+      "consumption": 1489.4570000000012,
+      "estimatedConsumption": 0,
+      "combinedBreakdown": {
+        "hh": 1489.4570000000012,
+        "reading": 0,
+        "invoice": 0,
+        "custom": 0
+      },
+      "sources": [
+        "hh"
+      ]
+    },
+    {
+      "startDate": "2025-03-01T00:00:00.000Z",
+      "endDate": "2025-04-01T00:00:00.000Z",
+      "date": "2025-03",
+      "isMissing": false,
+      "consumption": 1500.7564946236255,
+      "estimatedConsumption": 0,
+      "combinedBreakdown": {
+        "hh": 1047.0779999999997,
+        "reading": 0,
+        "invoice": 453.67849462365353,
+        "custom": 0
+      },
+      "sources": [
+        "hh",
+        "invoice"
+      ]
+    },
+    {
+      "startDate": "2025-04-01T00:00:00.000Z",
+      "endDate": "2025-05-01T00:00:00.000Z",
+      "date": "2025-04",
+      "isMissing": false,
+      "consumption": 1242.6000000000295,
+      "estimatedConsumption": 0,
+      "combinedBreakdown": {
+        "hh": 0,
+        "reading": 0,
+        "invoice": 1242.6000000000295,
+        "custom": 0
+      },
+      "sources": [
+        "invoice"
+      ]
+    },
+    {
+      "startDate": "2025-05-01T00:00:00.000Z",
+      "endDate": "2025-06-01T00:00:00.000Z",
+      "date": "2025-05",
+      "isMissing": false,
+      "consumption": 1192.399999999989,
+      "estimatedConsumption": 1192.399999999989,
+      "combinedBreakdown": {
+        "hh": 0,
+        "reading": 0,
+        "invoice": 1192.399999999989,
+        "custom": 0
+      },
+      "sources": [
+        "invoice"
+      ]
+    },
+    {
+      "startDate": "2025-06-01T00:00:00.000Z",
+      "endDate": "2025-07-01T00:00:00.000Z",
+      "date": "2025-06",
+      "isMissing": false,
+      "consumption": 766.5067499999977,
+      "estimatedConsumption": 0,
+      "combinedBreakdown": {
+        "hh": 406.6829999999998,
+        "reading": 0,
+        "invoice": 359.82374999999973,
+        "custom": 0
+      },
+      "sources": [
+        "hh",
+        "invoice"
+      ]
+    },
+    {
+      "startDate": "2025-07-01T00:00:00.000Z",
+      "endDate": "2025-08-01T00:00:00.000Z",
+      "date": "2025-07",
+      "isMissing": false,
+      "consumption": 1012.282000000002,
+      "estimatedConsumption": 0,
+      "combinedBreakdown": {
+        "hh": 1012.282000000002,
+        "reading": 0,
+        "invoice": 0,
+        "custom": 0
+      },
+      "sources": [
+        "hh"
+      ]
+    },
+    {
+      "startDate": "2025-08-01T00:00:00.000Z",
+      "endDate": "2025-09-01T00:00:00.000Z",
+      "date": "2025-08",
+      "isMissing": false,
+      "consumption": 940.4419999999993,
+      "estimatedConsumption": 0,
+      "combinedBreakdown": {
+        "hh": 940.4419999999993,
+        "reading": 0,
+        "invoice": 0,
+        "custom": 0
+      },
+      "sources": [
+        "hh"
+      ]
+    },
+    {
+      "startDate": "2025-09-01T00:00:00.000Z",
+      "endDate": "2025-10-01T00:00:00.000Z",
+      "date": "2025-09",
+      "isMissing": false,
+      "consumption": 1009.9190000000003,
+      "estimatedConsumption": 0,
+      "combinedBreakdown": {
+        "hh": 1009.9190000000003,
+        "reading": 0,
+        "invoice": 0,
+        "custom": 0
+      },
+      "sources": [
+        "hh"
+      ]
+    },
+    {
+      "startDate": "2025-10-01T00:00:00.000Z",
+      "endDate": "2025-11-01T00:00:00.000Z",
+      "date": "2025-10",
+      "isMissing": false,
+      "consumption": 1305.1390000000017,
+      "estimatedConsumption": 0,
+      "combinedBreakdown": {
+        "hh": 1305.1390000000017,
+        "reading": 0,
+        "invoice": 0,
+        "custom": 0
+      },
+      "sources": [
+        "hh"
+      ]
+    },
+    {
+      "startDate": "2025-11-01T00:00:00.000Z",
+      "endDate": "2025-12-01T00:00:00.000Z",
+      "date": "2025-11",
+      "isMissing": false,
+      "consumption": 1481.5439999999994,
+      "estimatedConsumption": 0,
+      "combinedBreakdown": {
+        "hh": 1481.5439999999994,
+        "reading": 0,
+        "invoice": 0,
+        "custom": 0
+      },
+      "sources": [
+        "hh"
+      ]
+    },
+    {
+      "startDate": "2025-12-01T00:00:00.000Z",
+      "endDate": "2026-01-01T00:00:00.000Z",
+      "date": "2025-12",
+      "isMissing": false,
+      "consumption": 1751.1259999999982,
+      "estimatedConsumption": 0,
+      "combinedBreakdown": {
+        "hh": 1751.1259999999982,
+        "reading": 0,
+        "invoice": 0,
+        "custom": 0
+      },
+      "sources": [
+        "hh"
+      ]
+    }
+  ],
+  "units": null,
+  "accountId": "6584fdd1c9ec42556202eaa2",
+  "coverageStartDate": "2025-01-01T00:00:00.000Z",
+  "coverageEndDate": "2026-01-01T00:00:00.000Z",
+  "sources": [
+    "hh",
+    "invoice"
+  ],
+  "totalConsumption": 15770.287244623647,
+  "totalEstimatedConsumption": 1192.399999999989
+}

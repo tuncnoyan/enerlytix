@@ -1,4 +1,4 @@
-# Tasks: Usage Invoice Import
+﻿# Tasks: Usage Invoice Import
 
 **Input**: Design documents from `/specs/002-usage-invoice-import/`
 
@@ -37,7 +37,7 @@
 
 ---
 
-## Phase 3: User Story 1 - Import selected supply usage and invoice data (Priority: P1) 🎯 MVP
+## Phase 3: User Story 1 - Import selected supply usage and invoice data (Priority: P1) MVP
 
 **Goal**: User selects supplies and a reporting month; system imports required half-hourly, monthly, and invoice windows and stores records.
 
@@ -96,9 +96,13 @@
 **Purpose**: Complete retention, documentation, and final validation.
 
 - [ ] T033 Implement configurable retention cleanup management command in django_app/sitesync/management/commands/cleanup_expired_consumption.py
-- [ ] T034 [P] Add/update API documentation for import and display endpoints in docs/API.md
-- [ ] T035 [P] Document operational flow and retention behavior in django_app/README.md
-- [ ] T036 Run quickstart scenario validation and record outcomes in specs/002-usage-invoice-import/plan.md
+- [ ] T034 [US2] Add auditable import outcome fields and persistence for per-supply and per-period results (attempt count, retry_used, failure_reason, response_code, request_window) in django_app/sitesync/models.py and django_app/sitesync/services.py
+- [ ] T035 [US2] Expose ImportRun audit detail endpoint/view for authorized users in django_app/sitesync/views.py and django_app/sitesync/urls.py
+- [ ] T036 [P] Add/update API documentation for import and display endpoints in docs/API.md
+- [ ] T037 [P] Document operational flow and retention behavior in django_app/README.md
+- [ ] T038 Run quickstart scenario validation and record outcomes in specs/002-usage-invoice-import/plan.md
+- [ ] T039 Define and execute UAT protocol for SC-004 (90% users locate/verify within 2 minutes) and record evidence in specs/002-usage-invoice-import/quickstart.md
+- [ ] T040 Create import timing instrumentation and run benchmark for up to 20 supplies over required windows; document pass/fail against 95% within 10 minutes in specs/002-usage-invoice-import/quickstart.md
 
 ---
 
@@ -130,7 +134,7 @@
 - Foundational: T007 can run in parallel with T008-T011.
 - US1: T014, T015, and T016 can be implemented in parallel once T013 starts.
 - US3: T030 and T032 can run in parallel after T031 route/view context is defined.
-- Polish: T034 and T035 can run in parallel.
+- Polish: T036 and T037 can run in parallel.
 
 ## Parallel Example: User Story 1
 
@@ -181,3 +185,5 @@ Task: "T032 [US3] Add filter script in django_app/static/sitesync/js/consumption
 - All task descriptions include concrete file paths for immediate execution.
 - Each user story section has explicit independent test criteria.
 - This task list is immediately executable with existing repository structure.
+
+
