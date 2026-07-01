@@ -4,10 +4,24 @@ Etainabl API sync service for fetching and persisting site and supply data.
 
 import logging
 import time
-from typing import Dict, List, Optional
+from datetime import datetime, timedelta, timezone
+from decimal import Decimal
+from typing import Dict, List, Optional, Tuple
 import requests
 from django.conf import settings
-from .models import Site, Supply, AppSettings
+from django.db import transaction
+from django.utils import timezone as dj_timezone
+
+from .api_client import EtainablApiClient
+from .models import (
+    Site,
+    Supply,
+    AppSettings,
+    ImportRun,
+    HalfHourlyConsumption,
+    MonthlyConsumption,
+    InvoiceCost,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -496,3 +510,370 @@ class EtainaibleSyncService:
         except Exception as e:
             logger.error(f"Failed to upsert supply from {account_data}: {str(e)}")
             return None
+
+
+def parse_utc_datetime(value: str) -> datetime:
+    """Parse ISO datetime/date values from source and return UTC-aware datetime."""
+    if not value:
+        raise ValueError('Missing datetime value')
+
+    normalized = value.replace('Z', '+00:00')
+    parsed = datetime.fromisoformat(normalized)
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def canonical_month_key(value: datetime) -> str:
+    """Derive canonical month key from UTC datetime."""
+    return value.astimezone(timezone.utc).strftime('%Y-%m')
+
+
+def month_start(year: int, month: int) -> datetime:
+    return datetime(year, month, 1, tzinfo=timezone.utc)
+
+
+def shift_months(start: datetime, months: int) -> datetime:
+    total = start.year * 12 + (start.month - 1) + months
+    year = total // 12
+    month = (total % 12) + 1
+    return datetime(year, month, 1, tzinfo=timezone.utc)
+
+
+def reporting_month_bounds(reporting_month: str) -> Tuple[datetime, datetime]:
+    year, month = reporting_month.split('-')
+    start = month_start(int(year), int(month))
+    end = shift_months(start, 1)
+    return start, end
+
+
+def get_halfhourly_windows(reporting_month: str) -> List[Tuple[datetime, datetime]]:
+    start, end = reporting_month_bounds(reporting_month)
+    prior_start = shift_months(start, -12)
+    prior_end = shift_months(end, -12)
+    return [(start, end), (prior_start, prior_end)]
+
+
+def get_monthly_window(reporting_month: str) -> Tuple[datetime, datetime]:
+    start, end = reporting_month_bounds(reporting_month)
+    return shift_months(end, -settings.CONSUMPTION_MONTHLY_MONTHS), end
+
+
+def get_invoice_window(reporting_month: str) -> Tuple[datetime, datetime]:
+    start, end = reporting_month_bounds(reporting_month)
+    return shift_months(end, -settings.CONSUMPTION_INVOICE_MONTHS), end
+
+
+def set_import_run_status(import_run: ImportRun, status: str, error_details: Optional[Dict] = None) -> None:
+    """Persist import run status transitions and completion timestamps."""
+    import_run.status = status
+    if status in {ImportRun.STATUS_SUCCESS, ImportRun.STATUS_PARTIAL_FAILURE, ImportRun.STATUS_FAILED}:
+        import_run.completed_at = dj_timezone.now()
+    if error_details is not None:
+        import_run.error_details = error_details
+    import_run.save(
+        update_fields=['status', 'completed_at', 'error_details', 'updated_at']
+        if error_details is not None
+        else ['status', 'completed_at', 'updated_at']
+    )
+
+
+def upsert_halfhourly_record(import_run: ImportRun, supply: Supply, row: Dict) -> Tuple[HalfHourlyConsumption, bool]:
+    start = parse_utc_datetime(row.get('startDate') or row.get('periodStart') or row.get('start_date'))
+    end = parse_utc_datetime(row.get('endDate') or row.get('periodEnd') or row.get('end_date'))
+    value = Decimal(str(row.get('consumption', 0) or 0))
+    return HalfHourlyConsumption.objects.update_or_create(
+        supply=supply,
+        source_period_start=start,
+        source_period_end=end,
+        defaults={
+            'import_run': import_run,
+            'canonical_month_key': canonical_month_key(end),
+            'consumption': value,
+        },
+    )
+
+
+def upsert_monthly_record(import_run: ImportRun, supply: Supply, row: Dict) -> Tuple[MonthlyConsumption, bool]:
+    start = parse_utc_datetime(row.get('startDate') or row.get('periodStart') or row.get('start_date'))
+    end = parse_utc_datetime(row.get('endDate') or row.get('periodEnd') or row.get('end_date'))
+    value = Decimal(str(row.get('consumption', 0) or 0))
+    breakdown = row.get('combinedBreakdown') or row.get('breakdown') or {}
+    sources = row.get('sources') or []
+    return MonthlyConsumption.objects.update_or_create(
+        supply=supply,
+        source_period_start=start,
+        source_period_end=end,
+        defaults={
+            'import_run': import_run,
+            'canonical_month_key': canonical_month_key(end),
+            'consumption': value,
+            'breakdown': breakdown if isinstance(breakdown, dict) else {},
+            'sources': sources if isinstance(sources, list) else [],
+        },
+    )
+
+
+def upsert_invoice_record(import_run: ImportRun, supply: Supply, row: Dict) -> Tuple[InvoiceCost, bool]:
+    start = parse_utc_datetime(
+        row.get('periodStart')
+        or row.get('startDate')
+        or row.get('fromDate')
+        or row.get('period_start')
+    )
+    end = parse_utc_datetime(
+        row.get('periodEnd')
+        or row.get('endDate')
+        or row.get('toDate')
+        or row.get('period_end')
+    )
+    cost = Decimal(str(row.get('cost', 0) or row.get('amount', 0) or 0))
+    metadata = {
+        'invoiceDate': row.get('invoiceDate') or row.get('date'),
+        'invoiceNumber': row.get('invoiceNumber') or row.get('number'),
+        'status': row.get('status'),
+    }
+    return InvoiceCost.objects.update_or_create(
+        supply=supply,
+        source_period_start=start,
+        source_period_end=end,
+        defaults={
+            'import_run': import_run,
+            'canonical_month_key': canonical_month_key(end),
+            'cost': cost,
+            'invoice_metadata': {k: v for k, v in metadata.items() if v is not None},
+        },
+    )
+
+
+class ConsumptionImportService:
+    """Orchestrates usage/invoice imports for selected supplies and reporting month."""
+
+    def __init__(self, api_client: Optional[EtainablApiClient] = None):
+        self.client = api_client or EtainablApiClient()
+        self.retry_count = max(0, int(settings.CONSUMPTION_IMPORT_RETRY_COUNT))
+        self.retry_backoff = max(1, int(settings.CONSUMPTION_IMPORT_RETRY_BACKOFF_SECONDS))
+
+    def run(self, supply_external_ids: List[str], reporting_month: str, refresh_mode: bool = True) -> ImportRun:
+        import_run = ImportRun.objects.create(
+            selected_supply_ids=supply_external_ids,
+            reporting_month=reporting_month,
+            status=ImportRun.STATUS_IN_PROGRESS,
+            affected_supply_count=len(supply_external_ids),
+        )
+
+        records_imported = 0
+        records_failed = 0
+        retry_used = 0
+        errors: Dict[str, str] = {}
+        outcomes: List[Dict] = []
+
+        supplies = list(Supply.objects.filter(external_id__in=supply_external_ids).order_by('id'))
+        supply_by_external_id = {s.external_id: s for s in supplies}
+
+        for supply_external_id in supply_external_ids:
+            supply = supply_by_external_id.get(supply_external_id)
+            if not supply:
+                records_failed += 1
+                errors[supply_external_id] = 'Supply not found'
+                outcomes.append({
+                    'supply_id': supply_external_id,
+                    'status': 'failed',
+                    'failure_reason': 'Supply not found',
+                })
+                continue
+
+            try:
+                outcome, imported_count, retries_for_supply, failed_ops = self._import_supply(import_run, supply, reporting_month)
+                records_imported += imported_count
+                retry_used += retries_for_supply
+                records_failed += failed_ops
+                outcomes.extend(outcome)
+            except Exception as exc:  # pylint: disable=broad-except
+                records_failed += 1
+                errors[supply_external_id] = str(exc)
+                outcomes.append({
+                    'supply_id': supply.external_id,
+                    'status': 'failed',
+                    'failure_reason': str(exc),
+                })
+
+        import_run.records_imported = records_imported
+        import_run.records_failed = records_failed
+        import_run.retry_count = retry_used
+        import_run.error_details = errors
+        import_run.outcome_details = outcomes
+
+        if records_failed == 0:
+            import_run.status = ImportRun.STATUS_SUCCESS
+        elif records_imported > 0:
+            import_run.status = ImportRun.STATUS_PARTIAL_FAILURE
+        else:
+            import_run.status = ImportRun.STATUS_FAILED
+
+        import_run.completed_at = dj_timezone.now()
+        import_run.save()
+        return import_run
+
+    def _import_supply(self, import_run: ImportRun, supply: Supply, reporting_month: str) -> Tuple[List[Dict], int, int, int]:
+        outcomes = []
+        imported_count = 0
+        retries_used = 0
+        failed_ops = 0
+
+        hh_windows = get_halfhourly_windows(reporting_month)
+        for start, end in hh_windows:
+            try:
+                rows, retries = self._fetch_with_retry(
+                    lambda: self.client.get_consumption(
+                        account_id=supply.external_id,
+                        start_date=start.isoformat().replace('+00:00', 'Z'),
+                        end_date=end.isoformat().replace('+00:00', 'Z'),
+                        granularity='halfhourly',
+                    ),
+                )
+                retries_used += retries
+                payload_rows = rows.get('data') if isinstance(rows, dict) else []
+                payload_rows = payload_rows if isinstance(payload_rows, list) else []
+                with transaction.atomic():
+                    for row in payload_rows:
+                        upsert_halfhourly_record(import_run, supply, row)
+                        imported_count += 1
+                outcomes.append({
+                    'supply_id': supply.external_id,
+                    'data_type': 'halfhourly',
+                    'request_window': {'start': start.isoformat(), 'end': end.isoformat()},
+                    'attempt_count': retries + 1,
+                    'retry_used': retries > 0,
+                    'response_code': 200,
+                    'status': 'success',
+                })
+            except Exception as exc:  # pylint: disable=broad-except
+                failed_ops += 1
+                outcomes.append({
+                    'supply_id': supply.external_id,
+                    'data_type': 'halfhourly',
+                    'request_window': {'start': start.isoformat(), 'end': end.isoformat()},
+                    'attempt_count': self.retry_count + 1,
+                    'retry_used': self.retry_count > 0,
+                    'response_code': None,
+                    'status': 'failed',
+                    'failure_reason': str(exc),
+                })
+
+        monthly_start, monthly_end = get_monthly_window(reporting_month)
+        try:
+            monthly_payload, retries = self._fetch_with_retry(
+                lambda: self.client.get_consumption(
+                    account_id=supply.external_id,
+                    start_date=monthly_start.isoformat().replace('+00:00', 'Z'),
+                    end_date=monthly_end.isoformat().replace('+00:00', 'Z'),
+                    granularity='monthly',
+                ),
+            )
+            retries_used += retries
+            monthly_rows = monthly_payload.get('data') if isinstance(monthly_payload, dict) else []
+            monthly_rows = monthly_rows if isinstance(monthly_rows, list) else []
+            with transaction.atomic():
+                for row in monthly_rows:
+                    upsert_monthly_record(import_run, supply, row)
+                    imported_count += 1
+            outcomes.append({
+                'supply_id': supply.external_id,
+                'data_type': 'monthly',
+                'request_window': {'start': monthly_start.isoformat(), 'end': monthly_end.isoformat()},
+                'attempt_count': retries + 1,
+                'retry_used': retries > 0,
+                'response_code': 200,
+                'status': 'success',
+            })
+        except Exception as exc:  # pylint: disable=broad-except
+            failed_ops += 1
+            outcomes.append({
+                'supply_id': supply.external_id,
+                'data_type': 'monthly',
+                'request_window': {'start': monthly_start.isoformat(), 'end': monthly_end.isoformat()},
+                'attempt_count': self.retry_count + 1,
+                'retry_used': self.retry_count > 0,
+                'response_code': None,
+                'status': 'failed',
+                'failure_reason': str(exc),
+            })
+
+        invoice_start, invoice_end = get_invoice_window(reporting_month)
+        try:
+            invoice_rows, retries = self._fetch_with_retry(
+                lambda: self.client.get_invoices(
+                    account_id=supply.external_id,
+                    start_date=invoice_start.isoformat().replace('+00:00', 'Z'),
+                    end_date=invoice_end.isoformat().replace('+00:00', 'Z'),
+                ),
+            )
+            retries_used += retries
+            with transaction.atomic():
+                for row in invoice_rows:
+                    upsert_invoice_record(import_run, supply, row)
+                    imported_count += 1
+            outcomes.append({
+                'supply_id': supply.external_id,
+                'data_type': 'invoice',
+                'request_window': {'start': invoice_start.isoformat(), 'end': invoice_end.isoformat()},
+                'attempt_count': retries + 1,
+                'retry_used': retries > 0,
+                'response_code': 200,
+                'status': 'success',
+            })
+        except Exception as exc:  # pylint: disable=broad-except
+            failed_ops += 1
+            outcomes.append({
+                'supply_id': supply.external_id,
+                'data_type': 'invoice',
+                'request_window': {'start': invoice_start.isoformat(), 'end': invoice_end.isoformat()},
+                'attempt_count': self.retry_count + 1,
+                'retry_used': self.retry_count > 0,
+                'response_code': None,
+                'status': 'failed',
+                'failure_reason': str(exc),
+            })
+
+        return outcomes, imported_count, retries_used, failed_ops
+
+    def _fetch_with_retry(self, fetcher):
+        attempts = 0
+        while True:
+            try:
+                return fetcher(), attempts
+            except Exception:  # pylint: disable=broad-except
+                if attempts >= self.retry_count:
+                    raise
+                attempts += 1
+                time.sleep(self.retry_backoff)
+
+
+def get_consumption_display_records(reporting_month: str, data_type: str = 'monthly', supply_external_id: Optional[str] = None) -> List[Dict]:
+    model_map = {
+        'halfhourly': (HalfHourlyConsumption, 'consumption'),
+        'monthly': (MonthlyConsumption, 'consumption'),
+        'invoice': (InvoiceCost, 'cost'),
+    }
+    model, value_field = model_map.get(data_type, model_map['monthly'])
+
+    qs = model.objects.filter(canonical_month_key=reporting_month).select_related('supply')
+    if supply_external_id:
+        qs = qs.filter(supply__external_id=supply_external_id)
+
+    records = []
+    for item in qs.order_by('-source_period_start'):
+        records.append({
+            'id': item.id,
+            'supply_id': item.supply.id,
+            'supply_external_id': item.supply.external_id,
+            'supply_name': item.supply.name,
+            'data_type': data_type,
+            'source_period_start': item.source_period_start,
+            'source_period_end': item.source_period_end,
+            'canonical_month_key': item.canonical_month_key,
+            'value': getattr(item, value_field),
+            'updated_at': item.updated_at,
+        })
+    return records

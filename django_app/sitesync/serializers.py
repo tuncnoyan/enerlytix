@@ -3,7 +3,15 @@ Serializers for Site, Supply, and Settings models.
 """
 
 from rest_framework import serializers
-from .models import Site, Supply, AppSettings
+from .models import (
+    Site,
+    Supply,
+    AppSettings,
+    ImportRun,
+    HalfHourlyConsumption,
+    MonthlyConsumption,
+    InvoiceCost,
+)
 
 
 class SupplySerializer(serializers.ModelSerializer):
@@ -95,3 +103,71 @@ class AppSettingsSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
         ]
+
+
+class ConsumptionImportRequestSerializer(serializers.Serializer):
+    supply_ids = serializers.ListField(
+        child=serializers.CharField(),
+        min_length=1,
+    )
+    reporting_month = serializers.RegexField(regex=r'^\d{4}-\d{2}$')
+    refresh_mode = serializers.BooleanField(required=False, default=True)
+
+
+class ConsumptionDisplayQuerySerializer(serializers.Serializer):
+    reporting_month = serializers.RegexField(regex=r'^\d{4}-\d{2}$')
+    supply_id = serializers.CharField(required=False, allow_blank=False)
+    data_type = serializers.ChoiceField(
+        choices=['halfhourly', 'monthly', 'invoice'],
+        required=False,
+        default='monthly',
+    )
+
+
+class ImportRunSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ImportRun
+        fields = [
+            'id',
+            'selected_supply_ids',
+            'reporting_month',
+            'status',
+            'started_at',
+            'completed_at',
+            'affected_supply_count',
+            'records_imported',
+            'records_failed',
+            'retry_count',
+            'error_details',
+            'outcome_details',
+            'created_at',
+            'updated_at',
+        ]
+
+
+class ConsumptionRecordSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    supply_id = serializers.IntegerField()
+    data_type = serializers.CharField()
+    source_period_start = serializers.DateTimeField()
+    source_period_end = serializers.DateTimeField()
+    canonical_month_key = serializers.CharField()
+    value = serializers.DecimalField(max_digits=16, decimal_places=6)
+
+
+class HalfHourlyConsumptionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HalfHourlyConsumption
+        fields = '__all__'
+
+
+class MonthlyConsumptionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MonthlyConsumption
+        fields = '__all__'
+
+
+class InvoiceCostSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InvoiceCost
+        fields = '__all__'

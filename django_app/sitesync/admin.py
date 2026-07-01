@@ -3,7 +3,15 @@ Django admin configuration for sitesync app.
 """
 
 from django.contrib import admin
-from .models import Site, Supply, AppSettings
+from .models import (
+    Site,
+    Supply,
+    AppSettings,
+    ImportRun,
+    HalfHourlyConsumption,
+    MonthlyConsumption,
+    InvoiceCost,
+)
 
 
 @admin.register(Site)
@@ -34,3 +42,83 @@ class AppSettingsAdmin(admin.ModelAdmin):
     
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(ImportRun)
+class ImportRunAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'reporting_month',
+        'status',
+        'affected_supply_count',
+        'records_imported',
+        'records_failed',
+        'retry_count',
+        'created_at',
+    )
+    list_filter = ('status', 'reporting_month', 'created_at')
+    search_fields = ('id', 'reporting_month')
+    readonly_fields = (
+        'id',
+        'selected_supply_ids',
+        'reporting_month',
+        'status',
+        'started_at',
+        'completed_at',
+        'affected_supply_count',
+        'records_imported',
+        'records_failed',
+        'retry_count',
+        'error_details',
+        'outcome_details',
+        'created_at',
+        'updated_at',
+    )
+
+
+@admin.register(HalfHourlyConsumption)
+class HalfHourlyConsumptionAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'supply',
+        'canonical_month_key',
+        'source_period_start',
+        'source_period_end',
+        'consumption',
+        'updated_at',
+    )
+    search_fields = ('supply__name', 'supply__external_id', 'canonical_month_key')
+    list_filter = ('canonical_month_key', 'created_at', 'updated_at')
+    autocomplete_fields = ('import_run', 'supply')
+
+
+@admin.register(MonthlyConsumption)
+class MonthlyConsumptionAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'supply',
+        'canonical_month_key',
+        'source_period_start',
+        'source_period_end',
+        'consumption',
+        'updated_at',
+    )
+    search_fields = ('supply__name', 'supply__external_id', 'canonical_month_key')
+    list_filter = ('canonical_month_key', 'created_at', 'updated_at')
+    autocomplete_fields = ('import_run', 'supply')
+
+
+@admin.register(InvoiceCost)
+class InvoiceCostAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'supply',
+        'canonical_month_key',
+        'source_period_start',
+        'source_period_end',
+        'cost',
+        'updated_at',
+    )
+    search_fields = ('supply__name', 'supply__external_id', 'canonical_month_key')
+    list_filter = ('canonical_month_key', 'created_at', 'updated_at')
+    autocomplete_fields = ('import_run', 'supply')

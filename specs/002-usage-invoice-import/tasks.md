@@ -12,10 +12,10 @@
 
 **Purpose**: Prepare configuration and entry points for new import/display capability.
 
-- [ ] T001 Add Xcelerate import config keys and retention default in django_app/config/settings.py
-- [ ] T002 Add environment variable examples for import and retention settings in .env.example
-- [ ] T003 [P] Add consumption import/display URL stubs in django_app/sitesync/urls.py
-- [ ] T004 [P] Register new route includes for sitesync in django_app/config/urls.py
+- [X] T001 Add Xcelerate import config keys and retention default in django_app/config/settings.py
+- [X] T002 Add environment variable examples for import and retention settings in .env.example
+- [X] T003 [P] Add consumption import/display URL stubs in django_app/sitesync/urls.py
+- [X] T004 [P] Register new route includes for sitesync in django_app/config/urls.py
 
 ---
 
@@ -25,13 +25,13 @@
 
 **CRITICAL**: Complete this phase before user story implementation.
 
-- [ ] T005 Create ImportRun, HalfHourlyConsumption, MonthlyConsumption, and InvoiceCost models in django_app/sitesync/models.py
-- [ ] T006 Create database migration for new consumption/invoice models in django_app/sitesync/migrations/0003_usage_invoice_import_models.py
-- [ ] T007 [P] Register new models in Django admin in django_app/sitesync/admin.py
-- [ ] T008 Implement UTC month-window helpers and canonical month key utilities in django_app/sitesync/services.py
-- [ ] T009 Implement Xcelerate consumption and invoices API client methods in django_app/sitesync/api_client.py
-- [ ] T010 Implement shared import run status/error logging helpers in django_app/sitesync/services.py
-- [ ] T011 Implement shared upsert repository helpers keyed by supply and source period in django_app/sitesync/services.py
+- [X] T005 Create ImportRun, HalfHourlyConsumption, MonthlyConsumption, and InvoiceCost models in django_app/sitesync/models.py
+- [X] T006 Create database migration for new consumption/invoice models in django_app/sitesync/migrations/0003_usage_invoice_import_models.py
+- [X] T007 [P] Register new models in Django admin in django_app/sitesync/admin.py
+- [X] T008 Implement UTC month-window helpers and canonical month key utilities in django_app/sitesync/services.py
+- [X] T009 Implement Xcelerate consumption and invoices API client methods in django_app/sitesync/api_client.py
+- [X] T010 Implement shared import run status/error logging helpers in django_app/sitesync/services.py
+- [X] T011 Implement shared upsert repository helpers keyed by supply and source period in django_app/sitesync/services.py
 
 **Checkpoint**: Foundation ready for independent user story execution.
 
@@ -43,14 +43,14 @@
 
 **Independent Test**: Trigger import for one known supply and reporting month; confirm two half-hourly months, 24 monthly rows, and 12 invoice rows are stored with UTC-normalized period keys.
 
-- [ ] T012 [US1] Add request/response serializers for consumption import trigger in django_app/sitesync/serializers.py
-- [ ] T013 [US1] Implement import orchestration service for selected supplies and reporting month in django_app/sitesync/services.py
-- [ ] T014 [US1] Implement half-hourly window fetch for selected month and prior-year same month in django_app/sitesync/services.py
-- [ ] T015 [US1] Implement monthly consumption fetch for previous 24 months in django_app/sitesync/services.py
-- [ ] T016 [US1] Implement invoice cost fetch for previous 12 months in django_app/sitesync/services.py
-- [ ] T017 [US1] Persist imported half-hourly/monthly/invoice records with canonical month keys in django_app/sitesync/services.py
-- [ ] T018 [US1] Add POST import endpoint view to trigger import run in django_app/sitesync/views.py
-- [ ] T019 [US1] Wire POST import endpoint in django_app/sitesync/urls.py
+- [X] T012 [US1] Add request/response serializers for consumption import trigger in django_app/sitesync/serializers.py
+- [X] T013 [US1] Implement import orchestration service for selected supplies and reporting month in django_app/sitesync/services.py
+- [X] T014 [US1] Implement half-hourly window fetch for selected month and prior-year same month in django_app/sitesync/services.py
+- [X] T015 [US1] Implement monthly consumption fetch for previous 24 months in django_app/sitesync/services.py
+- [X] T016 [US1] Implement invoice cost fetch for previous 12 months in django_app/sitesync/services.py
+- [X] T017 [US1] Persist imported half-hourly/monthly/invoice records with canonical month keys in django_app/sitesync/services.py
+- [X] T018 [US1] Add POST import endpoint view to trigger import run in django_app/sitesync/views.py
+- [X] T019 [US1] Wire POST import endpoint in django_app/sitesync/urls.py
 
 **Checkpoint**: MVP import flow works for initial load.
 
@@ -62,12 +62,12 @@
 
 **Independent Test**: Run import twice for same supply/month; verify row counts do not duplicate, changed source values overwrite existing records, and partial failures are logged with one retry.
 
-- [ ] T020 [US2] Add refresh mode input handling for existing import endpoint in django_app/sitesync/serializers.py
-- [ ] T021 [US2] Implement one-retry continue-on-error policy per failed supply-period in django_app/sitesync/services.py
-- [ ] T022 [US2] Implement strict upsert update path for repeated imports in django_app/sitesync/services.py
-- [ ] T023 [US2] Enforce duplicate prevention via model constraints and conflict handling in django_app/sitesync/models.py
-- [ ] T024 [US2] Update import run status transitions for success/partial_failure/failed in django_app/sitesync/services.py
-- [ ] T025 [US2] Expose refresh behavior and run summary in POST import endpoint response in django_app/sitesync/views.py
+- [X] T020 [US2] Add refresh mode input handling for existing import endpoint in django_app/sitesync/serializers.py
+- [X] T021 [US2] Implement one-retry continue-on-error policy per failed supply-period in django_app/sitesync/services.py
+- [X] T022 [US2] Implement strict upsert update path for repeated imports in django_app/sitesync/services.py
+- [X] T023 [US2] Enforce duplicate prevention via model constraints and conflict handling in django_app/sitesync/models.py
+- [X] T024 [US2] Update import run status transitions for success/partial_failure/failed in django_app/sitesync/services.py
+- [X] T025 [US2] Expose refresh behavior and run summary in POST import endpoint response in django_app/sitesync/views.py
 
 **Checkpoint**: Refresh/update behavior is idempotent and auditable.
 
@@ -79,13 +79,13 @@
 
 **Independent Test**: Open display page for a month with imported data and verify table rows, period fields, value type, and empty-state behavior.
 
-- [ ] T026 [US3] Add display query serializers for reporting month, supply, and data type filters in django_app/sitesync/serializers.py
-- [ ] T027 [US3] Implement display query service for canonical month-key and source-period filtering in django_app/sitesync/services.py
-- [ ] T028 [US3] Add GET API endpoint returning filtered table-ready records in django_app/sitesync/views.py
-- [ ] T029 [US3] Wire GET display endpoint route in django_app/sitesync/urls.py
-- [ ] T030 [US3] Create dedicated table page template in django_app/templates/sitesync/consumption_display.html
-- [ ] T031 [US3] Add template-rendering view for the consumption display page in django_app/sitesync/views.py
-- [ ] T032 [US3] Add client-side month/supply filter interactions for display page in django_app/static/sitesync/js/consumption_display.js
+- [X] T026 [US3] Add display query serializers for reporting month, supply, and data type filters in django_app/sitesync/serializers.py
+- [X] T027 [US3] Implement display query service for canonical month-key and source-period filtering in django_app/sitesync/services.py
+- [X] T028 [US3] Add GET API endpoint returning filtered table-ready records in django_app/sitesync/views.py
+- [X] T029 [US3] Wire GET display endpoint route in django_app/sitesync/urls.py
+- [X] T030 [US3] Create dedicated table page template in django_app/templates/sitesync/consumption_display.html
+- [X] T031 [US3] Add template-rendering view for the consumption display page in django_app/sitesync/views.py
+- [X] T032 [US3] Add client-side month/supply filter interactions for display page in django_app/static/sitesync/js/consumption_display.js
 
 **Checkpoint**: Dedicated table page is usable and matches imported dataset.
 
@@ -95,11 +95,11 @@
 
 **Purpose**: Complete retention, documentation, and final validation.
 
-- [ ] T033 Implement configurable retention cleanup management command in django_app/sitesync/management/commands/cleanup_expired_consumption.py
-- [ ] T034 [US2] Add auditable import outcome fields and persistence for per-supply and per-period results (attempt count, retry_used, failure_reason, response_code, request_window) in django_app/sitesync/models.py and django_app/sitesync/services.py
-- [ ] T035 [US2] Expose ImportRun audit detail endpoint/view for authorized users in django_app/sitesync/views.py and django_app/sitesync/urls.py
-- [ ] T036 [P] Add/update API documentation for import and display endpoints in docs/API.md
-- [ ] T037 [P] Document operational flow and retention behavior in django_app/README.md
+- [X] T033 Implement configurable retention cleanup management command in django_app/sitesync/management/commands/cleanup_expired_consumption.py
+- [X] T034 [US2] Add auditable import outcome fields and persistence for per-supply and per-period results (attempt count, retry_used, failure_reason, response_code, request_window) in django_app/sitesync/models.py and django_app/sitesync/services.py
+- [X] T035 [US2] Expose ImportRun audit detail endpoint/view for authorized users in django_app/sitesync/views.py and django_app/sitesync/urls.py
+- [X] T036 [P] Add/update API documentation for import and display endpoints in docs/API.md
+- [X] T037 [P] Document operational flow and retention behavior in django_app/README.md
 - [ ] T038 Run quickstart scenario validation and record outcomes in specs/002-usage-invoice-import/plan.md
 - [ ] T039 Define and execute UAT protocol for SC-004 (90% users locate/verify within 2 minutes) and record evidence in specs/002-usage-invoice-import/quickstart.md
 - [ ] T040 Create import timing instrumentation and run benchmark for up to 20 supplies over required windows; document pass/fail against 95% within 10 minutes in specs/002-usage-invoice-import/quickstart.md
