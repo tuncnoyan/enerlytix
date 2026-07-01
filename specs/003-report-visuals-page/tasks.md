@@ -28,7 +28,7 @@ description: "Task list for 003-report-visuals-page"
 - [ ] T003 Implement `report_data_api_view` in `django_app/sitesync/views.py`: accept `site_id` + `end_month` query params; assemble full JSON response per `contracts/report-data-api.md`; compute Max Demand, Load Factor, variance, Day/Night split server-side; return 400/404 on bad input
 - [ ] T004 [P] Add `BenchmarkSerializer` in `django_app/sitesync/serializers.py` and stub `report_view` (renders `report.html` with `site_id` + `end_month` from GET params) in `django_app/sitesync/views.py`
 - [ ] T005 [P] Create `django_app/templates/sitesync/report.html`: page shell (topbar, left-nav pane, main scroll area), CSS variables matching the existing design system (`--cxg-*`), CDN `<script>` tags for Chart.js 4.4.9, html2canvas 1.4.1, and jsPDF 2.5.2
-- [ ] T006 Create `django_app/static/sitesync/js/report.js`: fetch `/api/report-data/` on page load; parse response; dispatch section rendering per utility type in order electricity → gas → water; expose `renderReport(data)` entry point
+- [ ] T006 [P] Create `django_app/static/sitesync/js/report.js`: fetch `/api/report-data/` on page load; parse response; dispatch section rendering per utility type in order electricity → gas → water; expose `renderReport(data)` entry point
 
 **Checkpoint**: Foundation complete — US1/US2/US3/US4 work can now proceed in parallel per story.
 
@@ -40,26 +40,26 @@ description: "Task list for 003-report-visuals-page"
 
 **Independent test**: Navigate dashboard → select one site → set end month → click Create Report → all visual sections present and drawn with real data.
 
-- [ ] T007 [US1] Add "Create Report" button and `<input type="month">` picker to `.toolbar` in `django_app/templates/sitesync/site_list.html`; style to match existing toolbar buttons
+- [ ] T007 [US1] Add "Create Report" button and `<input type="month">` picker to `.import-controls` panel in `django_app/templates/sitesync/site_list.html`, directly after `#trigger-import-button` (per FR-001); style buttons to match existing `.import-controls button` style
 - [ ] T008 [US1] Implement enable/disable logic for "Create Report" button and month picker in `django_app/static/sitesync/js/site_selection.js`: disabled when 0 sites checked (tooltip: "Select a site first"), disabled when ≥2 sites checked (tooltip: "Select only one site to create a report"), enabled + navigates to `/report/?site_id=X&end_month=YYYY-MM` when exactly 1 site checked
 - [ ] T009 [US1] Implement Site Overview section in `django_app/static/sitesync/js/report.js`: render Total Utility Usage (£) pie chart (Chart.js doughnut) + cost-breakdown table from `response.overview`; use `--cxg-highlight-376` (#7AB800) for Electricity, `--cxg-primary-430` (#7C878E) for Gas, `--cxg-primary-432` (#333F48) for Water
 - [ ] T010 [P] [US1] Implement Monthly Electricity Usage bar chart in `django_app/static/sitesync/js/report.js`: grouped bar chart with Current (green `#7AB800`), Previous Year (grey `#7C878E`), Benchmark (yellow `#F5C400`) series from `supply.monthly`; x-axis months, y-axis kWh with `K` suffix formatter; omit Benchmark series if all null
 - [ ] T011 [P] [US1] Implement Monthly Electricity Usage table in `django_app/static/sitesync/js/report.js`: render HTML table rows from `supply.monthly.table` with columns Date, Last 12 Months (kWh), Prev. 12 Months (kWh), Gross Variance (kWh), Relative Variance (%)
 - [ ] T012 [P] [US1] Implement Electricity Load Factor visual in `django_app/static/sitesync/js/report.js`: line chart with Consumption series (green), Max Demand constant line (grey), Available Capacity constant line (yellow, omit if null); three KPI cards below showing Load Factor %, Max Demand kW, Available Capacity kW (or "N/A"); data from `supply.load_factor`
-- [ ] T013 [P] [US1] Implement HH Electricity Data Comparison — Last Month line chart in `django_app/static/sitesync/js/report.js`: dual line chart from `supply.hh_comparison`; Current Year (green `#7AB800`), Previous Year Same Month (grey `#7C878E`); x-axis datetime ticks
+- [ ] T013 [P] [US1] Implement HH Electricity Data Comparison — Last Month line chart in `django_app/static/sitesync/js/report.js`: dual line chart from `supply.hh_comparison`; Current Year (green `#7AB800`), Previous Year Same Month (grey `#7C878E`); x-axis datetime ticks; enable Chart.js `normalized: true` and `parsing: false` (pass pre-sorted numeric arrays) to handle ~1 500 data points per series within SC-001 render budget
 - [ ] T014 [P] [US1] Implement HH Electricity Day/Night Usage — Last Month stacked bar chart in `django_app/static/sitesync/js/report.js`: one bar per HH interval from `supply.day_night.records`; Day period (green `#7AB800`), Night period (dark `#333F48`); x-axis datetime ticks
-- [ ] T015 [P] [US1] Implement Daily Comparison — Weekday Usage overlaid line chart in `django_app/static/sitesync/js/report.js`: one line series per weekday from `supply.weekday_comparison.days`; x-axis 00:00–23:30 time labels; multi-colour series from a fixed 20-colour palette
-- [ ] T016 [P] [US1] Implement Daily Comparison — Weekend Usage overlaid line chart in `django_app/static/sitesync/js/report.js`: same pattern as T015 using `supply.weekend_comparison.days`
+- [ ] T015 [P] [US1] Implement Daily Comparison — Weekday Usage overlaid line chart in `django_app/static/sitesync/js/report.js`: one line series per weekday from `supply.weekday_comparison.days`; x-axis 00:00–23:30 time labels; multi-colour series from a fixed 20-colour palette; use `normalized: true` and `parsing: false` (T013 pattern)
+- [ ] T016 [P] [US1] Implement Daily Comparison — Weekend Usage overlaid line chart in `django_app/static/sitesync/js/report.js`: same pattern as T015 using `supply.weekend_comparison.days`; same performance options
 - [ ] T017 [P] [US1] Implement Monthly Gas Usage bar chart in `django_app/static/sitesync/js/report.js`: same grouped bar pattern as T010 using gas supply `monthly` data (unit: kWh)
 - [ ] T018 [P] [US1] Implement Monthly Gas Usage table in `django_app/static/sitesync/js/report.js`: same table pattern as T011 for gas supply `monthly.table` (unit: kWh)
-- [ ] T019 [P] [US1] Implement HH Gas Data Comparison — Last Month line chart in `django_app/static/sitesync/js/report.js`: same dual-line pattern as T013 using gas `supply.hh_comparison`
-- [ ] T020 [P] [US1] Implement Daily Comparison — Weekday Usage (Gas) overlaid line chart in `django_app/static/sitesync/js/report.js`: same pattern as T015 using gas `supply.weekday_comparison.days`
-- [ ] T021 [P] [US1] Implement Daily Comparison — Weekend Usage (Gas) overlaid line chart in `django_app/static/sitesync/js/report.js`: same pattern as T016 using gas `supply.weekend_comparison.days`
+- [ ] T019 [P] [US1] Implement HH Gas Data Comparison — Last Month line chart in `django_app/static/sitesync/js/report.js`: same dual-line pattern as T013 using gas `supply.hh_comparison`; same `normalized: true` / `parsing: false` options
+- [ ] T020 [P] [US1] Implement Daily Comparison — Weekday Usage (Gas) overlaid line chart in `django_app/static/sitesync/js/report.js`: same pattern as T015 using gas `supply.weekday_comparison.days`; same performance options
+- [ ] T021 [P] [US1] Implement Daily Comparison — Weekend Usage (Gas) overlaid line chart in `django_app/static/sitesync/js/report.js`: same pattern as T016 using gas `supply.weekend_comparison.days`; same performance options
 - [ ] T022 [P] [US1] Implement Monthly Water Usage bar chart in `django_app/static/sitesync/js/report.js`: same grouped bar pattern as T010 using water supply `monthly` data (unit: m³; field names `current_m3` / `previous_year_m3` / `benchmark_m3`)
 - [ ] T023 [P] [US1] Implement Monthly Water Usage table in `django_app/static/sitesync/js/report.js`: same table pattern as T011 for water supply `monthly.table` (columns use m³ unit label)
 - [ ] T024 [US1] Implement utility section ordering and conditional rendering in `django_app/static/sitesync/js/report.js`: iterate `response.supplies` grouped by `utility_type` in order electricity → gas → water; skip a utility group if it has no entries; within a group render one full visual set per supply
 - [ ] T025 [US1] Implement left navigation pane in `django_app/templates/sitesync/report.html` and `django_app/static/sitesync/js/report.js`: populate nav entries dynamically after data loads; single supply per type → labelled by utility name; multiple supplies → labelled by meter number; clicking an entry smooth-scrolls to the corresponding section anchor
-- [ ] T026 [US1] Implement "no halfhourly data available" placeholder card in `django_app/static/sitesync/js/report.js`: shown in place of Load Factor, HH Comparison, Day/Night, Weekday, and Weekend visuals when `supply.load_factor` or `supply.hh_comparison` is null or has empty `halfhourly` / `current` arrays
+- [ ] T026 [US1] Implement "no halfhourly data available" placeholder card in `django_app/static/sitesync/js/report.js`: shown in place of Load Factor, HH Comparison, Day/Night, Weekday, and Weekend visuals when `supply.load_factor` or `supply.hh_comparison` is null or has empty `halfhourly` / `current` arrays (implements FR-033)
 
 ---
 
@@ -104,12 +104,12 @@ description: "Task list for 003-report-visuals-page"
 ## Dependencies
 
 ```
-T001 → T003, T004, T005, T006
-T002 → T003, T004
-T003 → T006 → T007..T028
+T001 → T003, T004, T005
+T002 → T003, T004, T006
+T003 → T007..T028   (API must exist before client fetch is useful)
 T004 → T005
 T005 → T006
-T006 → T007..T028
+T006 [P with T003] → T007..T028   (skeleton can be written before T003 is complete; runtime dep only)
 
 Story execution order (can be parallelised once Phase 2 is done):
   US1 (T007–T026) → recommended first: delivers the full visual page

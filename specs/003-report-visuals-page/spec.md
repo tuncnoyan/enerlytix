@@ -91,7 +91,7 @@ The energy manager can navigate within the report page using both the left navig
 ### Functional Requirements
 
 **Dashboard Entry Point**
-- **FR-001**: The dashboard page MUST display a "Create Report" button positioned directly after the existing "Load Data" button.
+- **FR-001**: The dashboard page MUST display a "Create Report" button positioned directly after the existing "Load Data" button, within the same import-controls panel (not in the top toolbar). The month picker (FR-001a) MUST also appear in this same location.
 - **FR-001a**: The dashboard page MUST display a month picker (end month selector) adjacent to the "Create Report" button, allowing the user to select the reporting end month. The default selection MUST be the most recent complete calendar month.
 - **FR-001b**: The "Create Report" button and the end-month picker MUST be disabled when no site is currently loaded. A tooltip MUST be shown on hover explaining that a site must be loaded first.
 - **FR-001c**: The "Create Report" button and the end-month picker MUST also be disabled when more than one site is currently selected, because the report can only be generated for a single site. A tooltip MUST be shown on hover explaining that exactly one site must be selected.
@@ -142,6 +142,7 @@ The energy manager can navigate within the report page using both the left navig
 - **FR-030**: The report page MUST include a "Download as PDF" button that triggers a client-side PDF generation and download.
 - **FR-031**: The generated PDF MUST include all visible charts, tables, and comments in the same visual order as the on-screen report.
 - **FR-032**: The PDF presentation format MUST be landscape-oriented and styled for stakeholder distribution.
+- **FR-033**: When no halfhourly data exists for a supply in the selected reporting period, the Load Factor, HH Comparison, Day/Night, Weekday, and Weekend visuals for that supply MUST each display a clear "No data available" placeholder message rather than a blank canvas or broken chart.
 
 ### Key Entities
 
