@@ -2,6 +2,26 @@
   const body = document.getElementById('records-body');
   const summary = document.getElementById('summary');
   const querySummary = document.getElementById('query-summary');
+  const startHeader = document.getElementById('col-start');
+  const endHeader = document.getElementById('col-end');
+  const valueHeader = document.getElementById('col-value');
+
+  function applyColumnLabels(dataType) {
+    if (!startHeader || !endHeader || !valueHeader) {
+      return;
+    }
+
+    if (dataType === 'invoice') {
+      startHeader.textContent = 'startDate';
+      endHeader.textContent = 'endDate';
+      valueHeader.textContent = 'netTotalCost';
+      return;
+    }
+
+    startHeader.textContent = 'Source Start';
+    endHeader.textContent = 'Source End';
+    valueHeader.textContent = 'Value';
+  }
 
   function clearRows() {
     if (body) {
@@ -64,6 +84,8 @@
     const dataType = urlParams.get('data_type') || 'monthly';
     const supplyIdsRaw = urlParams.get('supply_ids') || '';
     const selectedSupplyIds = supplyIdsRaw.split(',').map((item) => item.trim()).filter(Boolean);
+
+    applyColumnLabels(dataType);
 
     if (querySummary) {
       querySummary.textContent = 'Month: ' + (reportingMonth || '-') + ' | Data Type: ' + dataType + ' | Supplies: ' + selectedSupplyIds.length;

@@ -66,3 +66,4 @@ class SiteListViewTest(TestCase):
         self.assertIn('site-selector', content)
         self.assertIn('data-fiscal-total=', content)
         self.assertIn('data-submeter-total=', content)
+        self.assertIn('Refresh data', content)

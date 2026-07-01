@@ -673,7 +673,13 @@
                             </div>
                             <div>
                                 <label>&nbsp;</label>
-                                <button id="trigger-import-button" type="button">Load Data</button>
+                                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                    <button id="trigger-import-button" type="button">Load Data</button>
+                                    <label for="import-refresh-mode" style="display: flex; align-items: center; gap: 0.35rem; margin: 0; font-weight: 600; white-space: nowrap;">
+                                        <input id="import-refresh-mode" type="checkbox" />
+                                        Refresh data
+                                    </label>
+                                </div>
                             </div>
                         </div>
                         <div class="import-status" id="import-status"></div>

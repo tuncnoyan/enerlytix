@@ -21,10 +21,21 @@ class EtainablApiClient:
             'Content-Type': 'application/json'
         }
 
+    def _headers_key_only(self):
+        return {
+            'x-api-key': self.api_key,
+            'Content-Type': 'application/json'
+        }
+
     def get(self, path, params=None):
         url = f"{self.base_url.rstrip('/')}/{path.lstrip('/')}"
         logger.debug(f"GET {url} params={params}")
         resp = requests.get(url, params=params, headers=self._headers(), timeout=self.timeout)
+        if resp.status_code >= 400:
+            body = (resp.text or '').lower()
+            if resp.status_code >= 500 and ('unauthorized' in body or 'internal server error' in body):
+                logger.debug("Retrying GET %s with x-api-key only headers", url)
+                resp = requests.get(url, params=params, headers=self._headers_key_only(), timeout=self.timeout)
         resp.raise_for_status()
         return resp.json()
 

@@ -183,6 +183,7 @@ LOGGING = {
 # Etainabl API Configuration
 ETAINABL_API_KEY = os.getenv('ETAINABL_API_KEY')
 ETAINABL_API_URL = os.getenv('ETAINABL_API_URL', 'https://api.etainabl.com/2.0')
+ETAINABL_ACCOUNT_ID = os.getenv('ETAINABL_ACCOUNT_ID', '6584fdd1c9ec4255')
 API_TIMEOUT = int(os.getenv('API_TIMEOUT', 30))
 
 # Usage and invoice import configuration

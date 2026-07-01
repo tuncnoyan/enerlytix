@@ -257,6 +257,13 @@ function getImportDataTypeValue() {
     return input ? input.value : 'monthly';
 }
 
+function getRefreshModeValue() {
+    "use strict";
+
+    const input = document.getElementById('import-refresh-mode');
+    return input ? input.checked : false;
+}
+
 function setImportStatus(message, isError) {
     "use strict";
 
@@ -274,6 +281,7 @@ function triggerConsumptionImport() {
     const supplyIds = getSelectedSupplyIds();
     const reportingMonth = getReportingMonthValue();
     const dataType = getImportDataTypeValue();
+    const refreshMode = getRefreshModeValue();
     const button = document.getElementById('trigger-import-button');
 
     if (!reportingMonth) {
@@ -298,7 +306,7 @@ function triggerConsumptionImport() {
         body: JSON.stringify({
             supply_ids: supplyIds,
             reporting_month: reportingMonth,
-            refresh_mode: true,
+            refresh_mode: refreshMode,
         }),
     })
         .then((response) => {
