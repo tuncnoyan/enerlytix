@@ -1,29 +1,23 @@
 (function () {
-  const monthInput = document.getElementById('reporting-month');
-  const supplyInput = document.getElementById('supply-id');
-  const typeInput = document.getElementById('data-type');
-  const loadButton = document.getElementById('load-data');
   const body = document.getElementById('records-body');
-  const emptyState = document.getElementById('empty-state');
   const summary = document.getElementById('summary');
-
-  function normalizeMonth(value) {
-    if (!value) return '';
-    return value;
-  }
+  const querySummary = document.getElementById('query-summary');
 
   function clearRows() {
-    body.innerHTML = '';
+    if (body) {
+      body.innerHTML = '';
+    }
   }
 
   function renderRows(records) {
     clearRows();
     if (!records.length) {
-      emptyState.textContent = 'No records found for the selected filters.';
+      if (summary) {
+        summary.textContent = 'No records found for the selected filters.';
+      }
       return;
     }
 
-    emptyState.textContent = '';
     records.forEach((row) => {
       const tr = document.createElement('tr');
       tr.innerHTML =
@@ -37,23 +31,12 @@
     });
   }
 
-  async function loadData() {
-    const reportingMonth = normalizeMonth(monthInput.value);
-    if (!reportingMonth) {
-      summary.textContent = 'Reporting month is required.';
-      clearRows();
-      emptyState.textContent = 'No records loaded.';
-      return;
-    }
-
+  async function fetchAndRender(reportingMonth, dataType, selectedSupplyIds) {
     const params = new URLSearchParams({
       reporting_month: reportingMonth,
-      data_type: typeInput.value,
+      data_type: dataType,
+      supply_ids: selectedSupplyIds.join(','),
     });
-
-    if (supplyInput.value) {
-      params.set('supply_id', supplyInput.value);
-    }
 
     const response = await fetch('/api/consumption-display/?' + params.toString(), {
       method: 'GET',
@@ -61,18 +44,38 @@
     });
 
     if (!response.ok) {
-      summary.textContent = 'Failed to load records.';
+      if (summary) {
+        summary.textContent = 'Failed to load records.';
+      }
       clearRows();
-      emptyState.textContent = 'Unable to fetch data.';
       return;
     }
 
     const payload = await response.json();
-    summary.textContent = 'Loaded ' + payload.total_records + ' records.';
+    if (summary) {
+      summary.textContent = 'Loaded ' + payload.total_records + ' records from ' + selectedSupplyIds.length + ' selected supplies.';
+    }
     renderRows(payload.records || []);
   }
 
-  if (loadButton) {
-    loadButton.addEventListener('click', loadData);
-  }
+  document.addEventListener('DOMContentLoaded', function () {
+    const urlParams = new URLSearchParams(window.location.search);
+    const reportingMonth = urlParams.get('reporting_month') || '';
+    const dataType = urlParams.get('data_type') || 'monthly';
+    const supplyIdsRaw = urlParams.get('supply_ids') || '';
+    const selectedSupplyIds = supplyIdsRaw.split(',').map((item) => item.trim()).filter(Boolean);
+
+    if (querySummary) {
+      querySummary.textContent = 'Month: ' + (reportingMonth || '-') + ' | Data Type: ' + dataType + ' | Supplies: ' + selectedSupplyIds.length;
+    }
+
+    if (!reportingMonth || !selectedSupplyIds.length) {
+      if (summary) {
+        summary.textContent = 'Missing query parameters. Return to the dashboard and load data again.';
+      }
+      return;
+    }
+
+    fetchAndRender(reportingMonth, dataType, selectedSupplyIds);
+  });
 })();

@@ -40,6 +40,11 @@
 {% if supplies %}
     <div class="supply-list">
         <h3 class="supply-section-title">Supplies for This Site</h3>
+        <div class="site-list-actions" style="margin-bottom:0.55rem;">
+            <span class="site-selection-count" id="selected-supplies-count">Selected Supplies: 0</span>
+            <button type="button" onclick="document.querySelectorAll('.supply-selector').forEach((item) => { item.checked = true; }); const node = document.getElementById('selected-supplies-count'); if (node) { node.textContent = 'Selected Supplies: ' + document.querySelectorAll('.supply-selector:checked').length; }">Select all</button>
+            <button type="button" onclick="document.querySelectorAll('.supply-selector:checked').forEach((item) => { item.checked = false; }); const node = document.getElementById('selected-supplies-count'); if (node) { node.textContent = 'Selected Supplies: 0'; }">Deselect all</button>
+        </div>
         {% if fiscal_supplies %}
             <ul class="supply-items">
                 {% for fiscal in fiscal_supplies %}
@@ -52,6 +57,14 @@
                                 <ul class="supply-items" style="padding-left: 0; margin-top: 0;">
                                     {% for submeter in fiscal.submeters %}
                                         <li class="supply-item" style="border-left-color: #00693c; background: #f2f2f3;">
+                                            <div>
+                                                <input
+                                                    class="site-item-checkbox supply-selector"
+                                                    type="checkbox"
+                                                    data-supply-id="{{ submeter.external_id }}"
+                                                    onchange="const node = document.getElementById('selected-supplies-count'); if (node) { node.textContent = 'Selected Supplies: ' + document.querySelectorAll('.supply-selector:checked').length; }"
+                                                />
+                                            </div>
                                             <div class="supply-name"><strong>{{ submeter.name }}</strong></div>
                                             <div class="supply-type">{{ submeter.get_utility_type_display }} • Submeter</div>
                                             {% if submeter.device_id %}
@@ -65,6 +78,14 @@
                         {% endif %}
                     {% else %}
                         <li class="supply-item">
+                            <div>
+                                <input
+                                    class="site-item-checkbox supply-selector"
+                                    type="checkbox"
+                                    data-supply-id="{{ fiscal.supply.external_id }}"
+                                    onchange="const node = document.getElementById('selected-supplies-count'); if (node) { node.textContent = 'Selected Supplies: ' + document.querySelectorAll('.supply-selector:checked').length; }"
+                                />
+                            </div>
                             <div class="supply-name"><strong>{{ fiscal.supply.name }}</strong></div>
                             <div class="supply-type">{{ fiscal.supply.get_utility_type_display }} • Main (Fiscal)</div>
                             {% if fiscal.supply.device_id %}
@@ -76,6 +97,14 @@
                                 <ul class="supply-items" style="margin-top: 0.55rem; padding-left: 0.75rem; border-left: 2px solid #dee0e3;">
                                     {% for submeter in fiscal.submeters %}
                                         <li class="supply-item" style="border-left-color: #00693c; background: #f2f2f3;">
+                                            <div>
+                                                <input
+                                                    class="site-item-checkbox supply-selector"
+                                                    type="checkbox"
+                                                    data-supply-id="{{ submeter.external_id }}"
+                                                    onchange="const node = document.getElementById('selected-supplies-count'); if (node) { node.textContent = 'Selected Supplies: ' + document.querySelectorAll('.supply-selector:checked').length; }"
+                                                />
+                                            </div>
                                             <div class="supply-name"><strong>{{ submeter.name }}</strong></div>
                                             <div class="supply-type">{{ submeter.get_utility_type_display }} • Submeter</div>
                                             {% if submeter.device_id %}
@@ -103,6 +132,14 @@
             <ul class="supply-items">
                 {% for submeter in orphan_submeters %}
                     <li class="supply-item" style="border-left-color: #7ab800; background: #f1ffd6;">
+                        <div>
+                            <input
+                                class="site-item-checkbox supply-selector"
+                                type="checkbox"
+                                data-supply-id="{{ submeter.external_id }}"
+                                onchange="const node = document.getElementById('selected-supplies-count'); if (node) { node.textContent = 'Selected Supplies: ' + document.querySelectorAll('.supply-selector:checked').length; }"
+                            />
+                        </div>
                         <div class="supply-name"><strong>{{ submeter.name }}</strong></div>
                         <div class="supply-type">{{ submeter.get_utility_type_display }} • Submeter</div>
                         {% if submeter.device_id %}

@@ -117,6 +117,7 @@ class ConsumptionImportRequestSerializer(serializers.Serializer):
 class ConsumptionDisplayQuerySerializer(serializers.Serializer):
     reporting_month = serializers.RegexField(regex=r'^\d{4}-\d{2}$')
     supply_id = serializers.CharField(required=False, allow_blank=False)
+    supply_ids = serializers.CharField(required=False, allow_blank=False)
     data_type = serializers.ChoiceField(
         choices=['halfhourly', 'monthly', 'invoice'],
         required=False,

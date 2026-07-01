@@ -361,12 +361,18 @@ def consumption_display_api_view(request):
 
     reporting_month = validated['reporting_month']
     supply_external_id = validated.get('supply_id')
+    supply_ids_raw = validated.get('supply_ids')
     data_type = validated.get('data_type', 'monthly')
+
+    supply_external_ids = []
+    if supply_ids_raw:
+        supply_external_ids = [item.strip() for item in supply_ids_raw.split(',') if item.strip()]
 
     rows = get_consumption_display_records(
         reporting_month=reporting_month,
         data_type=data_type,
         supply_external_id=supply_external_id,
+        supply_external_ids=supply_external_ids,
     )
 
     return Response({
@@ -380,13 +386,22 @@ def consumption_display_api_view(request):
 def consumption_display_view(request):
     reporting_month = request.GET.get('reporting_month', '')
     supply_id = request.GET.get('supply_id', '')
+    supply_ids = request.GET.get('supply_ids', '')
     data_type = request.GET.get('data_type', 'monthly')
 
     context = {
         'reporting_month': reporting_month,
         'supply_id': supply_id,
+        'supply_ids': supply_ids,
         'data_type': data_type,
-        'supplies': Supply.objects.all().order_by('name'),
+        'sites': Site.objects.order_by('name'),
+        'site_count': Site.objects.count(),
+        'fiscal_meter_count': Supply.objects.filter(
+            Q(parent_account_id__isnull=True) | Q(parent_account_id='')
+        ).count(),
+        'submeter_count': Supply.objects.exclude(
+            Q(parent_account_id__isnull=True) | Q(parent_account_id='')
+        ).count(),
     }
     return render(request, 'sitesync/consumption_display.html', context)
 

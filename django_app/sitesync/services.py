@@ -850,7 +850,12 @@ class ConsumptionImportService:
                 time.sleep(self.retry_backoff)
 
 
-def get_consumption_display_records(reporting_month: str, data_type: str = 'monthly', supply_external_id: Optional[str] = None) -> List[Dict]:
+def get_consumption_display_records(
+    reporting_month: str,
+    data_type: str = 'monthly',
+    supply_external_id: Optional[str] = None,
+    supply_external_ids: Optional[List[str]] = None,
+) -> List[Dict]:
     model_map = {
         'halfhourly': (HalfHourlyConsumption, 'consumption'),
         'monthly': (MonthlyConsumption, 'consumption'),
@@ -859,6 +864,8 @@ def get_consumption_display_records(reporting_month: str, data_type: str = 'mont
     model, value_field = model_map.get(data_type, model_map['monthly'])
 
     qs = model.objects.filter(canonical_month_key=reporting_month).select_related('supply')
+    if supply_external_ids:
+        qs = qs.filter(supply__external_id__in=supply_external_ids)
     if supply_external_id:
         qs = qs.filter(supply__external_id=supply_external_id)
 

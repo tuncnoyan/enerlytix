@@ -235,22 +235,112 @@ function deselectAllSites() {
     loadSupplies(selectedSiteId);
 }
 
-// Auto-select first site on page load if available
+function getSelectedSupplyIds() {
+    "use strict";
+
+    return Array.from(document.querySelectorAll('.supply-selector:checked'))
+        .map((checkbox) => checkbox.getAttribute('data-supply-id'))
+        .filter(Boolean);
+}
+
+function getReportingMonthValue() {
+    "use strict";
+
+    const input = document.getElementById('import-reporting-month');
+    return input ? input.value : '';
+}
+
+function getImportDataTypeValue() {
+    "use strict";
+
+    const input = document.getElementById('import-data-type');
+    return input ? input.value : 'monthly';
+}
+
+function setImportStatus(message, isError) {
+    "use strict";
+
+    const statusNode = document.getElementById('import-status');
+    if (!statusNode) {
+        return;
+    }
+    statusNode.textContent = message || '';
+    statusNode.style.color = isError ? '#b91c1c' : '#0f766e';
+}
+
+function triggerConsumptionImport() {
+    "use strict";
+
+    const supplyIds = getSelectedSupplyIds();
+    const reportingMonth = getReportingMonthValue();
+    const dataType = getImportDataTypeValue();
+    const button = document.getElementById('trigger-import-button');
+
+    if (!reportingMonth) {
+        setImportStatus('Reporting month is required.', true);
+        return;
+    }
+    if (!supplyIds.length) {
+        setImportStatus('Select at least one supply to load data.', true);
+        return;
+    }
+
+    setImportStatus('Import is running. Please wait...', false);
+    if (button) {
+        button.disabled = true;
+    }
+
+    fetch('/api/consumption-import/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            supply_ids: supplyIds,
+            reporting_month: reportingMonth,
+            refresh_mode: true,
+        }),
+    })
+        .then((response) => {
+            if (!response.ok) {
+                throw new Error('Import request failed.');
+            }
+            return response.json();
+        })
+        .then(() => {
+            const params = new URLSearchParams({
+                reporting_month: reportingMonth,
+                data_type: dataType,
+                supply_ids: supplyIds.join(','),
+            });
+            window.location.href = '/consumption-display/?' + params.toString();
+        })
+        .catch((error) => {
+            console.error(error);
+            setImportStatus('Unable to run import. Please try again.', true);
+        })
+        .finally(() => {
+            if (button) {
+                button.disabled = false;
+            }
+        });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     "use strict";
-    const firstSite = document.querySelector('.site-item');
     updateTopStatsFromCheckedSites();
-    if (firstSite) {
-        // Simulate click on first site
-        const siteId = firstSite.getAttribute('data-site-id');
-        firstSite.classList.add('selected');
-        const checkbox = firstSite.querySelector('.site-selector');
-        if (checkbox) {
-            checkbox.checked = true;
-        }
-        if (siteId) {
-            selectedSiteId = siteId;
-            loadSupplies(siteId);
-        }
+
+    const now = new Date();
+    const currentMonth = now.toISOString().slice(0, 7);
+    const reportingMonthInput = document.getElementById('import-reporting-month');
+    if (reportingMonthInput && !reportingMonthInput.value) {
+        reportingMonthInput.value = currentMonth;
     }
+
+    const importButton = document.getElementById('trigger-import-button');
+    if (importButton) {
+        importButton.addEventListener('click', triggerConsumptionImport);
+    }
+
+    renderNoSelectedSites();
 });

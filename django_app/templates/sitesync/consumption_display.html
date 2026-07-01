@@ -1,72 +1,84 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Consumption Display</title>
+    <title>Usage and Invoices</title>
     <style>
-        body { font-family: "Segoe UI", Tahoma, sans-serif; margin: 24px; background: #f7f9fc; color: #1f2937; }
-        .panel { background: #fff; border: 1px solid #dbe3ef; border-radius: 10px; padding: 16px; margin-bottom: 16px; }
-        .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
-        label { font-size: 12px; font-weight: 600; color: #334155; display: block; margin-bottom: 6px; }
-        input, select { min-width: 160px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; }
-        button { padding: 8px 14px; border: none; border-radius: 6px; background: #0f766e; color: #fff; cursor: pointer; }
-        table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; }
-        th, td { border-bottom: 1px solid #e2e8f0; padding: 10px; text-align: left; font-size: 14px; }
-        th { background: #ecfeff; color: #134e4a; }
-        .empty { color: #64748b; margin-top: 10px; }
-        @media (max-width: 640px) { body { margin: 12px; } th, td { font-size: 12px; padding: 8px; } }
+        :root {
+            --cxg-bg-10: #F2F2F3;
+            --cxg-primary-432: #333F48;
+            --cxg-primary-430: #7C878E;
+            --cxg-highlight-349: #00693C;
+            --cxg-border: #C6D0D7;
+            --cxg-white: #FFFFFF;
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: "Manrope", "Segoe UI", sans-serif; background: var(--cxg-bg-10); color: var(--cxg-primary-432); }
+        .topbar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 0.85rem 1.4rem; border-bottom: 1px solid var(--cxg-border); background: var(--cxg-white); }
+        .brand { font-size: 1.15rem; font-weight: 800; }
+        .topbar-links { display: flex; gap: 1.1rem; }
+        .topbar-links a { color: var(--cxg-primary-430); text-decoration: none; font-size: 0.78rem; font-weight: 600; padding: 0.3rem 0.15rem; border-bottom: 2px solid transparent; }
+        .topbar-links a.is-active { color: var(--cxg-primary-432); border-bottom-color: var(--cxg-primary-430); }
+        .content-wrap { width: min(1400px, 100%); margin: 0 auto; padding: 1rem; }
+        .panel { background: var(--cxg-white); border: 1px solid var(--cxg-border); border-radius: 0.45rem; padding: 0.9rem; margin-bottom: 0.8rem; }
+        .header-row { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+        .return-link {
+            display: inline-block;
+            text-decoration: none;
+            color: var(--cxg-white);
+            background: var(--cxg-highlight-349);
+            border-radius: 0.3rem;
+            padding: 0.48rem 0.72rem;
+            font-size: 0.78rem;
+            font-weight: 700;
+        }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border-bottom: 1px solid #e2e8f0; padding: 9px; text-align: left; font-size: 0.82rem; }
+        th { background: #f4f8fb; color: #134e4a; }
+        .empty { color: #64748b; font-size: 0.82rem; }
     </style>
 </head>
 <body>
-    <div class="panel">
-        <h2>Imported Usage and Invoice Records</h2>
-        <div class="row">
-            <div>
-                <label for="reporting-month">Reporting Month</label>
-                <input id="reporting-month" type="month" value="{{ reporting_month }}" />
-            </div>
-            <div>
-                <label for="supply-id">Supply</label>
-                <select id="supply-id">
-                    <option value="">All</option>
-                    {% for supply in supplies %}
-                        <option value="{{ supply.external_id }}" {% if supply.external_id == supply_id %}selected{% endif %}>{{ supply.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div>
-                <label for="data-type">Data Type</label>
-                <select id="data-type">
-                    <option value="monthly" {% if data_type == 'monthly' %}selected{% endif %}>Monthly</option>
-                    <option value="halfhourly" {% if data_type == 'halfhourly' %}selected{% endif %}>Half-hourly</option>
-                    <option value="invoice" {% if data_type == 'invoice' %}selected{% endif %}>Invoice</option>
-                </select>
-            </div>
-            <div>
-                <button id="load-data" type="button">Load</button>
+    <div class="topbar">
+        <div class="brand">Enerlytix</div>
+        <div class="topbar-links">
+            <a href="{% url 'sitesync:site_list' %}">Dashboard</a>
+            <a href="{% url 'sitesync:consumption_display' %}" class="is-active">Usage &amp; Invoices</a>
+            <a href="{% url 'sitesync:settings_panel' %}">Settings</a>
+        </div>
+    </div>
+
+    <div class="content-wrap">
+        <div class="panel">
+            <div class="header-row">
+                <div>
+                    <h2 style="margin: 0 0 0.25rem;">Usage and Invoice Records</h2>
+                    <p class="empty" id="query-summary" style="margin: 0;"></p>
+                </div>
+                <a class="return-link" href="{% url 'sitesync:site_list' %}">Back to Dashboard</a>
             </div>
         </div>
-        <p id="summary" class="empty"></p>
+
+        <div class="panel">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Supply</th>
+                        <th>Source Start</th>
+                        <th>Source End</th>
+                        <th>Canonical Month</th>
+                        <th>Value</th>
+                        <th>Type</th>
+                    </tr>
+                </thead>
+                <tbody id="records-body"></tbody>
+            </table>
+            <p id="summary" class="empty">Loading records...</p>
+        </div>
     </div>
 
-    <div class="panel">
-        <table>
-            <thead>
-                <tr>
-                    <th>Supply</th>
-                    <th>Source Start</th>
-                    <th>Source End</th>
-                    <th>Canonical Month</th>
-                    <th>Value</th>
-                    <th>Type</th>
-                </tr>
-            </thead>
-            <tbody id="records-body"></tbody>
-        </table>
-        <p id="empty-state" class="empty">Select filters and click Load.</p>
-    </div>
-
-    <script src="/static/sitesync/js/consumption_display.js"></script>
+    <script src="{% static 'sitesync/js/consumption_display.js' %}"></script>
 </body>
 </html>

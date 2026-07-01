@@ -453,9 +453,75 @@
             font-size: 0.86rem;
         }
 
+        .import-controls {
+            margin-bottom: 0.8rem;
+            background: var(--cxg-white);
+            border: 1px solid var(--cxg-border);
+            border-radius: 0.35rem;
+            padding: 0.75rem;
+            box-shadow: 0 1px 2px rgba(51, 63, 72, 0.06);
+        }
+
+        .import-controls h4 {
+            margin: 0 0 0.55rem;
+            font-size: 0.85rem;
+            color: var(--cxg-primary-432);
+        }
+
+        .import-controls-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.55rem;
+            align-items: end;
+        }
+
+        .import-controls label {
+            display: block;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #5b7080;
+            margin-bottom: 0.25rem;
+        }
+
+        .import-controls input,
+        .import-controls select {
+            width: 100%;
+            border: 1px solid var(--cxg-border);
+            border-radius: 0.3rem;
+            padding: 0.45rem 0.55rem;
+            font-size: 0.78rem;
+            color: var(--cxg-primary-432);
+            background: var(--cxg-white);
+        }
+
+        .import-controls button {
+            background: var(--cxg-highlight-349);
+            color: var(--cxg-white);
+            border: none;
+            border-radius: 0.3rem;
+            padding: 0.5rem 0.7rem;
+            font-size: 0.78rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .import-controls button:hover {
+            background: #0e7f4d;
+        }
+
+        .import-status {
+            margin-top: 0.45rem;
+            font-size: 0.76rem;
+            min-height: 1.05rem;
+        }
+
         @media (max-width: 1024px) {
             .stats-row,
             .content-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .import-controls-grid {
                 grid-template-columns: 1fr;
             }
 
@@ -590,6 +656,29 @@
                 </div>
 
                 <div class="supply-column">
+                    <div class="import-controls">
+                        <h4>Usage and Invoice Import</h4>
+                        <div class="import-controls-grid">
+                            <div>
+                                <label for="import-reporting-month">Reporting Month</label>
+                                <input id="import-reporting-month" type="month" />
+                            </div>
+                            <div>
+                                <label for="import-data-type">Default Display Type</label>
+                                <select id="import-data-type">
+                                    <option value="monthly">Monthly</option>
+                                    <option value="halfhourly">Half-hourly</option>
+                                    <option value="invoice">Invoice</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label>&nbsp;</label>
+                                <button id="trigger-import-button" type="button">Load Data</button>
+                            </div>
+                        </div>
+                        <div class="import-status" id="import-status"></div>
+                    </div>
+
                     <div class="supply-panel" id="supply-panel">
                         <h3>Supply Details</h3>
                         <div class="empty-state">
