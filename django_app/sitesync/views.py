@@ -9,12 +9,28 @@ from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from rest_framework import viewsets
+from rest_framework.decorators import api_view
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import permission_classes
 from rest_framework.response import Response
-from .models import Site, Supply, AppSettings
+from .models import (
+    Site,
+    Supply,
+    AppSettings,
+    ImportRun,
+)
 from .forms import SettingsForm
 from .config_service import SettingsConfigService
 from .services import EtainaibleSyncService
-from .serializers import SiteSerializer, SupplySerializer, AppSettingsSerializer
+from .services import ConsumptionImportService, get_consumption_display_records
+from .serializers import (
+    SiteSerializer,
+    SupplySerializer,
+    AppSettingsSerializer,
+    ConsumptionImportRequestSerializer,
+    ConsumptionDisplayQuerySerializer,
+    ImportRunSerializer,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -308,3 +324,95 @@ class AppSettingsViewSet(viewsets.ModelViewSet):
     """ViewSet for AppSettings model."""
     queryset = AppSettings.objects.all()
     serializer_class = AppSettingsSerializer
+
+
+@api_view(['POST'])
+def consumption_import_view(request):
+    serializer = ConsumptionImportRequestSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    service = ConsumptionImportService()
+    payload = serializer.validated_data
+    run = service.run(
+        supply_external_ids=payload['supply_ids'],
+        reporting_month=payload['reporting_month'],
+        refresh_mode=payload.get('refresh_mode', True),
+    )
+
+    return Response({
+        'import_run_id': run.id,
+        'status': run.status,
+        'supplies_count': run.affected_supply_count,
+        'started_at': run.started_at,
+        'completed_at': run.completed_at,
+        'records_imported': run.records_imported,
+        'records_failed': run.records_failed,
+        'retry_count': run.retry_count,
+        'error_details': run.error_details,
+        'outcome_details': run.outcome_details,
+    })
+
+
+@api_view(['GET'])
+def consumption_display_api_view(request):
+    serializer = ConsumptionDisplayQuerySerializer(data=request.query_params)
+    serializer.is_valid(raise_exception=True)
+    validated = serializer.validated_data
+
+    reporting_month = validated['reporting_month']
+    supply_external_id = validated.get('supply_id')
+    supply_ids_raw = validated.get('supply_ids')
+    data_type = validated.get('data_type', 'monthly')
+
+    supply_external_ids = []
+    if supply_ids_raw:
+        supply_external_ids = [item.strip() for item in supply_ids_raw.split(',') if item.strip()]
+
+    rows = get_consumption_display_records(
+        reporting_month=reporting_month,
+        data_type=data_type,
+        supply_external_id=supply_external_id,
+        supply_external_ids=supply_external_ids,
+    )
+
+    return Response({
+        'reporting_month': reporting_month,
+        'data_type': data_type,
+        'total_records': len(rows),
+        'records': rows,
+    })
+
+
+def consumption_display_view(request):
+    reporting_month = request.GET.get('reporting_month', '')
+    supply_id = request.GET.get('supply_id', '')
+    supply_ids = request.GET.get('supply_ids', '')
+    data_type = request.GET.get('data_type', 'monthly')
+
+    context = {
+        'reporting_month': reporting_month,
+        'supply_id': supply_id,
+        'supply_ids': supply_ids,
+        'data_type': data_type,
+        'sites': Site.objects.order_by('name'),
+        'site_count': Site.objects.count(),
+        'fiscal_meter_count': Supply.objects.filter(
+            Q(parent_account_id__isnull=True) | Q(parent_account_id='')
+        ).count(),
+        'submeter_count': Supply.objects.exclude(
+            Q(parent_account_id__isnull=True) | Q(parent_account_id='')
+        ).count(),
+    }
+    return render(request, 'sitesync/consumption_display.html', context)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def import_run_detail_view(request, import_run_id):
+    try:
+        run = ImportRun.objects.get(id=import_run_id)
+    except ImportRun.DoesNotExist:
+        return Response({'detail': 'Import run not found'}, status=404)
+
+    serializer = ImportRunSerializer(run)
+    return Response(serializer.data)

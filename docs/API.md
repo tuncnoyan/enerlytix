@@ -31,3 +31,72 @@
 - `GET /settings/`
 - `POST /settings/`
 - Loads and saves the runtime Etainabl configuration.
+
+## Consumption import
+
+- `POST /api/consumption-import/`
+- Triggers usage and invoice import for selected supplies and reporting month.
+
+Request payload:
+
+```json
+{
+  "supply_ids": ["6584fdd1c9ec42556202eaa2"],
+  "reporting_month": "2026-05",
+  "refresh_mode": true
+}
+```
+
+Response payload:
+
+```json
+{
+  "import_run_id": "2bf3cfc6-a264-4cc9-8bfd-565e2a8f8507",
+  "status": "success",
+  "supplies_count": 1,
+  "records_imported": 305,
+  "records_failed": 0,
+  "retry_count": 0,
+  "error_details": {},
+  "outcome_details": []
+}
+```
+
+## Consumption display API
+
+- `GET /api/consumption-display/?reporting_month=YYYY-MM&data_type=monthly&supply_id=<external_id>`
+- Returns table-ready imported records for selected filters.
+
+Response payload:
+
+```json
+{
+  "reporting_month": "2026-05",
+  "data_type": "monthly",
+  "total_records": 24,
+  "records": [
+    {
+      "id": "9aeeea50-62df-4f45-ba11-96ab190f6081",
+      "supply_id": 12,
+      "supply_external_id": "6584fdd1c9ec42556202eaa2",
+      "supply_name": "Main Meter",
+      "data_type": "monthly",
+      "source_period_start": "2025-01-01T00:00:00Z",
+      "source_period_end": "2025-02-01T00:00:00Z",
+      "canonical_month_key": "2025-02",
+      "value": "2078.115000"
+    }
+  ]
+}
+```
+
+## Consumption display page
+
+- `GET /consumption-display/`
+- Renders the dedicated usage/invoice table UI with month, supply, and data-type filters.
+
+## Import run audit detail
+
+- `GET /api/import-runs/<import_run_id>/`
+- Returns full persisted audit details for a single import run.
+- Requires authentication.

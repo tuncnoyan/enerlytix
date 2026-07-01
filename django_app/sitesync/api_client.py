@@ -21,9 +21,62 @@ class EtainablApiClient:
             'Content-Type': 'application/json'
         }
 
+    def _headers_key_only(self):
+        return {
+            'x-api-key': self.api_key,
+            'Content-Type': 'application/json'
+        }
+
     def get(self, path, params=None):
         url = f"{self.base_url.rstrip('/')}/{path.lstrip('/')}"
         logger.debug(f"GET {url} params={params}")
         resp = requests.get(url, params=params, headers=self._headers(), timeout=self.timeout)
+        if resp.status_code >= 400:
+            body = (resp.text or '').lower()
+            if resp.status_code >= 500 and ('unauthorized' in body or 'internal server error' in body):
+                logger.debug("Retrying GET %s with x-api-key only headers", url)
+                resp = requests.get(url, params=params, headers=self._headers_key_only(), timeout=self.timeout)
         resp.raise_for_status()
         return resp.json()
+
+    def get_consumption(self, account_id, start_date, end_date, granularity, source=None):
+        params = {
+            'accountId': account_id,
+            'startDate': start_date,
+            'endDate': end_date,
+            'granularity': granularity,
+        }
+        if source:
+            params['source'] = source
+        return self.get('/consumption', params=params)
+
+    def get_invoices(self, account_id, start_date=None, end_date=None, limit=100):
+        skip = 0
+        all_rows = []
+        while True:
+            params = {
+                'accountId': account_id,
+                'limit': limit,
+                'skip': skip,
+            }
+            if start_date:
+                params['startDate'] = start_date
+            if end_date:
+                params['endDate'] = end_date
+
+            payload = self.get('/invoices', params=params)
+            rows = payload.get('data') or payload.get('results') or payload.get('items') or []
+            if not isinstance(rows, list):
+                rows = []
+
+            all_rows.extend(rows)
+            total = payload.get('total') if isinstance(payload, dict) else None
+            if not rows:
+                break
+            if isinstance(total, int) and len(all_rows) >= total:
+                break
+            if len(rows) < limit:
+                break
+            skip += limit
+
+        return all_rows
