@@ -12,8 +12,10 @@ urlpatterns = [
     path('sync/', views.manual_sync_view, name='manual_sync'),
     path('supplies/', views.supply_list_view, name='supply_list'),
     path('settings/', views.settings_panel_view, name='settings_panel'),
+    path('report/', views.report_view, name='report'),
     path('consumption-display/', views.consumption_display_view, name='consumption_display'),
     path('api/consumption-import/', views.consumption_import_view, name='consumption_import'),
     path('api/consumption-display/', views.consumption_display_api_view, name='consumption_display_api'),
+    path('api/report-data/', views.report_data_api_view, name='report_data_api'),
     path('api/import-runs/<uuid:import_run_id>/', views.import_run_detail_view, name='import_run_detail'),
 ]

@@ -1,0 +1,148 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Enerlytix Login</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --cxg-bg-10: #F2F2F3;
+            --cxg-primary-430: #7C878E;
+            --cxg-primary-432: #333F48;
+            --cxg-highlight-376: #7AB800;
+            --cxg-highlight-349: #00693C;
+            --cxg-border: #C6D0D7;
+            --cxg-white: #FFFFFF;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            font-family: 'Manrope', 'Segoe UI', sans-serif;
+            color: var(--cxg-primary-432);
+            background:
+                radial-gradient(circle at top left, rgba(122, 184, 0, 0.12), transparent 28%),
+                linear-gradient(180deg, #f8faf7 0%, var(--cxg-bg-10) 50%, #eef2f5 100%);
+        }
+
+        .card {
+            width: min(92vw, 420px);
+            background: var(--cxg-white);
+            border: 1px solid var(--cxg-border);
+            border-radius: 0.8rem;
+            box-shadow: 0 18px 40px rgba(51, 63, 72, 0.14);
+            padding: 1.4rem;
+        }
+
+        h1 {
+            margin: 0 0 0.35rem;
+            font-size: 1.7rem;
+        }
+
+        p {
+            margin: 0 0 1rem;
+            color: #5b7080;
+            font-size: 0.92rem;
+        }
+
+        .form-row {
+            margin-bottom: 0.8rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.35rem;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #5b7080;
+        }
+
+        input {
+            width: 100%;
+            border: 1px solid var(--cxg-border);
+            border-radius: 0.45rem;
+            padding: 0.7rem 0.8rem;
+            font: inherit;
+            color: var(--cxg-primary-432);
+            background: #fff;
+        }
+
+        .actions {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.75rem;
+            align-items: center;
+            margin-top: 1rem;
+        }
+
+        button {
+            border: none;
+            border-radius: 0.45rem;
+            padding: 0.7rem 1rem;
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+            background: var(--cxg-highlight-376);
+            color: var(--cxg-primary-432);
+        }
+
+        button:hover {
+            background: #96E000;
+        }
+
+        .errorlist {
+            margin: 0 0 0.8rem;
+            padding-left: 1rem;
+            color: #b91c1c;
+            font-size: 0.84rem;
+        }
+
+        .errornote {
+            margin-top: 0.9rem;
+            padding: 0.7rem 0.8rem;
+            border-radius: 0.45rem;
+            border: 1px solid #f3c4c4;
+            background: #fff1f1;
+            color: #991b1b;
+            font-size: 0.84rem;
+        }
+    </style>
+</head>
+<body>
+    <form class="card" method="post">
+        {% csrf_token %}
+        <h1>Enerlytix</h1>
+        <p>Sign in to access dashboards, reports, and imports.</p>
+
+        {% if form.non_field_errors %}
+            <div class="errornote">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <div class="form-row">
+            <label for="id_username">Username</label>
+            {{ form.username }}
+            {{ form.username.errors }}
+        </div>
+
+        <div class="form-row">
+            <label for="id_password">Password</label>
+            {{ form.password }}
+            {{ form.password.errors }}
+        </div>
+
+        <input type="hidden" name="next" value="{{ next }}" />
+
+        <div class="actions">
+            <button type="submit">Sign in</button>
+        </div>
+    </form>
+</body>
+</html>

@@ -175,6 +175,7 @@ function updateTopStatsFromCheckedSites() {
         siteCountNode.textContent = siteCountNode.dataset.default || siteCountNode.textContent;
         fiscalCountNode.textContent = fiscalCountNode.dataset.default || fiscalCountNode.textContent;
         submeterCountNode.textContent = submeterCountNode.dataset.default || submeterCountNode.textContent;
+        updateReportButtonState();
         return;
     }
 
@@ -193,6 +194,7 @@ function updateTopStatsFromCheckedSites() {
     siteCountNode.textContent = String(totals.siteCount);
     fiscalCountNode.textContent = String(totals.fiscalCount);
     submeterCountNode.textContent = String(totals.submeterCount);
+    updateReportButtonState();
 }
 
 function toggleSiteSelection(event) {
@@ -255,6 +257,54 @@ function getImportDataTypeValue() {
 
     const input = document.getElementById('import-data-type');
     return input ? input.value : 'monthly';
+}
+
+function getReportMonthValue() {
+    "use strict";
+
+    const input = document.getElementById('import-reporting-month');
+    return input ? input.value : '';
+}
+
+function updateReportButtonState() {
+    "use strict";
+
+    const button = document.getElementById('trigger-report-button');
+    if (!button) {
+        return;
+    }
+
+    const checkedSiteIds = getCheckedSiteIds();
+    const reportMonth = getReportMonthValue();
+    const isEnabled = checkedSiteIds.length === 1 && Boolean(reportMonth);
+
+    button.disabled = !isEnabled;
+    if (checkedSiteIds.length === 0) {
+        button.title = 'Select a site first';
+    } else if (checkedSiteIds.length > 1) {
+        button.title = 'Select only one site to create a report';
+    } else if (!reportMonth) {
+        button.title = 'Select a reporting month';
+    } else {
+        button.title = 'Create a report for the selected site';
+    }
+}
+
+function triggerReportView() {
+    "use strict";
+
+    const checkedSiteIds = getCheckedSiteIds();
+    const reportMonth = getReportMonthValue();
+    if (checkedSiteIds.length !== 1 || !reportMonth) {
+        updateReportButtonState();
+        return;
+    }
+
+    const params = new URLSearchParams({
+        site_id: checkedSiteIds[0],
+        end_month: reportMonth,
+    });
+    window.location.href = '/report/?' + params.toString();
 }
 
 function getRefreshModeValue() {
@@ -350,5 +400,16 @@ document.addEventListener('DOMContentLoaded', function() {
         importButton.addEventListener('click', triggerConsumptionImport);
     }
 
+    const reportButton = document.getElementById('trigger-report-button');
+    if (reportButton) {
+        reportButton.addEventListener('click', triggerReportView);
+    }
+
+    const reportingMonthInputForReport = document.getElementById('import-reporting-month');
+    if (reportingMonthInputForReport) {
+        reportingMonthInputForReport.addEventListener('change', updateReportButtonState);
+    }
+
     renderNoSelectedSites();
+    updateReportButtonState();
 });

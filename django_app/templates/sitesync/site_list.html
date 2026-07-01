@@ -557,6 +557,7 @@
                 <a href="{% url 'sitesync:site_list' %}" class="is-active">Dashboard</a>
                 <a href="{% url 'sitesync:consumption_display' %}">Usage &amp; Invoices</a>
                 <a href="{% url 'sitesync:settings_panel' %}">Settings</a>
+                <a href="{% url 'sitesync:report' %}">Report</a>
             </div>
         </div>
 
@@ -675,6 +676,7 @@
                                 <label>&nbsp;</label>
                                 <div style="display: flex; align-items: center; gap: 0.65rem;">
                                     <button id="trigger-import-button" type="button">Load Data</button>
+                                    <button id="trigger-report-button" type="button" disabled title="Select a site first">Create Report</button>
                                     <label for="import-refresh-mode" style="display: flex; align-items: center; gap: 0.35rem; margin: 0; font-weight: 600; white-space: nowrap;">
                                         <input id="import-refresh-mode" type="checkbox" />
                                         Refresh data

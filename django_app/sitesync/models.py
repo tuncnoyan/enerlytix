@@ -80,6 +80,13 @@ class Supply(models.Model):
         null=True,
         help_text="Device ID (meter/sensor identifier)"
     )
+    available_capacity = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        help_text="Available capacity in kW"
+    )
     parent_account_id = models.CharField(
         max_length=255,
         blank=True,
@@ -100,6 +107,39 @@ class Supply(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.get_utility_type_display()})"
+
+
+class Benchmark(models.Model):
+    """Configured benchmark value for a supply and month."""
+
+    UNIT_CHOICES = [
+        ('kWh', 'kWh'),
+        ('m3', 'm3'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    supply = models.ForeignKey(Supply, on_delete=models.CASCADE, related_name='benchmarks')
+    canonical_month_key = models.CharField(max_length=7, db_index=True)
+    value = models.DecimalField(max_digits=16, decimal_places=6)
+    unit = models.CharField(max_length=3, choices=UNIT_CHOICES, default='kWh')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-canonical_month_key']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['supply', 'canonical_month_key'],
+                name='uniq_benchmark_supply_month',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['supply', 'canonical_month_key']),
+            models.Index(fields=['canonical_month_key']),
+        ]
+
+    def __str__(self):
+        return f"Benchmark {self.supply_id} {self.canonical_month_key}"
 
 
 class AppSettings(models.Model):
