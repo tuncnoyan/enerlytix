@@ -92,20 +92,25 @@ The energy manager can navigate within the report page using both the left navig
 
 **Dashboard Entry Point**
 - **FR-001**: The dashboard page MUST display a "Create Report" button positioned directly after the existing "Load Data" button.
-- **FR-002**: Clicking "Create Report" MUST navigate the user to the Report Visuals page for the currently selected site.
+- **FR-001a**: The dashboard page MUST display a month picker (end month selector) adjacent to the "Create Report" button, allowing the user to select the reporting end month. The default selection MUST be the most recent complete calendar month.
+- **FR-001b**: The "Create Report" button and the end-month picker MUST be disabled when no site is currently loaded. A tooltip MUST be shown on hover explaining that a site must be loaded first.
+- **FR-001c**: The "Create Report" button and the end-month picker MUST also be disabled when more than one site is currently selected, because the report can only be generated for a single site. A tooltip MUST be shown on hover explaining that exactly one site must be selected.
+- **FR-002**: Clicking "Create Report" (when enabled) MUST navigate the user to the Report Visuals page for the single currently loaded site, using the 12-month window that ends on the last day of the selected end month.
 
 **Report Page Layout**
-- **FR-003**: The Report Visuals page MUST display a fixed left-side navigation pane listing all visual sections available for the site.
+- **FR-003**: The Report Visuals page MUST display a fixed left-side navigation pane listing all visual sections available for the site. Where a utility type has a single supply, the nav entry is labelled by utility type (e.g., "Electricity"). Where a utility type has multiple supplies, each supply MUST have its own nav entry labelled by meter number (e.g., "Electricity – 1200061225556").
 - **FR-004**: The top ribbon on the Report Visuals page MUST include navigation links consistent with other pages in the application (e.g., Dashboard link and any other existing navigation items).
 - **FR-005**: Visual sections MUST be ordered as: Electricity first, Gas second, Water third.
 - **FR-006**: If a utility type has no associated supply for the site, its entire section MUST be omitted from the report page and from the left navigation pane.
-- **FR-007**: If a utility type has multiple supplies, all supplies for that type MUST be displayed within the same section, one after another.
+- **FR-007**: If a utility type has multiple supplies, each supply MUST be displayed with its own complete set of visuals, presented sequentially within the utility section. Data for different supplies MUST NOT be aggregated or combined into shared charts.
 
 **Colour Scheme**
 - **FR-008**: All visual colours (chart series, highlights, backgrounds) MUST conform to the project colour scheme guideline already established for Enerlytix.
 
+**Site Overview** *(displayed once, at the top of the report, before any utility section)*
+- **FR-009**: The report MUST display a Total Utility Usage (£) summary as the first visual on the report page, showing a table of all utility meters with their total costs and a pie chart showing cost distribution by utility type, labelled with utility name and percentage. This visual is site-wide and is not repeated within individual utility sections. It MUST also appear as the first entry in the left navigation pane (e.g., labelled "Overview").
+
 **Electricity Visuals** *(per electricity supply)*
-- **FR-009**: The report MUST display a Total Utility Usage (£) summary showing a table of all utility meters with total costs and a pie chart showing cost distribution by utility type, labelled with utility name and percentage.
 - **FR-010**: The report MUST display a Monthly Electricity Usage bar chart showing current consumption (kWh), previous year same month (kWh), and benchmark (kWh) series for each month in the 12-month reporting period.
 - **FR-011**: The report MUST display a Monthly Electricity Usage table with columns: Date, Last 12 Months (kWh), Prev. 12 Months (kWh), Gross Variance (kWh), Relative Variance (%).
 - **FR-012**: The report MUST display an Electricity Load Factor visual, showing a time-series line chart plotting halfhourly consumption (kWh), Maximum Demand (kW) as a constant line for the month, and Available Capacity (kW) as a constant line. Below the chart, three KPI cards MUST display: Load Factor (%), Maximum Demand (kW), and Available Capacity (kW). The Load Factor visual covers the most recent complete month by default.
@@ -113,7 +118,7 @@ The energy manager can navigate within the report page using both the left navig
 - **FR-014**: Load Factor (%) MUST be calculated as: monthly consumption (kWh) ÷ (Maximum Demand (kW) × number of days in month × 24).
 - **FR-015**: Available Capacity (kW) is stored as a supply attribute and MUST be displayed as provided; it does not require calculation.
 - **FR-016**: The report MUST display an HH Electricity Data Comparison – Last Month line chart showing halfhourly consumption for the current year (green) and previous year same month (grey) across all halfhour intervals in the most recent complete month.
-- **FR-017**: The report MUST display an HH Electricity Day/Night Usage – Last Month bar chart showing all halfhourly consumption readings across the most recent complete month as a stacked or grouped bar chart (one bar per halfhour interval per day).
+- **FR-017**: The report MUST display an HH Electricity Day/Night Usage – Last Month bar chart showing all halfhourly consumption readings across the most recent complete month as colour-coded stacked bars, one bar per halfhour interval per day. Day is defined as 07:00–23:00 (inclusive) and Night as 23:00–07:00. Each stacked bar MUST show the Day portion in one colour and the Night portion in a contrasting colour, both conforming to the project colour scheme.
 - **FR-018**: The report MUST display a Daily Comparison – Weekday Usage chart showing halfhourly consumption profiles for each individual weekday in the most recent complete month, rendered as overlaid line series, one per day.
 - **FR-019**: The report MUST display a Daily Comparison – Weekend Usage chart showing halfhourly consumption profiles for each individual weekend day in the most recent complete month, rendered as overlaid line series, one per day.
 
@@ -164,10 +169,22 @@ The energy manager can navigate within the report page using both the left navig
 
 ---
 
+## Clarifications
+
+### Session 2026-07-01
+
+- Q: Should the Total Utility Usage (£) chart and table be displayed once at the very top of the report as a site-wide summary, or within the Electricity section? → A: Option A — displayed once at the very top of the report as a site-level cost summary, before the Electricity/Gas/Water sections, with its own "Overview" entry in the left navigation pane.
+- Q: What hours define "Day" and "Night" for the HH Electricity Day/Night Usage chart, and how should the split be rendered? → A: Option A — Day = 07:00–23:00, Night = 23:00–07:00; render as colour-coded stacked bars per halfhour interval.
+- Q: Can the user change the 12-month reporting period before generating the report, or is it always fixed to the last 12 complete months automatically? → A: Option A — the user can select the end month before generating the report; the 12-month window ends on the last day of the selected month and starts 12 months prior. The default selection is the most recent complete calendar month.
+- Q: When a utility type has multiple supplies, does each supply get its own full set of visuals or are they aggregated? → A: Option A — each supply gets its own full set of visuals, displayed sequentially within the utility section; left navigation pane entries for that utility type are labelled by meter number.
+- Q: What should happen when the user clicks "Create Report" with no site loaded on the dashboard? → A: Option A — the "Create Report" button and the end-month picker are disabled until exactly one site is loaded. The button is also disabled when more than one site is selected (since a report can only be generated for a single site). A tooltip MUST explain the reason in each case.
+
+---
+
 ## Assumptions
 
 - All required data (halfhourly consumption, monthly consumption, invoice cost, benchmark, available capacity) is already stored in the existing Enerlytix database and accessible via the current data models.
-- The "reporting period" defaults to the last 12 complete calendar months relative to today's date unless a future date-range selector is added.
+- The "reporting period" is the 12-month window ending on the last day of the user-selected end month. It defaults to the most recent complete calendar month when the report page is first accessed.
 - The "most recent complete month" used for load factor and HH charts is the last fully elapsed calendar month.
 - Available Capacity (kW) is stored as an existing attribute on the Supply model; if no value is present, the Available Capacity KPI card shows "N/A" and the Available Capacity line is omitted from the Load Factor chart.
 - Benchmark values are optional; if no benchmark is configured for a supply, the benchmark series is omitted from charts rather than shown as zero.
