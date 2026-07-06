@@ -127,6 +127,10 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Use the app login page for authenticated views that require sign-in.
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/'
+
 # REST Framework Configuration
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [

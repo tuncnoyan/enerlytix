@@ -12,7 +12,8 @@
     }
 
     if (dataType === 'invoice') {
-      startHeader.textContent = 'startDate';
+      startHeader.textContent = 'startDate \u25bc';
+      startHeader.title = 'Sorted: newest first';
       endHeader.textContent = 'endDate';
       valueHeader.textContent = 'netTotalCost';
       return;
@@ -29,8 +30,20 @@
     }
   }
 
-  function renderRows(records) {
+  function sortRecords(records, dataType) {
+    if (dataType === 'invoice') {
+      return [...records].sort(function (a, b) {
+        var ta = a.source_period_start ? new Date(a.source_period_start).getTime() : 0;
+        var tb = b.source_period_start ? new Date(b.source_period_start).getTime() : 0;
+        return tb - ta; // newest first
+      });
+    }
+    return records;
+  }
+
+  function renderRows(records, dataType) {
     clearRows();
+    records = sortRecords(records, dataType || 'monthly');
     if (!records.length) {
       if (summary) {
         summary.textContent = 'No records found for the selected filters.';
@@ -73,9 +86,17 @@
 
     const payload = await response.json();
     if (summary) {
-      summary.textContent = 'Loaded ' + payload.total_records + ' records from ' + selectedSupplyIds.length + ' selected supplies.';
+      let msg = 'Loaded ' + payload.total_records + ' records from ' + selectedSupplyIds.length + ' selected supplies.';
+      if (dataType === 'invoice' && payload.total_records > 0 && payload.in_window === false) {
+        msg += ' \u26a0\ufe0f No invoice data found for the selected period \u2014 showing all available historical records instead. '
+          + 'If recent invoices exist in Etainabl, try \u201cRefresh data\u201d to re-import.';
+        summary.style.color = '#b45309';
+      } else {
+        summary.style.color = '';
+      }
+      summary.textContent = msg;
     }
-    renderRows(payload.records || []);
+    renderRows(payload.records || [], dataType);
   }
 
   document.addEventListener('DOMContentLoaded', function () {

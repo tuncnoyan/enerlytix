@@ -25,13 +25,9 @@
                     <option value="other" {% if selected_utility_type == 'other' %}selected{% endif %}>Other</option>
                 </select>
             </label>
-            <label class="supply-filter-label">
-                Meter Type
-                <select id="supply-filter-meter" onchange="applySupplyFilters()" class="supply-filter-select">
-                    <option value="all" {% if selected_meter_type == 'all' %}selected{% endif %}>All</option>
-                    <option value="fiscal" {% if selected_meter_type == 'fiscal' %}selected{% endif %}>Fiscal</option>
-                    <option value="sub" {% if selected_meter_type == 'sub' %}selected{% endif %}>Submeter</option>
-                </select>
+            <label class="supply-filter-label" style="display:flex;align-items:center;gap:0.45rem;padding-top:1.4rem;font-weight:600;cursor:pointer;">
+                <input type="checkbox" id="supply-filter-include-submeters" onchange="applySupplyFilters()" style="width:1rem;height:1rem;accent-color:var(--cxg-highlight-349);" {% if selected_meter_type == 'all' or selected_meter_type == 'sub' %}checked{% endif %} />
+                Include Sub Meters
             </label>
         </div>
     </div>

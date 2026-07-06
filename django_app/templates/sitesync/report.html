@@ -1,0 +1,350 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Enerlytix Report</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --cxg-bg-10: #F2F2F3;
+            --cxg-bg-25: #DEE0E3;
+            --cxg-primary-430: #7C878E;
+            --cxg-primary-432: #333F48;
+            --cxg-highlight-376: #7AB800;
+            --cxg-highlight-349: #00693C;
+            --cxg-border: #C6D0D7;
+            --cxg-white: #FFFFFF;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: 'Manrope', 'Segoe UI', sans-serif;
+            color: var(--cxg-primary-432);
+            background:
+                radial-gradient(circle at top left, rgba(122, 184, 0, 0.12), transparent 24%),
+                linear-gradient(180deg, #f8faf7 0%, var(--cxg-bg-10) 50%, #eef2f5 100%);
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.85rem 1.4rem;
+            border-bottom: 1px solid var(--cxg-border);
+            background: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(8px);
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
+
+        .brand { font-size: 1.15rem; font-weight: 800; }
+        .topbar-links { display: flex; gap: 1.1rem; flex-wrap: wrap; }
+        .topbar-links a {
+            color: var(--cxg-primary-430);
+            text-decoration: none;
+            font-size: 0.78rem;
+            font-weight: 700;
+            padding: 0.3rem 0.15rem;
+            border-bottom: 2px solid transparent;
+        }
+        .topbar-links a.is-active { color: var(--cxg-primary-432); border-bottom-color: var(--cxg-primary-430); }
+
+        .page {
+            width: min(1500px, 100%);
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        .hero {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            align-items: flex-start;
+            background: var(--cxg-white);
+            border: 1px solid var(--cxg-border);
+            border-radius: 0.7rem;
+            padding: 1rem 1.1rem;
+            box-shadow: 0 10px 30px rgba(51, 63, 72, 0.08);
+            margin-bottom: 1rem;
+        }
+
+        .hero h1 { margin: 0 0 0.35rem; font-size: 1.65rem; }
+        .hero p { margin: 0; color: #5b7080; font-size: 0.92rem; }
+
+        .hero-actions {
+            display: flex;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .button {
+            border: none;
+            border-radius: 0.45rem;
+            padding: 0.62rem 0.9rem;
+            font: inherit;
+            font-size: 0.84rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .button-primary {
+            background: var(--cxg-highlight-376);
+            color: var(--cxg-primary-432);
+        }
+
+        .button-secondary {
+            background: var(--cxg-primary-432);
+            color: var(--cxg-white);
+        }
+
+        .report-layout {
+            display: grid;
+            grid-template-columns: 18rem minmax(0, 1fr);
+            gap: 1rem;
+            align-items: start;
+        }
+
+        .nav-panel,
+        .content-panel {
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid var(--cxg-border);
+            border-radius: 0.7rem;
+            box-shadow: 0 10px 24px rgba(51, 63, 72, 0.06);
+        }
+
+        .nav-panel {
+            position: sticky;
+            top: 5rem;
+            padding: 0.9rem;
+        }
+
+        .nav-panel h2,
+        .section h2 { margin: 0 0 0.7rem; font-size: 1rem; }
+
+        .nav-list { display: grid; gap: 0.4rem; }
+        .nav-list a {
+            display: block;
+            text-decoration: none;
+            color: var(--cxg-primary-432);
+            background: var(--cxg-bg-10);
+            border: 1px solid transparent;
+            border-radius: 0.45rem;
+            padding: 0.62rem 0.75rem;
+            font-size: 0.84rem;
+            font-weight: 600;
+        }
+
+        .nav-list a:hover { border-color: var(--cxg-primary-430); }
+
+        .content-panel {
+            padding: 1rem;
+            min-width: 0;
+        }
+
+        .report-meta {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+            color: #5b7080;
+            font-size: 0.86rem;
+        }
+
+        .empty-state {
+            padding: 1rem;
+            border: 1px dashed var(--cxg-border);
+            border-radius: 0.6rem;
+            background: rgba(242, 242, 243, 0.8);
+            color: #5b7080;
+        }
+
+        .section { margin-bottom: 1.1rem; }
+        .section-card {
+            border: 1px solid var(--cxg-border);
+            border-radius: 0.65rem;
+            background: var(--cxg-white);
+            padding: 0.95rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .section-grid { display: grid; gap: 0.8rem; }
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.75rem;
+        }
+
+        .metric {
+            border-radius: 0.55rem;
+            padding: 0.7rem;
+            background: #f7faf8;
+            border: 1px solid #deebdf;
+        }
+
+        .metric-label { color: var(--cxg-primary-430); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 800; }
+        .metric-value { margin-top: 0.2rem; font-size: 1.15rem; font-weight: 800; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            border-bottom: 1px solid #e2e8f0;
+            padding: 0.55rem 0.5rem;
+            text-align: left;
+            font-size: 0.82rem;
+            vertical-align: top;
+        }
+
+        th {
+            background: #f4f8fb;
+            color: #134e4a;
+            font-size: 0.74rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .chart-box {
+            position: relative;
+            height: 16rem;
+            border-radius: 0.55rem;
+            background: linear-gradient(180deg, #fafcf8 0%, #eef5ea 100%);
+            border: 1px solid #dce7d7;
+            overflow: hidden;
+        }
+
+        .comment-box {
+            width: 100%;
+            min-height: 4.5rem;
+            resize: vertical;
+            border-radius: 0.45rem;
+            border: 1px solid var(--cxg-border);
+            padding: 0.7rem;
+            font: inherit;
+        }
+
+        .is-exporting .comment-box::placeholder {
+            color: transparent;
+        }
+
+        /* During PDF export: remove comment-box styling so text reads like a paragraph */
+        .is-exporting .comment-box {
+            color: var(--cxg-primary-432);
+            border: none;
+            background: transparent;
+            resize: none;
+            padding: 0.6rem 0 0 0;
+            min-height: 0;
+            font-size: 0.86rem;
+            line-height: 1.65;
+        }
+
+        /* Clean white section cards — remove gradients, shadows, and rounded corners */
+        .is-exporting .section-card {
+            background: #ffffff;
+            border: 1px solid #d8e4ec;
+            box-shadow: none;
+            border-radius: 2px;
+        }
+
+        /* Clean up chart canvas containers */
+        .is-exporting .chart-canvas-wrapper {
+            background: #ffffff !important;
+            border-color: #d8e4ec !important;
+            border-radius: 2px !important;
+        }
+
+        /* Cleaner metric cards */
+        .is-exporting .metric {
+            background: #f8fafb;
+            border-color: #d8e4ec;
+            border-radius: 2px;
+        }
+
+        /* Cleaner table headers */
+        .is-exporting th {
+            background: #f4f6f8;
+            color: #333F48;
+        }
+
+        /* Hide the HTML card headings during PDF export — the title/subtitle
+           are already rendered inside the Chart.js canvas. */
+        .is-exporting .card-title-screen,
+        .is-exporting .card-subtitle-screen {
+            display: none;
+        }
+
+        @media (max-width: 1180px) {
+            .report-layout { grid-template-columns: 1fr; }
+            .nav-panel { position: static; }
+            .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+
+        @media print {
+            .topbar, .hero-actions, .nav-panel { display: none !important; }
+            body { background: #fff; }
+            .page { width: 100%; padding: 0; }
+            .report-layout { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <div class="brand">Enerlytix</div>
+        <div class="topbar-links">
+            <a href="{% url 'sitesync:site_list' %}">Dashboard</a>
+            <a href="{% url 'sitesync:consumption_display' %}">Usage &amp; Invoices</a>
+            <a href="{% url 'sitesync:settings_panel' %}">Settings</a>
+            <a href="{% url 'sitesync:report' %}" class="is-active">Report</a>
+        </div>
+    </div>
+
+    <div class="page">
+        <div class="hero">
+            <div>
+                <h1>Report Visuals</h1>
+                <p id="report-subtitle">Generating report...</p>
+            </div>
+            <div class="hero-actions">
+                <button id="download-pdf-button" class="button button-secondary" type="button">Download as PDF</button>
+            </div>
+        </div>
+
+        <div class="report-layout">
+            <aside class="nav-panel">
+                <h2>Sections</h2>
+                <div id="report-nav" class="nav-list"></div>
+            </aside>
+
+            <main class="content-panel">
+                <div class="report-meta" id="report-meta"></div>
+                <div id="report-empty" class="empty-state">Loading report...</div>
+                <div id="report-sections" class="section-grid" aria-live="polite"></div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        window.ENERLYTIX_REPORT_CONTEXT = {
+            siteId: "{{ site_id|default:'' }}",
+            endMonth: "{{ end_month|default:'' }}",
+            siteName: "{{ report_site.name|default:''|escapejs }}",
+            supplyIds: "{{ supply_ids|default:''|escapejs }}"
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+    <script src="{% static 'sitesync/js/report.js' %}"></script>
+</body>
+</html>

@@ -6,6 +6,7 @@ from rest_framework import serializers
 from .models import (
     Site,
     Supply,
+    Benchmark,
     AppSettings,
     ImportRun,
     HalfHourlyConsumption,
@@ -95,6 +96,25 @@ class AppSettingsSerializer(serializers.ModelSerializer):
             'etainabl_api_url',
             'page_size',
             'api_timeout',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = [
+            'id',
+            'created_at',
+            'updated_at',
+        ]
+
+
+class BenchmarkSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Benchmark
+        fields = [
+            'id',
+            'supply',
+            'canonical_month_key',
+            'value',
+            'unit',
             'created_at',
             'updated_at',
         ]

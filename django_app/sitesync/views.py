@@ -3,29 +3,38 @@ Views for the sitesync app.
 """
 
 import logging
+from collections import defaultdict
+from datetime import datetime, timezone as datetime_timezone
+from decimal import Decimal
 
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Sum
 from django.http import JsonResponse
-from django.shortcuts import render, redirect
+from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
+from django.utils import timezone as dj_timezone
 from rest_framework import viewsets
 from rest_framework.decorators import api_view
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.decorators import permission_classes
 from rest_framework.response import Response
 from .models import (
+    Benchmark,
     Site,
     Supply,
     AppSettings,
     ImportRun,
+    HalfHourlyConsumption,
+    MonthlyConsumption,
+    InvoiceCost,
 )
 from .forms import SettingsForm
 from .config_service import SettingsConfigService
 from .services import EtainaibleSyncService
-from .services import ConsumptionImportService, get_consumption_display_records
+from .services import ConsumptionImportService, get_consumption_display_records, month_start, reporting_month_bounds, shift_months
 from .serializers import (
     SiteSerializer,
     SupplySerializer,
+    BenchmarkSerializer,
     AppSettingsSerializer,
     ConsumptionImportRequestSerializer,
     ConsumptionDisplayQuerySerializer,
@@ -33,6 +42,388 @@ from .serializers import (
 )
 
 logger = logging.getLogger(__name__)
+
+REPORT_UTILITY_ORDER = ['electricity', 'gas', 'water']
+REPORT_UTILITY_LABELS = {
+    'electricity': 'Electricity',
+    'gas': 'Gas',
+    'water': 'Water',
+}
+
+
+def _previous_complete_month_key():
+    now = dj_timezone.localtime(dj_timezone.now())
+    return shift_months(month_start(now.year, now.month), -1).strftime('%Y-%m')
+
+
+def _month_label(month_key):
+    return datetime.strptime(month_key + '-01', '%Y-%m-%d').strftime('%b %Y')
+
+
+def _month_sequence(end_month, count=12):
+    report_start, _ = reporting_month_bounds(end_month)
+    start = shift_months(report_start, -(count - 1))
+    return [shift_months(start, offset).strftime('%Y-%m') for offset in range(count)]
+
+
+def _previous_year_month_key(month_key):
+    report_start, _ = reporting_month_bounds(month_key)
+    return shift_months(report_start, -12).strftime('%Y-%m')
+
+
+def _decimal_to_float(value):
+    return float(value) if value is not None else None
+
+
+def _meter_number_for_supply(supply):
+    # Prefer the supply name (meter number) over the device ID.
+    return (supply.name or supply.device_id or supply.external_id or '').strip()
+
+
+def _supply_label(supply, utility_counts):
+    # Always use the supply's name field as the section label.
+    return supply.name or supply.device_id or supply.external_id or supply.get_utility_type_display()
+
+
+def _monthly_series_for_supply(supply, current_month_keys, previous_month_keys):
+    current_rows = {
+        row.canonical_month_key: row
+        for row in MonthlyConsumption.objects.filter(supply=supply, canonical_month_key__in=current_month_keys)
+    }
+    previous_rows = {
+        row.canonical_month_key: row
+        for row in MonthlyConsumption.objects.filter(supply=supply, canonical_month_key__in=previous_month_keys)
+    }
+    benchmark_rows = {
+        row.canonical_month_key: row
+        for row in Benchmark.objects.filter(supply=supply, canonical_month_key__in=current_month_keys)
+    }
+
+    current_key = 'current_m3' if supply.utility_type == 'water' else 'current_kwh'
+    previous_key = 'previous_year_m3' if supply.utility_type == 'water' else 'previous_year_kwh'
+    benchmark_key = 'benchmark_m3' if supply.utility_type == 'water' else 'benchmark_kwh'
+
+    table_rows = []
+    current_values = []
+    previous_values = []
+    benchmark_values = []
+    for index, month_key in enumerate(current_month_keys):
+        current_row = current_rows.get(month_key)
+        previous_row = previous_rows.get(previous_month_keys[index])
+        benchmark_row = benchmark_rows.get(month_key)
+        current_value = _decimal_to_float(current_row.consumption) if current_row else None
+        previous_value = _decimal_to_float(previous_row.consumption) if previous_row else None
+        benchmark_value = _decimal_to_float(benchmark_row.value) if benchmark_row else None
+        variance = current_value - previous_value if current_value is not None and previous_value is not None else None
+        relative_variance = (variance / previous_value * 100) if variance is not None and previous_value not in (None, 0) else None
+
+        current_values.append(current_value)
+        previous_values.append(previous_value)
+        benchmark_values.append(benchmark_value)
+        table_rows.append({
+            'date': _month_label(month_key),
+            'current': current_value,
+            'previous_year': previous_value,
+            'gross_variance': variance,
+            'relative_variance': relative_variance,
+        })
+
+    return {
+        'months': [
+            {
+                'key': month_key,
+                'label': _month_label(month_key),
+                'previous_year_key': previous_month_keys[index],
+            }
+            for index, month_key in enumerate(current_month_keys)
+        ],
+        current_key: current_values,
+        previous_key: previous_values,
+        benchmark_key: benchmark_values,
+        'table': table_rows,
+    }
+
+
+def _hh_series_for_supply(supply, end_month):
+    previous_month = _previous_year_month_key(end_month)
+    current_rows = []
+    previous_rows = []
+    for item in HalfHourlyConsumption.objects.filter(
+        supply=supply,
+        canonical_month_key__in=[end_month, previous_month],
+    ).order_by('source_period_start'):
+        payload = {
+            'ts': dj_timezone.localtime(item.source_period_start).isoformat(),
+            'consumption_kwh': _decimal_to_float(item.consumption),
+        }
+        if item.canonical_month_key == end_month:
+            current_rows.append(payload)
+        elif item.canonical_month_key == previous_month:
+            previous_rows.append(payload)
+
+    if not current_rows and not previous_rows:
+        return None
+
+    return {
+        'month': end_month,
+        'current': current_rows,
+        'previous_year': previous_rows,
+    }
+
+
+def _load_factor_for_supply(supply, end_month, hh_series):
+    if supply.utility_type != 'electricity' or not hh_series or not hh_series['current']:
+        return None
+
+    hh_values = [Decimal(str(item['consumption_kwh'] or 0)) for item in hh_series['current']]
+    max_halfhourly = max(hh_values)
+    max_demand_kw = max_halfhourly / Decimal('0.5')
+    monthly_kwh = sum(hh_values)
+    report_start, report_end = reporting_month_bounds(end_month)
+    days_in_month = (report_end - report_start).days
+    denominator = max_demand_kw * Decimal(days_in_month) * Decimal('24')
+    load_factor_pct = (monthly_kwh / denominator) * Decimal('100') if denominator else None
+
+    return {
+        'month': end_month,
+        'monthly_kwh': _decimal_to_float(monthly_kwh),
+        'max_demand_kw': _decimal_to_float(max_demand_kw),
+        'load_factor_pct': _decimal_to_float(load_factor_pct),
+        'available_capacity_kw': _decimal_to_float(supply.available_capacity),
+        'halfhourly': hh_series['current'],
+    }
+
+
+def _day_night_for_supply(supply, end_month, hh_series):
+    if supply.utility_type != 'electricity' or not hh_series or not hh_series['current']:
+        return None
+
+    records = []
+    for item in hh_series['current']:
+        local_ts = datetime.fromisoformat(item['ts'])
+        records.append({
+            'ts': item['ts'],
+            'consumption_kwh': item['consumption_kwh'],
+            'period': 'day' if 7 <= local_ts.hour < 23 else 'night',
+        })
+
+    return {
+        'month': end_month,
+        'day_start': '07:00',
+        'day_end': '23:00',
+        'records': records,
+    }
+
+
+def _weekday_weekend_for_supply(supply, end_month, hh_series):
+    if supply.utility_type not in {'electricity', 'gas'} or not hh_series or not hh_series['current']:
+        return None, None
+
+    grouped = defaultdict(list)
+    for item in hh_series['current']:
+        local_ts = datetime.fromisoformat(item['ts'])
+        grouped[local_ts.date().isoformat()].append({
+            'time': local_ts.strftime('%H:%M'),
+            'consumption_kwh': item['consumption_kwh'],
+        })
+
+    weekday_days = []
+    weekend_days = []
+    for date_key in sorted(grouped):
+        local_date = datetime.fromisoformat(date_key)
+        payload = {
+            'date': date_key,
+            'day_name': local_date.strftime('%A'),
+            'records': sorted(grouped[date_key], key=lambda row: row['time']),
+        }
+        if local_date.weekday() >= 5:
+            weekend_days.append(payload)
+        else:
+            weekday_days.append(payload)
+
+    return (
+        {'month': end_month, 'days': weekday_days},
+        {'month': end_month, 'days': weekend_days},
+    )
+
+
+def _overview_for_site(site, report_start, report_end):
+    invoice_rows = InvoiceCost.objects.filter(
+        supply__site=site,
+        source_period_end__gte=report_start,
+        source_period_end__lte=report_end,  # inclusive: catches invoices ending exactly on the boundary (exclusive end-date pattern)
+        supply__utility_type__in=REPORT_UTILITY_ORDER,
+    ).values('supply_id', 'supply__utility_type', 'supply__device_id', 'supply__name').annotate(total_cost=Sum('cost'))
+
+    totals = defaultdict(Decimal)
+    meter_numbers = defaultdict(list)
+    per_meter_rows = []
+    for row in invoice_rows:
+        utility_type = row['supply__utility_type']
+        totals[utility_type] += row['total_cost'] or Decimal('0')
+        meter_number = row.get('supply__device_id') or row.get('supply__name') or str(row['supply_id'])
+        if meter_number not in meter_numbers[utility_type]:
+            meter_numbers[utility_type].append(meter_number)
+        per_meter_rows.append({
+            'utility_type': utility_type,
+            'label': REPORT_UTILITY_LABELS.get(utility_type, utility_type.capitalize()),
+            'meter_number': meter_number,
+            'total_cost': _decimal_to_float(row['total_cost'] or Decimal('0')),
+        })
+
+    total_cost = sum(totals.values(), Decimal('0'))
+    by_utility = []
+    for utility_type in REPORT_UTILITY_ORDER:
+        utility_total = totals.get(utility_type, Decimal('0'))
+        percentage = (utility_total / total_cost) * Decimal('100') if total_cost else None
+        by_utility.append({
+            'utility_type': utility_type,
+            'label': REPORT_UTILITY_LABELS[utility_type],
+            'total_cost': _decimal_to_float(utility_total),
+            'percentage': _decimal_to_float(percentage),
+            'meter_numbers': meter_numbers.get(utility_type, []),
+        })
+
+    order_map = {ut: i for i, ut in enumerate(REPORT_UTILITY_ORDER)}
+    per_meter_rows.sort(key=lambda r: order_map.get(r['utility_type'], 99))
+
+    return {
+        'total_cost': _decimal_to_float(total_cost),
+        'by_utility': by_utility,
+        'per_meter': per_meter_rows,
+    }
+
+
+def _report_payload(site, end_month, supply_external_ids=None):
+    current_month_keys = _month_sequence(end_month, 12)
+    previous_month_keys = [_previous_year_month_key(month_key) for month_key in current_month_keys]
+    report_start, report_end = reporting_month_bounds(end_month)
+    report_start = shift_months(report_start, -11)
+
+    supplies = list(site.supplies.filter(
+        utility_type__in=REPORT_UTILITY_ORDER,
+        # Only include fiscal meters; exclude sub-meters
+    ).filter(
+        Q(parent_account_id__isnull=True) | Q(parent_account_id='')
+    ).filter(
+        **({'external_id__in': supply_external_ids} if supply_external_ids else {})
+    ).order_by('utility_type', 'name', 'id'))
+    utility_counts = defaultdict(int)
+    for supply in supplies:
+        utility_counts[supply.utility_type] += 1
+
+    payload_supplies = []
+    for supply in supplies:
+        monthly = _monthly_series_for_supply(supply, current_month_keys, previous_month_keys)
+        hh_series = _hh_series_for_supply(supply, end_month)
+        load_factor = _load_factor_for_supply(supply, end_month, hh_series)
+        day_night = _day_night_for_supply(supply, end_month, hh_series)
+        weekday_comparison, weekend_comparison = _weekday_weekend_for_supply(supply, end_month, hh_series)
+
+        payload_supplies.append({
+            'id': supply.id,
+            'utility_type': supply.utility_type,
+            'utility_type_display': supply.get_utility_type_display(),
+            'label': _supply_label(supply, utility_counts),
+            'meter_number': _meter_number_for_supply(supply),
+            'available_capacity_kw': _decimal_to_float(supply.available_capacity),
+            'monthly': monthly,
+            'load_factor': load_factor,
+            'hh_comparison': hh_series,
+            'day_night': day_night,
+            'weekday_comparison': weekday_comparison,
+            'weekend_comparison': weekend_comparison,
+        })
+
+    return {
+        'site': {
+            'id': site.id,
+            'external_id': site.external_id,
+            'name': site.name,
+            'description': site.description,
+        },
+        'reporting_period': {
+            'end_month': end_month,
+            'start_month': current_month_keys[0],
+            'previous_year_start_month': previous_month_keys[0],
+            'report_start': report_start.isoformat(),
+            'report_end': report_end.isoformat(),
+            'months': [
+                {
+                    'key': month_key,
+                    'label': _month_label(month_key),
+                    'previous_year_key': previous_month_keys[index],
+                }
+                for index, month_key in enumerate(current_month_keys)
+            ],
+        },
+        'overview': _overview_for_site(site, report_start, report_end),
+        'supplies': payload_supplies,
+    }
+
+
+def report_view(request):
+    site_id = request.GET.get('site_id', '').strip()
+    end_month = (request.GET.get('end_month', '') or '').strip() or _previous_complete_month_key()
+    supply_ids = request.GET.get('supply_ids', '').strip()
+    site = None
+    if site_id:
+        try:
+            site = Site.objects.get(id=int(site_id))
+        except (Site.DoesNotExist, TypeError, ValueError):
+            site = None
+
+    return render(request, 'sitesync/report.html', {
+        'report_site': site,
+        'site_id': site.id if site else site_id,
+        'end_month': end_month,
+        'supply_ids': supply_ids,
+    })
+
+
+@api_view(['GET'])
+def report_data_api_view(request):
+    raw_site_id = request.query_params.get('site_id')
+    end_month = (request.query_params.get('end_month') or '').strip()
+    supply_ids_raw = (request.query_params.get('supply_ids') or '').strip()
+    supply_external_ids = [s.strip() for s in supply_ids_raw.split(',') if s.strip()] if supply_ids_raw else []
+
+    if not raw_site_id or not end_month:
+        return Response({'detail': 'site_id and end_month are required'}, status=400)
+
+    try:
+        site_id = int(raw_site_id)
+    except (TypeError, ValueError):
+        return Response({'detail': 'site_id must be an integer'}, status=400)
+
+    try:
+        reporting_month_bounds(end_month)
+    except Exception:  # pylint: disable=broad-except
+        return Response({'detail': 'end_month must be in YYYY-MM format'}, status=400)
+
+    site = get_object_or_404(Site, id=site_id)
+    if not site.supplies.exists():
+        return Response({
+            'site': {
+                'id': site.id,
+                'external_id': site.external_id,
+                'name': site.name,
+                'description': site.description,
+            },
+            'reporting_period': {
+                'end_month': end_month,
+                'start_month': _month_sequence(end_month, 12)[0],
+                'previous_year_start_month': _month_sequence(_previous_year_month_key(end_month), 12)[0],
+                'months': [],
+            },
+            'overview': {
+                'total_cost': 0,
+                'by_utility': [],
+            },
+            'supplies': [],
+        })
+
+    return Response(_report_payload(site, end_month, supply_external_ids or None))
 
 
 def site_list_view(request):
@@ -327,6 +718,7 @@ class AppSettingsViewSet(viewsets.ModelViewSet):
 
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def consumption_import_view(request):
     serializer = ConsumptionImportRequestSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
@@ -375,10 +767,24 @@ def consumption_display_api_view(request):
         supply_external_ids=supply_external_ids,
     )
 
+    # Tell the client if the returned data falls outside the requested period
+    # (e.g. API returned only historical records, not the selected window).
+    in_window = True
+    if data_type == 'invoice' and rows:
+        from .services import get_invoice_window  # local import avoids circular risk
+        window_start, window_end = get_invoice_window(reporting_month)
+        in_window = any(
+            r['source_period_end'] is not None
+            and r['source_period_end'] >= window_start
+            and r['source_period_end'] <= window_end
+            for r in rows
+        )
+
     return Response({
         'reporting_month': reporting_month,
         'data_type': data_type,
         'total_records': len(rows),
+        'in_window': in_window,
         'records': rows,
     })
 
