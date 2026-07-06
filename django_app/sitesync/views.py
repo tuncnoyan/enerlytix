@@ -7,7 +7,6 @@ from collections import defaultdict
 from datetime import datetime, timezone as datetime_timezone
 from decimal import Decimal
 
-from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q, Sum
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
@@ -15,7 +14,7 @@ from django.urls import reverse
 from django.utils import timezone as dj_timezone
 from rest_framework import viewsets
 from rest_framework.decorators import api_view
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.decorators import permission_classes
 from rest_framework.response import Response
 from .models import (
@@ -77,13 +76,13 @@ def _decimal_to_float(value):
 
 
 def _meter_number_for_supply(supply):
-    return (supply.device_id or supply.name or supply.external_id or '').strip()
+    # Prefer the supply name (meter number) over the device ID.
+    return (supply.name or supply.device_id or supply.external_id or '').strip()
 
 
 def _supply_label(supply, utility_counts):
-    if utility_counts.get(supply.utility_type, 0) <= 1:
-        return REPORT_UTILITY_LABELS.get(supply.utility_type, supply.get_utility_type_display())
-    return _meter_number_for_supply(supply) or supply.name or supply.get_utility_type_display()
+    # Always use the supply's name field as the section label.
+    return supply.name or supply.device_id or supply.external_id or supply.get_utility_type_display()
 
 
 def _monthly_series_for_supply(supply, current_month_keys, previous_month_keys):
@@ -252,18 +251,25 @@ def _overview_for_site(site, report_start, report_end):
     invoice_rows = InvoiceCost.objects.filter(
         supply__site=site,
         source_period_end__gte=report_start,
-        source_period_end__lt=report_end,
+        source_period_end__lte=report_end,  # inclusive: catches invoices ending exactly on the boundary (exclusive end-date pattern)
         supply__utility_type__in=REPORT_UTILITY_ORDER,
     ).values('supply_id', 'supply__utility_type', 'supply__device_id', 'supply__name').annotate(total_cost=Sum('cost'))
 
     totals = defaultdict(Decimal)
     meter_numbers = defaultdict(list)
+    per_meter_rows = []
     for row in invoice_rows:
         utility_type = row['supply__utility_type']
         totals[utility_type] += row['total_cost'] or Decimal('0')
         meter_number = row.get('supply__device_id') or row.get('supply__name') or str(row['supply_id'])
         if meter_number not in meter_numbers[utility_type]:
             meter_numbers[utility_type].append(meter_number)
+        per_meter_rows.append({
+            'utility_type': utility_type,
+            'label': REPORT_UTILITY_LABELS.get(utility_type, utility_type.capitalize()),
+            'meter_number': meter_number,
+            'total_cost': _decimal_to_float(row['total_cost'] or Decimal('0')),
+        })
 
     total_cost = sum(totals.values(), Decimal('0'))
     by_utility = []
@@ -278,19 +284,30 @@ def _overview_for_site(site, report_start, report_end):
             'meter_numbers': meter_numbers.get(utility_type, []),
         })
 
+    order_map = {ut: i for i, ut in enumerate(REPORT_UTILITY_ORDER)}
+    per_meter_rows.sort(key=lambda r: order_map.get(r['utility_type'], 99))
+
     return {
         'total_cost': _decimal_to_float(total_cost),
         'by_utility': by_utility,
+        'per_meter': per_meter_rows,
     }
 
 
-def _report_payload(site, end_month):
+def _report_payload(site, end_month, supply_external_ids=None):
     current_month_keys = _month_sequence(end_month, 12)
     previous_month_keys = [_previous_year_month_key(month_key) for month_key in current_month_keys]
     report_start, report_end = reporting_month_bounds(end_month)
     report_start = shift_months(report_start, -11)
 
-    supplies = list(site.supplies.filter(utility_type__in=REPORT_UTILITY_ORDER).order_by('utility_type', 'name', 'id'))
+    supplies = list(site.supplies.filter(
+        utility_type__in=REPORT_UTILITY_ORDER,
+        # Only include fiscal meters; exclude sub-meters
+    ).filter(
+        Q(parent_account_id__isnull=True) | Q(parent_account_id='')
+    ).filter(
+        **({'external_id__in': supply_external_ids} if supply_external_ids else {})
+    ).order_by('utility_type', 'name', 'id'))
     utility_counts = defaultdict(int)
     for supply in supplies:
         utility_counts[supply.utility_type] += 1
@@ -345,10 +362,10 @@ def _report_payload(site, end_month):
     }
 
 
-@login_required
 def report_view(request):
     site_id = request.GET.get('site_id', '').strip()
     end_month = (request.GET.get('end_month', '') or '').strip() or _previous_complete_month_key()
+    supply_ids = request.GET.get('supply_ids', '').strip()
     site = None
     if site_id:
         try:
@@ -360,14 +377,16 @@ def report_view(request):
         'report_site': site,
         'site_id': site.id if site else site_id,
         'end_month': end_month,
+        'supply_ids': supply_ids,
     })
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def report_data_api_view(request):
     raw_site_id = request.query_params.get('site_id')
     end_month = (request.query_params.get('end_month') or '').strip()
+    supply_ids_raw = (request.query_params.get('supply_ids') or '').strip()
+    supply_external_ids = [s.strip() for s in supply_ids_raw.split(',') if s.strip()] if supply_ids_raw else []
 
     if not raw_site_id or not end_month:
         return Response({'detail': 'site_id and end_month are required'}, status=400)
@@ -404,7 +423,7 @@ def report_data_api_view(request):
             'supplies': [],
         })
 
-    return Response(_report_payload(site, end_month))
+    return Response(_report_payload(site, end_month, supply_external_ids or None))
 
 
 def site_list_view(request):
@@ -699,6 +718,7 @@ class AppSettingsViewSet(viewsets.ModelViewSet):
 
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def consumption_import_view(request):
     serializer = ConsumptionImportRequestSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
@@ -747,10 +767,24 @@ def consumption_display_api_view(request):
         supply_external_ids=supply_external_ids,
     )
 
+    # Tell the client if the returned data falls outside the requested period
+    # (e.g. API returned only historical records, not the selected window).
+    in_window = True
+    if data_type == 'invoice' and rows:
+        from .services import get_invoice_window  # local import avoids circular risk
+        window_start, window_end = get_invoice_window(reporting_month)
+        in_window = any(
+            r['source_period_end'] is not None
+            and r['source_period_end'] >= window_start
+            and r['source_period_end'] <= window_end
+            for r in rows
+        )
+
     return Response({
         'reporting_month': reporting_month,
         'data_type': data_type,
         'total_records': len(rows),
+        'in_window': in_window,
         'records': rows,
     })
 

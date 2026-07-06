@@ -525,8 +525,17 @@ def parse_utc_datetime(value: str) -> datetime:
 
 
 def canonical_month_key(value: datetime) -> str:
-    """Derive canonical month key from UTC datetime."""
-    return value.astimezone(timezone.utc).strftime('%Y-%m')
+    """Derive canonical month key from UTC datetime.
+
+    Etainabl uses exclusive end dates: a period ending on 2026-06-01T00:00:00Z
+    covers up to (but not including) June 1st, so it belongs to May 2026.
+    When the timestamp is exactly midnight on the 1st of a month we subtract one
+    second to land in the correct (previous) month.
+    """
+    dt = value.astimezone(timezone.utc)
+    if dt.day == 1 and dt.hour == 0 and dt.minute == 0 and dt.second == 0:
+        dt = dt - timedelta(seconds=1)
+    return dt.strftime('%Y-%m')
 
 
 def month_start(year: int, month: int) -> datetime:
@@ -877,10 +886,9 @@ class ConsumptionImportService:
         has_invoice_window_data = InvoiceCost.objects.filter(
             supply=supply,
             source_period_end__gte=invoice_start,
-            source_period_end__lt=invoice_end,
+            source_period_end__lte=invoice_end,  # inclusive: catches invoices ending exactly on the boundary
         ).exists()
-        has_any_invoice_data = InvoiceCost.objects.filter(supply=supply).exists()
-        if not refresh_mode and (has_invoice_window_data or has_any_invoice_data):
+        if not refresh_mode and has_invoice_window_data:
             outcomes.append({
                 'supply_id': supply.external_id,
                 'data_type': 'invoice',
@@ -995,6 +1003,10 @@ class ConsumptionImportService:
                         end_date=end_date,
                     ),
                 )
+                logger.info(
+                    "Invoice fetch for supply %s: accountId=%s returned %d rows",
+                    supply.external_id, account_id, len(payload) if isinstance(payload, list) else -1,
+                )
                 return payload, retries, account_id
             except Exception as exc:  # pylint: disable=broad-except
                 errors.append(f"{account_id}: {exc}")
@@ -1028,10 +1040,13 @@ def get_consumption_display_records(
         qs = qs.filter(source_period_start__gte=window_start, source_period_start__lt=report_end)
     elif data_type == 'invoice':
         window_start, report_end = get_invoice_window(reporting_month)
-        window_qs = qs.filter(source_period_end__gte=window_start, source_period_end__lt=report_end)
-        # Some upstream accounts ignore invoice date filters and return historical data only.
-        # Fall back to available invoice history so imported rows remain visible in the table.
-        qs = window_qs if window_qs.exists() else qs
+        window_qs = qs.filter(source_period_end__gte=window_start, source_period_end__lte=report_end)
+        if window_qs.exists():
+            qs = window_qs
+        else:
+            # No data in the requested window — fall back to all available invoice history
+            # so the user can at least see what has been imported.
+            pass  # qs already covers all records for the supply
     else:
         qs = qs.filter(canonical_month_key=reporting_month)
 

@@ -71,12 +71,16 @@ class EtainablApiClient:
 
             all_rows.extend(rows)
             total = payload.get('total') if isinstance(payload, dict) else None
+
             if not rows:
                 break
             if isinstance(total, int) and len(all_rows) >= total:
                 break
-            if len(rows) < limit:
+            # Advance by the number of rows actually received to avoid gaps when
+            # the API returns fewer than `limit` rows on a non-final page.
+            skip += len(rows)
+            # Safety: if total is unknown, stop when we get a short page.
+            if not isinstance(total, int) and len(rows) < limit:
                 break
-            skip += limit
 
         return all_rows

@@ -215,14 +215,12 @@
         }
 
         .chart-box {
+            position: relative;
             height: 16rem;
             border-radius: 0.55rem;
             background: linear-gradient(180deg, #fafcf8 0%, #eef5ea 100%);
             border: 1px solid #dce7d7;
-            display: grid;
-            place-items: center;
-            color: #47604b;
-            font-weight: 700;
+            overflow: hidden;
         }
 
         .comment-box {
@@ -239,8 +237,51 @@
             color: transparent;
         }
 
+        /* During PDF export: remove comment-box styling so text reads like a paragraph */
         .is-exporting .comment-box {
             color: var(--cxg-primary-432);
+            border: none;
+            background: transparent;
+            resize: none;
+            padding: 0.6rem 0 0 0;
+            min-height: 0;
+            font-size: 0.86rem;
+            line-height: 1.65;
+        }
+
+        /* Clean white section cards — remove gradients, shadows, and rounded corners */
+        .is-exporting .section-card {
+            background: #ffffff;
+            border: 1px solid #d8e4ec;
+            box-shadow: none;
+            border-radius: 2px;
+        }
+
+        /* Clean up chart canvas containers */
+        .is-exporting .chart-canvas-wrapper {
+            background: #ffffff !important;
+            border-color: #d8e4ec !important;
+            border-radius: 2px !important;
+        }
+
+        /* Cleaner metric cards */
+        .is-exporting .metric {
+            background: #f8fafb;
+            border-color: #d8e4ec;
+            border-radius: 2px;
+        }
+
+        /* Cleaner table headers */
+        .is-exporting th {
+            background: #f4f6f8;
+            color: #333F48;
+        }
+
+        /* Hide the HTML card headings during PDF export — the title/subtitle
+           are already rendered inside the Chart.js canvas. */
+        .is-exporting .card-title-screen,
+        .is-exporting .card-subtitle-screen {
+            display: none;
         }
 
         @media (max-width: 1180px) {
@@ -297,7 +338,8 @@
         window.ENERLYTIX_REPORT_CONTEXT = {
             siteId: "{{ site_id|default:'' }}",
             endMonth: "{{ end_month|default:'' }}",
-            siteName: "{{ report_site.name|default:''|escapejs }}"
+            siteName: "{{ report_site.name|default:''|escapejs }}",
+            supplyIds: "{{ supply_ids|default:''|escapejs }}"
         };
     </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.min.js"></script>

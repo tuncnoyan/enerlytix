@@ -6,8 +6,26 @@ let selectedSiteId = null;
 
 const currentSupplyFilters = {
     utilityType: 'all',
-    meterType: 'all',
+    meterType: 'fiscal',  // default: exclude submeters until the checkbox is ticked
 };
+
+function getCsrfToken() {
+    "use strict";
+
+    const match = document.cookie.match(/(?:^|;)\s*csrftoken=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : '';
+}
+
+function setReportStatus(message, isWarning) {
+    "use strict";
+
+    const statusNode = document.getElementById('report-status');
+    if (!statusNode) {
+        return;
+    }
+    statusNode.textContent = message || '';
+    statusNode.style.color = isWarning ? '#b91c1c' : '#0f766e';
+}
 
 function selectSite(siteId, event) {
     "use strict";
@@ -84,9 +102,16 @@ function applySupplyFilters() {
 
     const utilitySelect = document.getElementById('supply-filter-utility');
     const meterSelect = document.getElementById('supply-filter-meter');
+    const includeSubmetersCheckbox = document.getElementById('supply-filter-include-submeters');
 
     currentSupplyFilters.utilityType = utilitySelect ? utilitySelect.value : 'all';
-    currentSupplyFilters.meterType = meterSelect ? meterSelect.value : 'all';
+    if (includeSubmetersCheckbox) {
+        currentSupplyFilters.meterType = includeSubmetersCheckbox.checked ? 'all' : 'fiscal';
+    } else if (meterSelect) {
+        currentSupplyFilters.meterType = meterSelect.value;
+    } else {
+        currentSupplyFilters.meterType = 'fiscal';
+    }
 
     updateTopStatsFromCheckedSites();
     loadSupplies(selectedSiteId);
@@ -262,7 +287,7 @@ function getImportDataTypeValue() {
 function getReportMonthValue() {
     "use strict";
 
-    const input = document.getElementById('import-reporting-month');
+    const input = document.getElementById('report-reporting-month');
     return input ? input.value : '';
 }
 
@@ -281,12 +306,16 @@ function updateReportButtonState() {
     button.disabled = !isEnabled;
     if (checkedSiteIds.length === 0) {
         button.title = 'Select a site first';
+        setReportStatus('Select a site first.', true);
     } else if (checkedSiteIds.length > 1) {
         button.title = 'Select only one site to create a report';
+        setReportStatus('Select only one site to create a report.', true);
     } else if (!reportMonth) {
         button.title = 'Select a reporting month';
+        setReportStatus('Select a reporting month.', true);
     } else {
         button.title = 'Create a report for the selected site';
+        setReportStatus('', false);
     }
 }
 
@@ -295,7 +324,12 @@ function triggerReportView() {
 
     const checkedSiteIds = getCheckedSiteIds();
     const reportMonth = getReportMonthValue();
-    if (checkedSiteIds.length !== 1 || !reportMonth) {
+    if (checkedSiteIds.length !== 1) {
+        updateReportButtonState();
+        return;
+    }
+
+    if (!reportMonth) {
         updateReportButtonState();
         return;
     }
@@ -304,6 +338,14 @@ function triggerReportView() {
         site_id: checkedSiteIds[0],
         end_month: reportMonth,
     });
+
+    // Pass the currently checked supply external IDs so the report only
+    // renders sections for supplies the user actually selected.
+    const selectedSupplyIds = getSelectedSupplyIds();
+    if (selectedSupplyIds.length > 0) {
+        params.set('supply_ids', selectedSupplyIds.join(','));
+    }
+
     window.location.href = '/report/?' + params.toString();
 }
 
@@ -352,6 +394,7 @@ function triggerConsumptionImport() {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken(),
         },
         body: JSON.stringify({
             supply_ids: supplyIds,
@@ -395,6 +438,11 @@ document.addEventListener('DOMContentLoaded', function() {
         reportingMonthInput.value = currentMonth;
     }
 
+    const reportMonthInput = document.getElementById('report-reporting-month');
+    if (reportMonthInput && !reportMonthInput.value) {
+        reportMonthInput.value = currentMonth;
+    }
+
     const importButton = document.getElementById('trigger-import-button');
     if (importButton) {
         importButton.addEventListener('click', triggerConsumptionImport);
@@ -405,9 +453,8 @@ document.addEventListener('DOMContentLoaded', function() {
         reportButton.addEventListener('click', triggerReportView);
     }
 
-    const reportingMonthInputForReport = document.getElementById('import-reporting-month');
-    if (reportingMonthInputForReport) {
-        reportingMonthInputForReport.addEventListener('change', updateReportButtonState);
+    if (reportMonthInput) {
+        reportMonthInput.addEventListener('change', updateReportButtonState);
     }
 
     renderNoSelectedSites();

@@ -602,6 +602,35 @@
 
             <div class="content-layout">
                 <div class="site-column">
+                    <div class="import-controls">
+                        <h4>Usage and Invoice Import</h4>
+                        <div class="import-controls-grid">
+                            <div>
+                                <label for="import-reporting-month">Reporting Month</label>
+                                <input id="import-reporting-month" type="month" />
+                            </div>
+                            <div>
+                                <label for="import-data-type">Default Display Type</label>
+                                <select id="import-data-type">
+                                    <option value="monthly">Monthly</option>
+                                    <option value="halfhourly">Half-hourly</option>
+                                    <option value="invoice">Invoice</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label>&nbsp;</label>
+                                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                                    <button id="trigger-import-button" type="button">Load Data</button>
+                                    <label for="import-refresh-mode" style="display: flex; align-items: center; gap: 0.35rem; margin: 0; font-weight: 600; white-space: nowrap;">
+                                        <input id="import-refresh-mode" type="checkbox" />
+                                        Refresh data
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="import-status" id="import-status"></div>
+                    </div>
+
                     {% if sites %}
                         <div class="site-list">
                             <div class="site-list-header">
@@ -658,33 +687,20 @@
 
                 <div class="supply-column">
                     <div class="import-controls">
-                        <h4>Usage and Invoice Import</h4>
-                        <div class="import-controls-grid">
+                        <h4>Create Report</h4>
+                        <div class="import-controls-grid" style="grid-template-columns: 1fr 1fr;">
                             <div>
-                                <label for="import-reporting-month">Reporting Month</label>
-                                <input id="import-reporting-month" type="month" />
-                            </div>
-                            <div>
-                                <label for="import-data-type">Default Display Type</label>
-                                <select id="import-data-type">
-                                    <option value="monthly">Monthly</option>
-                                    <option value="halfhourly">Half-hourly</option>
-                                    <option value="invoice">Invoice</option>
-                                </select>
+                                <label for="report-reporting-month">Reporting Month</label>
+                                <input id="report-reporting-month" type="month" />
                             </div>
                             <div>
                                 <label>&nbsp;</label>
                                 <div style="display: flex; align-items: center; gap: 0.65rem;">
-                                    <button id="trigger-import-button" type="button">Load Data</button>
-                                    <button id="trigger-report-button" type="button" disabled title="Select a site first">Create Report</button>
-                                    <label for="import-refresh-mode" style="display: flex; align-items: center; gap: 0.35rem; margin: 0; font-weight: 600; white-space: nowrap;">
-                                        <input id="import-refresh-mode" type="checkbox" />
-                                        Refresh data
-                                    </label>
+                                    <button id="trigger-report-button" type="button">Create Report</button>
                                 </div>
                             </div>
                         </div>
-                        <div class="import-status" id="import-status"></div>
+                        <div class="import-status" id="report-status"></div>
                     </div>
 
                     <div class="supply-panel" id="supply-panel">
