@@ -291,6 +291,116 @@ function getReportMonthValue() {
     return input ? input.value : '';
 }
 
+function getReportRefreshModeValue() {
+    "use strict";
+
+    const input = document.getElementById('report-refresh-mode');
+    return input ? input.checked : false;
+}
+
+function reportPayloadHasData(payload) {
+    "use strict";
+
+    if (!payload || !Array.isArray(payload.supplies)) {
+        return false;
+    }
+
+    const hasOverviewCost = payload.overview
+        && payload.overview.total_cost !== null
+        && payload.overview.total_cost !== undefined
+        && Number(payload.overview.total_cost) > 0;
+
+    if (hasOverviewCost) {
+        return true;
+    }
+
+    return payload.supplies.some((supply) => {
+        const monthly = supply && supply.monthly ? supply.monthly : {};
+        const monthlyKeys = [
+            'current_kwh',
+            'current_m3',
+            'previous_year_kwh',
+            'previous_year_m3',
+            'benchmark_kwh',
+            'benchmark_m3',
+        ];
+        const hasMonthly = monthlyKeys.some((key) => Array.isArray(monthly[key])
+            && monthly[key].some((value) => value !== null && value !== undefined));
+
+        if (hasMonthly) {
+            return true;
+        }
+
+        const hhComparison = supply && supply.hh_comparison ? supply.hh_comparison : null;
+        if (hhComparison && ((Array.isArray(hhComparison.current) && hhComparison.current.length > 0)
+            || (Array.isArray(hhComparison.previous_year) && hhComparison.previous_year.length > 0))) {
+            return true;
+        }
+
+        const loadFactor = supply && supply.load_factor ? supply.load_factor : null;
+        return Boolean(loadFactor && Array.isArray(loadFactor.halfhourly) && loadFactor.halfhourly.length > 0);
+    });
+}
+
+function getSupplyIdsForReportImport(selectedSupplyIds, reportPayload) {
+    "use strict";
+
+    if (selectedSupplyIds.length) {
+        return selectedSupplyIds;
+    }
+
+    if (!reportPayload || !Array.isArray(reportPayload.supplies)) {
+        return [];
+    }
+
+    return reportPayload.supplies
+        .map((supply) => supply.external_id)
+        .filter(Boolean);
+}
+
+function fetchReportPayload(siteId, reportMonth, selectedSupplyIds) {
+    "use strict";
+
+    const params = new URLSearchParams({
+        site_id: siteId,
+        end_month: reportMonth,
+    });
+
+    if (selectedSupplyIds.length > 0) {
+        params.set('supply_ids', selectedSupplyIds.join(','));
+    }
+
+    return fetch('/api/report-data/?' + params.toString())
+        .then((response) => {
+            if (!response.ok) {
+                throw new Error('Unable to check report data availability.');
+            }
+            return response.json();
+        });
+}
+
+function importReportData(supplyIds, reportMonth, refreshMode) {
+    "use strict";
+
+    return fetch('/api/consumption-import/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken(),
+        },
+        body: JSON.stringify({
+            supply_ids: supplyIds,
+            reporting_month: reportMonth,
+            refresh_mode: refreshMode,
+        }),
+    }).then((response) => {
+        if (!response.ok) {
+            throw new Error('Unable to load required report data.');
+        }
+        return response.json();
+    });
+}
+
 function updateReportButtonState() {
     "use strict";
 
@@ -319,11 +429,13 @@ function updateReportButtonState() {
     }
 }
 
-function triggerReportView() {
+async function triggerReportView() {
     "use strict";
 
     const checkedSiteIds = getCheckedSiteIds();
     const reportMonth = getReportMonthValue();
+    const reportRefreshMode = getReportRefreshModeValue();
+    const button = document.getElementById('trigger-report-button');
     if (checkedSiteIds.length !== 1) {
         updateReportButtonState();
         return;
@@ -334,19 +446,57 @@ function triggerReportView() {
         return;
     }
 
-    const params = new URLSearchParams({
-        site_id: checkedSiteIds[0],
-        end_month: reportMonth,
-    });
-
-    // Pass the currently checked supply external IDs so the report only
-    // renders sections for supplies the user actually selected.
     const selectedSupplyIds = getSelectedSupplyIds();
-    if (selectedSupplyIds.length > 0) {
-        params.set('supply_ids', selectedSupplyIds.join(','));
+    if (button) {
+        button.disabled = true;
     }
 
-    window.location.href = '/report/?' + params.toString();
+    try {
+        const siteId = checkedSiteIds[0];
+        let reportPayload = null;
+        let shouldImport = reportRefreshMode;
+        let supplyIdsForImport = selectedSupplyIds.slice();
+
+        if (reportRefreshMode) {
+            setReportStatus('Refreshing report data. This may take a moment...', false);
+        } else {
+            setReportStatus('Checking report data availability...', false);
+            reportPayload = await fetchReportPayload(siteId, reportMonth, selectedSupplyIds);
+            if (!reportPayloadHasData(reportPayload)) {
+                shouldImport = true;
+                supplyIdsForImport = getSupplyIdsForReportImport(selectedSupplyIds, reportPayload);
+                setReportStatus('Required report data is missing. Downloading required data now; this may take a moment...', false);
+            }
+        }
+
+        if (shouldImport) {
+            if (!supplyIdsForImport.length) {
+                setReportStatus('No supplies available to load for this report.', true);
+                return;
+            }
+            await importReportData(supplyIdsForImport, reportMonth, reportRefreshMode);
+        }
+
+        setReportStatus('Opening report...', false);
+
+        const params = new URLSearchParams({
+            site_id: siteId,
+            end_month: reportMonth,
+        });
+
+        // Pass the currently checked supply external IDs so the report only
+        // renders sections for supplies the user actually selected.
+        if (selectedSupplyIds.length > 0) {
+            params.set('supply_ids', selectedSupplyIds.join(','));
+        }
+
+        window.location.href = '/report/?' + params.toString();
+    } catch (error) {
+        console.error(error);
+        setReportStatus('Unable to prepare report data. Please try again.', true);
+    } finally {
+        updateReportButtonState();
+    }
 }
 
 function getRefreshModeValue() {

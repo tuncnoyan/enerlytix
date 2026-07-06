@@ -322,6 +322,7 @@ def _report_payload(site, end_month, supply_external_ids=None):
 
         payload_supplies.append({
             'id': supply.id,
+            'external_id': supply.external_id,
             'utility_type': supply.utility_type,
             'utility_type_display': supply.get_utility_type_display(),
             'label': _supply_label(supply, utility_counts),

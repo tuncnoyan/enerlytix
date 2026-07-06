@@ -98,6 +98,7 @@ description: "Task list for 003-report-visuals-page"
 
 - [ ] T031 Write unit tests for Max Demand, Load Factor, and variance calculation logic in `django_app/sitesync/tests/test_report_data.py`: assert correct values against known HH fixtures; assert null/zero handling for previous year absent cases
 - [X] T032 Implement "no supplies" empty state in `django_app/templates/sitesync/report.html`: show a user-friendly message when `response.supplies` is empty (site exists but has no associated supply records)
+- [X] T033 Implement Create Report preflight refresh behavior in `django_app/templates/sitesync/site_list.html`, `django_app/static/sitesync/js/site_selection.js`, and `django_app/sitesync/views.py`: add a dedicated report refresh checkbox; when unchecked and report data is missing, auto-import required data before navigating and display an in-panel delay message
 
 ---
 
