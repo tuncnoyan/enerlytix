@@ -29,7 +29,7 @@ services:
     volumes:
       - ../../django_app:/app
     ports:
-      - "8008:8080"
+      - "8080:8080"
     environment:
       DEBUG: "True"
       DATABASE_URL: postgresql://enerlytix_user:enerlytix_password@db:5432/enerlytix
