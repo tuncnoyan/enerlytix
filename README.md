@@ -1,26 +1,178 @@
 # Enerlytix
 
-Enerlytix is a Django-based web app for analysing electricity, gas, and water usage data.
+Enerlytix is a Django web application for monitoring utility usage and costs across electricity, gas, and water supplies. It provides dashboard-driven data sync, usage and invoice imports, report visuals, and operational settings in a single app.
 
-## Local development
+## What the application does
 
-1. Create a Python environment and install dependencies from `requirements.txt`.
-2. Set environment variables in `.env`.
-3. Run migrations from `django_app/`.
-4. Start the app with `python manage.py runserver`.
+- Synchronizes sites and supplies from Etainabl.
+- Imports half-hourly, monthly, and invoice data for selected supplies.
+- Displays usage and invoice records for a selected reporting month.
+- Generates utility report visuals per site and month.
+- Supports runtime settings and import retention cleanup.
 
-## Docker
+## Application structure
 
-The app also supports Docker Compose from `django_app/docker/`.
+Top-level repository layout:
 
-## Main pages
+- django_app/: Django project and Sitesync application source.
+- deployment/: deployment and security process documentation.
+- docs/: API and security documentation.
+- sample_app/: API request examples and sample payloads.
+- specs/: feature specifications, plans, tasks, and contracts.
+- tests/: additional project-level test folders.
+- .env.example: environment variable template.
 
-- Site list dashboard
-- Supply details panel
-- Settings page for runtime configuration
+Key Django modules:
 
-## Security notes
+- django_app/manage.py: Django management entry point.
+- django_app/config/settings.py: runtime settings and environment variable loading.
+- django_app/config/urls.py: root URL routing.
+- django_app/sitesync/models.py: core domain models for sites, supplies, and consumption/import data.
+- django_app/sitesync/views.py: dashboard views and API endpoints.
+- django_app/sitesync/services.py: sync/import and data processing services.
+- django_app/sitesync/templates/sitesync/: dashboard, report, settings, and display templates.
+- django_app/static/sitesync/js/: client-side behavior for dashboard, report, and data display.
+- django_app/docker/: Dockerfile and Compose configuration for containerized development.
 
-- Secrets must come from environment variables.
-- Production deployments require approval.
-- Database connections should use encrypted transport where supported.
+## Prerequisites
+
+- Python 3.14 (project Pipfile target).
+- pip (or Pipenv if you prefer Pipfile workflow).
+- Docker Desktop (optional, for containerized run).
+
+## Local setup (Windows and cross-platform)
+
+1. Create and activate a virtual environment.
+2. Install dependencies.
+3. Create a local environment file from .env.example.
+4. Run migrations.
+5. Start the development server.
+
+Example commands:
+
+PowerShell:
+
+- py -3.14 -m venv .venv
+- .\.venv\Scripts\Activate.ps1
+- pip install -r django_app/requirements.txt
+- Copy-Item .env.example .env
+- Set-Location django_app
+- python manage.py migrate
+- python manage.py runserver 0.0.0.0:8080
+
+App URL:
+
+- http://localhost:8080/
+
+## Docker setup
+
+From the repository root:
+
+- Copy-Item .env.example .env
+- docker compose -f django_app/docker/docker-compose.yml up --build
+
+Services:
+
+- web: Django app on port 8080.
+- db: PostgreSQL service used by the web container via DATABASE_URL.
+
+To stop:
+
+- docker compose -f django_app/docker/docker-compose.yml down
+
+## Configuration
+
+Configuration is environment-variable driven. The app loads values from .env via python-dotenv.
+
+### Core Django settings
+
+- DEBUG: enables debug mode.
+- SECRET_KEY: Django secret key.
+- ALLOWED_HOSTS: comma-separated hostnames.
+- DJANGO_SETTINGS_MODULE: defaults to config.settings in container workflows.
+
+### Database
+
+- DATABASE_URL:
+	- if omitted, local SQLite is used at django_app/db.sqlite3.
+	- if postgresql URL is provided, PostgreSQL is used.
+- DATABASE_SSLMODE: PostgreSQL sslmode override.
+
+### Etainabl integration
+
+- ETAINABL_API_KEY: required API key.
+- ETAINABL_API_URL: base API URL (default https://api.etainabl.com/2.0).
+- ETAINABL_ACCOUNT_ID: root account id.
+- API_TIMEOUT: request timeout seconds.
+
+### Pagination and import behavior
+
+- PAGE_SIZE: API pagination size for DRF list responses.
+- CONSUMPTION_RETENTION_MONTHS: retention period for imported consumption and invoice data.
+- CONSUMPTION_IMPORT_RETRY_COUNT: retries for transient import failures.
+- CONSUMPTION_IMPORT_RETRY_BACKOFF_SECONDS: retry delay.
+- CONSUMPTION_HALFHOURLY_MONTHS: months fetched for half-hourly imports.
+- CONSUMPTION_MONTHLY_MONTHS: months fetched for monthly imports.
+- CONSUMPTION_INVOICE_MONTHS: months fetched for invoice imports.
+
+### Security toggles
+
+- SECURE_SSL_REDIRECT
+- SESSION_COOKIE_SECURE
+- CSRF_COOKIE_SECURE
+- SECURE_HSTS_SECONDS
+- SECURE_HSTS_INCLUDE_SUBDOMAINS
+- SECURE_HSTS_PRELOAD
+
+For local development, start with .env.example values and harden for production.
+
+## Usage
+
+### Main pages
+
+- /: Site and supply dashboard.
+- /consumption-display/: usage and invoice display page.
+- /report/: report visuals page.
+- /settings/: runtime settings panel.
+- /login/: login page template (available if authenticated flows are enabled).
+
+### Dashboard flow
+
+1. Open dashboard.
+2. Sync sites and supplies with Refresh data.
+3. Select site(s) and supply filters.
+4. Import usage data with Load Data.
+5. Create report with Create Report for a selected site and month.
+
+### API endpoints
+
+- POST /api/consumption-import/: trigger import for selected supply ids and reporting month.
+- GET /api/consumption-display/: return display records by reporting month and data type.
+- GET /api/report-data/: return aggregated report payload for site and month.
+- GET /api/import-runs/<uuid>/: retrieve import run details.
+
+### Data cleanup command
+
+Run periodic retention cleanup from django_app:
+
+- python manage.py cleanup_expired_consumption
+
+This removes expired HalfHourlyConsumption, MonthlyConsumption, and InvoiceCost records based on retention configuration.
+
+## Testing and checks
+
+From django_app:
+
+- python manage.py check
+- python manage.py test
+
+Optional pytest workflow (if configured in your environment):
+
+- pytest
+
+## Operational notes
+
+- Keep secrets out of source control and use environment variables.
+- Use PostgreSQL with TLS settings for production.
+- Follow deployment approval and security checklists in deployment/.
+- See docs/API.md and docs/SECRET_MANAGEMENT.md for integration and secret handling guidance.
