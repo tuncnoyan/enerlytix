@@ -6,7 +6,7 @@ import logging
 import time
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 import requests
 from django.conf import settings
 from django.db import transaction
@@ -61,8 +61,10 @@ class EtainaibleSyncService:
         results = {
             'sites_created': 0,
             'sites_updated': 0,
+            'sites_deleted': 0,
             'supplies_created': 0,
             'supplies_updated': 0,
+            'supplies_deleted': 0,
         }
         
         try:
@@ -70,18 +72,22 @@ class EtainaibleSyncService:
             sites_result = self.sync_assets()
             results['sites_created'] = sites_result.get('created', 0)
             results['sites_updated'] = sites_result.get('updated', 0)
+            results['sites_deleted'] = sites_result.get('deleted', 0)
             logger.info(
                 f"Assets sync complete: {results['sites_created']} created, "
-                f"{results['sites_updated']} updated"
+                f"{results['sites_updated']} updated, "
+                f"{results['sites_deleted']} deleted"
             )
             
             # Sync accounts (supplies)
             supplies_result = self.sync_accounts()
             results['supplies_created'] = supplies_result.get('created', 0)
             results['supplies_updated'] = supplies_result.get('updated', 0)
+            results['supplies_deleted'] = supplies_result.get('deleted', 0)
             logger.info(
                 f"Accounts sync complete: {results['supplies_created']} created, "
-                f"{results['supplies_updated']} updated"
+                f"{results['supplies_updated']} updated, "
+                f"{results['supplies_deleted']} deleted"
             )
             
             logger.info(f"Full sync completed successfully: {results}")
@@ -102,6 +108,9 @@ class EtainaibleSyncService:
         created = 0
         updated = 0
         skipped = 0
+        deleted = 0
+        remote_site_ids: Set[str] = set()
+        received_valid_payload = False
         
         try:
             endpoint = f"{self.api_url}/assets"
@@ -122,12 +131,17 @@ class EtainaibleSyncService:
                     logger.warning(f"No data in response from {endpoint}")
                     break
 
+                received_valid_payload = True
+
                 if not assets:
                     logger.info(f"No more assets to fetch (page={page})")
                     break
                 
                 # Process each asset
                 for asset in assets:
+                    external_id = self._extract_site_external_id(asset)
+                    if external_id:
+                        remote_site_ids.add(external_id)
                     site_created = self._upsert_site(asset)
                     if site_created is True:
                         created += 1
@@ -153,14 +167,29 @@ class EtainaibleSyncService:
                     break
 
                 page += 1
+
+            if received_valid_payload:
+                stale_sites = Site.objects.exclude(external_id__in=remote_site_ids)
+                deleted = stale_sites.count()
+                if deleted:
+                    stale_sites.delete()
+                    logger.info("Removed %s stale sites not present in Etainabl", deleted)
+            else:
+                logger.warning("Skipping stale site reconciliation due to invalid assets payload shape")
             
             logger.info(
-                "Asset sync complete: %s created, %s updated, %s skipped",
+                "Asset sync complete: %s created, %s updated, %s skipped, %s deleted",
                 created,
                 updated,
                 skipped,
+                deleted,
             )
-            return {'created': created, 'updated': updated, 'skipped': skipped}
+            return {
+                'created': created,
+                'updated': updated,
+                'skipped': skipped,
+                'deleted': deleted,
+            }
             
         except Exception as e:
             logger.error(f"Asset sync failed: {str(e)}", exc_info=True)
@@ -177,6 +206,9 @@ class EtainaibleSyncService:
         created = 0
         updated = 0
         skipped = 0
+        deleted = 0
+        remote_supply_ids: Set[str] = set()
+        received_valid_payload = False
         
         try:
             endpoint = f"{self.api_url}/accounts"
@@ -197,12 +229,17 @@ class EtainaibleSyncService:
                     logger.warning(f"No data in response from {endpoint}")
                     break
 
+                received_valid_payload = True
+
                 if not accounts:
                     logger.info(f"No more accounts to fetch (page={page})")
                     break
                 
                 # Process each account
                 for account in accounts:
+                    external_id = self._extract_supply_external_id(account)
+                    if external_id:
+                        remote_supply_ids.add(external_id)
                     supply_created = self._upsert_supply(account)
                     if supply_created is True:
                         created += 1
@@ -228,14 +265,29 @@ class EtainaibleSyncService:
                     break
 
                 page += 1
+
+            if received_valid_payload:
+                stale_supplies = Supply.objects.exclude(external_id__in=remote_supply_ids)
+                deleted = stale_supplies.count()
+                if deleted:
+                    stale_supplies.delete()
+                    logger.info("Removed %s stale supplies not present in Etainabl", deleted)
+            else:
+                logger.warning("Skipping stale supply reconciliation due to invalid accounts payload shape")
             
             logger.info(
-                "Account sync complete: %s created, %s updated, %s skipped",
+                "Account sync complete: %s created, %s updated, %s skipped, %s deleted",
                 created,
                 updated,
                 skipped,
+                deleted,
             )
-            return {'created': created, 'updated': updated, 'skipped': skipped}
+            return {
+                'created': created,
+                'updated': updated,
+                'skipped': skipped,
+                'deleted': deleted,
+            }
             
         except Exception as e:
             logger.error(f"Account sync failed: {str(e)}", exc_info=True)
@@ -361,11 +413,7 @@ class EtainaibleSyncService:
             True if created, False if updated
         """
         try:
-            external_id = (
-                asset_data.get('id')
-                or asset_data.get('_id')
-                or asset_data.get('assetId')
-            )
+            external_id = self._extract_site_external_id(asset_data)
             if not external_id:
                 logger.warning(f"Asset missing id field: {asset_data}")
                 return None
@@ -432,7 +480,7 @@ class EtainaibleSyncService:
             True if created, False if updated
         """
         try:
-            external_id = account_data.get('id') or account_data.get('_id')
+            external_id = self._extract_supply_external_id(account_data)
             site_external_id = (
                 account_data.get('asset_id')
                 or account_data.get('assetId')
@@ -480,6 +528,7 @@ class EtainaibleSyncService:
             }
             utility_raw = str(account_data.get('type', account_data.get('utility_type', 'other'))).lower()
             utility_type = utility_type_map.get(utility_raw, 'other')
+            status = self._normalize_supply_status(account_data)
 
             device_id = account_data.get('device_id') or account_data.get('deviceId') or ''
             if not device_id:
@@ -497,6 +546,7 @@ class EtainaibleSyncService:
                     'utility_type': utility_type,
                     'device_id': device_id,
                     'parent_account_id': str(parent_account_id) if parent_account_id else None,
+                    'status': status,
                 }
             )
             
@@ -510,6 +560,44 @@ class EtainaibleSyncService:
         except Exception as e:
             logger.error(f"Failed to upsert supply from {account_data}: {str(e)}")
             return None
+
+    def _extract_site_external_id(self, asset_data: Dict) -> Optional[str]:
+        """Extract a stable site external ID from asset payload."""
+        external_id = (
+            asset_data.get('id')
+            or asset_data.get('_id')
+            or asset_data.get('assetId')
+        )
+        if not external_id:
+            return None
+        return str(external_id).strip()
+
+    def _extract_supply_external_id(self, account_data: Dict) -> Optional[str]:
+        """Extract a stable supply external ID from account payload."""
+        external_id = account_data.get('id') or account_data.get('_id')
+        if not external_id:
+            return None
+        return str(external_id).strip()
+
+    def _normalize_supply_status(self, account_data: Dict) -> Optional[str]:
+        """Extract and normalize account status from Etainabl payload."""
+        raw_status = (
+            account_data.get('status')
+            or account_data.get('state')
+            or account_data.get('accountStatus')
+        )
+        if isinstance(raw_status, dict):
+            raw_status = (
+                raw_status.get('status')
+                or raw_status.get('state')
+                or raw_status.get('value')
+                or raw_status.get('label')
+            )
+        if raw_status is None:
+            return None
+
+        status = str(raw_status).strip().lower()
+        return status or None
 
 
 def parse_utc_datetime(value: str) -> datetime:

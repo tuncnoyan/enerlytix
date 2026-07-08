@@ -94,6 +94,13 @@ class Supply(models.Model):
         db_index=True,
         help_text="Parent fiscal meter account ID from Etainabl parentAccountId"
     )
+    status = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        db_index=True,
+        help_text="Supply status from Etainabl (for example: active/inactive)"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

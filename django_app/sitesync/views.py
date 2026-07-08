@@ -667,7 +667,15 @@ def manual_sync_view(request):
         sync_service = EtainaibleSyncService()
         results = sync_service.sync_all()
         logger.info("Manual sync completed: %s", results)
-        if (results.get('sites_created', 0) + results.get('sites_updated', 0)) == 0:
+        sync_activity = (
+            results.get('sites_created', 0)
+            + results.get('sites_updated', 0)
+            + results.get('sites_deleted', 0)
+            + results.get('supplies_created', 0)
+            + results.get('supplies_updated', 0)
+            + results.get('supplies_deleted', 0)
+        )
+        if sync_activity == 0:
             logger.warning("Manual sync completed but no sites were persisted")
             return redirect(f"{reverse('sitesync:site_list')}?sync=empty")
         return redirect(f"{reverse('sitesync:site_list')}?sync=success")

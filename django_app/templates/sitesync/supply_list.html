@@ -61,7 +61,12 @@
                                                     onchange="const node = document.getElementById('selected-supplies-count'); if (node) { node.textContent = 'Selected Supplies: ' + document.querySelectorAll('.supply-selector:checked').length; }"
                                                 />
                                             </div>
-                                            <div class="supply-name"><strong>{{ submeter.name }}</strong></div>
+                                            <div class="supply-name">
+                                                <strong>{{ submeter.name }}</strong>
+                                                {% if submeter.status|default:''|lower == 'inactive' %}
+                                                    <span style="display:inline-block;margin-left:0.35rem;padding:0.08rem 0.35rem;border-radius:0.22rem;background:#d93025;color:#fff;font-size:0.65rem;font-weight:700;vertical-align:middle;text-transform:lowercase;">inactive</span>
+                                                {% endif %}
+                                            </div>
                                             <div class="supply-type">{{ submeter.get_utility_type_display }} • Submeter</div>
                                             {% if submeter.device_id %}
                                                 <div class="supply-device">Device: {{ submeter.device_id }}</div>
@@ -82,7 +87,12 @@
                                     onchange="const node = document.getElementById('selected-supplies-count'); if (node) { node.textContent = 'Selected Supplies: ' + document.querySelectorAll('.supply-selector:checked').length; }"
                                 />
                             </div>
-                            <div class="supply-name"><strong>{{ fiscal.supply.name }}</strong></div>
+                            <div class="supply-name">
+                                <strong>{{ fiscal.supply.name }}</strong>
+                                {% if fiscal.supply.status|default:''|lower == 'inactive' %}
+                                    <span style="display:inline-block;margin-left:0.35rem;padding:0.08rem 0.35rem;border-radius:0.22rem;background:#d93025;color:#fff;font-size:0.65rem;font-weight:700;vertical-align:middle;text-transform:lowercase;">inactive</span>
+                                {% endif %}
+                            </div>
                             <div class="supply-type">{{ fiscal.supply.get_utility_type_display }} • Main (Fiscal)</div>
                             {% if fiscal.supply.device_id %}
                                 <div class="supply-device">Device: {{ fiscal.supply.device_id }}</div>
@@ -101,7 +111,12 @@
                                                     onchange="const node = document.getElementById('selected-supplies-count'); if (node) { node.textContent = 'Selected Supplies: ' + document.querySelectorAll('.supply-selector:checked').length; }"
                                                 />
                                             </div>
-                                            <div class="supply-name"><strong>{{ submeter.name }}</strong></div>
+                                            <div class="supply-name">
+                                                <strong>{{ submeter.name }}</strong>
+                                                {% if submeter.status|default:''|lower == 'inactive' %}
+                                                    <span style="display:inline-block;margin-left:0.35rem;padding:0.08rem 0.35rem;border-radius:0.22rem;background:#d93025;color:#fff;font-size:0.65rem;font-weight:700;vertical-align:middle;text-transform:lowercase;">inactive</span>
+                                                {% endif %}
+                                            </div>
                                             <div class="supply-type">{{ submeter.get_utility_type_display }} • Submeter</div>
                                             {% if submeter.device_id %}
                                                 <div class="supply-device">Device: {{ submeter.device_id }}</div>
@@ -136,7 +151,12 @@
                                 onchange="const node = document.getElementById('selected-supplies-count'); if (node) { node.textContent = 'Selected Supplies: ' + document.querySelectorAll('.supply-selector:checked').length; }"
                             />
                         </div>
-                        <div class="supply-name"><strong>{{ submeter.name }}</strong></div>
+                        <div class="supply-name">
+                            <strong>{{ submeter.name }}</strong>
+                            {% if submeter.status|default:''|lower == 'inactive' %}
+                                <span style="display:inline-block;margin-left:0.35rem;padding:0.08rem 0.35rem;border-radius:0.22rem;background:#d93025;color:#fff;font-size:0.65rem;font-weight:700;vertical-align:middle;text-transform:lowercase;">inactive</span>
+                            {% endif %}
+                        </div>
                         <div class="supply-type">{{ submeter.get_utility_type_display }} • Submeter</div>
                         {% if submeter.device_id %}
                             <div class="supply-device">Device: {{ submeter.device_id }}</div>
