@@ -80,6 +80,38 @@ To stop:
 
 - docker compose -f django_app/docker/docker-compose.yml down
 
+### Private image via GHCR
+
+This repository can publish a private container image to GitHub Container Registry (GHCR).
+
+Workflow file:
+
+- .github/workflows/publish-ghcr-private.yml
+
+What it does:
+
+- builds from `django_app/docker/Dockerfile`
+- publishes to `ghcr.io/<owner>/enerlytix`
+- pushes tags for `latest` (default branch), branch names, tags, and commit SHA
+
+One-time setup:
+
+1. Ensure repository Actions are enabled.
+2. Ensure package visibility remains private (GitHub Packages settings).
+3. If your org restricts package publishing, allow GitHub Actions to publish packages.
+
+Manual local login/pull commands (PowerShell):
+
+- echo <GH_PAT_WITH_READ_PACKAGES> | docker login ghcr.io -u <github-username> --password-stdin
+- docker pull ghcr.io/<owner>/enerlytix:latest
+- docker run --rm -p 8080:8080 --env-file .env ghcr.io/<owner>/enerlytix:latest
+
+Manual local build/push commands (PowerShell):
+
+- docker build -f django_app/docker/Dockerfile -t ghcr.io/<owner>/enerlytix:manual .
+- echo <GH_PAT_WITH_WRITE_PACKAGES> | docker login ghcr.io -u <github-username> --password-stdin
+- docker push ghcr.io/<owner>/enerlytix:manual
+
 ## Configuration
 
 Configuration is environment-variable driven. The app loads values from .env via python-dotenv.
