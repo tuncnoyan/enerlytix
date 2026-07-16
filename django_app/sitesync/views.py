@@ -284,6 +284,15 @@ def _report_editor_context(raw_site_id, raw_end_month, raw_reporting_month, raw_
                 if comment.is_reference_copy:
                     reference_comment_keys.append(comment.visual_key)
 
+    report_context = {
+        'siteId': site.id if site else site_id,
+        'endMonth': end_month,
+        'siteName': site.name if site else '',
+        'supplyIds': supply_ids,
+        'initialComments': initial_comments,
+        'referenceCommentKeys': reference_comment_keys,
+    }
+
     return {
         'report_site': site,
         'site_id': site.id if site else site_id,
@@ -292,6 +301,7 @@ def _report_editor_context(raw_site_id, raw_end_month, raw_reporting_month, raw_
         'monthly_report': monthly_report,
         'initial_comments_json': json.dumps(initial_comments),
         'reference_comment_keys_json': json.dumps(reference_comment_keys),
+        'report_context': report_context,
     }
 
 

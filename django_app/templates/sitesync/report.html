@@ -303,9 +303,8 @@
         <div class="brand">Enerlytix</div>
         <div class="topbar-links">
             <a href="{% url 'sitesync:site_list' %}">Dashboard</a>
-            <a href="{% url 'sitesync:consumption_display' %}">Usage &amp; Invoices</a>
+            <a href="{% url 'sitesync:saved_reports' %}">Saved Reports</a>
             <a href="{% url 'sitesync:settings_panel' %}">Settings</a>
-            <a href="{% url 'sitesync:report' %}" class="is-active">Report</a>
         </div>
     </div>
 
@@ -336,15 +335,14 @@
         </div>
     </div>
 
+    {{ report_context|json_script:"enerlytix-report-context" }}
     <script>
-        window.ENERLYTIX_REPORT_CONTEXT = {
-            siteId: "{{ site_id|default:'' }}",
-            endMonth: "{{ end_month|default:'' }}",
-            siteName: "{{ report_site.name|default:''|escapejs }}",
-            supplyIds: "{{ supply_ids|default:''|escapejs }}",
-            initialComments: {{ initial_comments_json|default:'{}'|safe }},
-            referenceCommentKeys: {{ reference_comment_keys_json|default:'[]'|safe }}
-        };
+        (function () {
+            const contextElement = document.getElementById('enerlytix-report-context');
+            window.ENERLYTIX_REPORT_CONTEXT = contextElement
+                ? JSON.parse(contextElement.textContent)
+                : {};
+        }());
     </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
