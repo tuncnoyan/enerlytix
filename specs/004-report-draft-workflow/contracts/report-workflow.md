@@ -9,8 +9,10 @@
 ## Report Editor Route
 
 ```text
-GET /report/?site_id=<id>&reporting_month=<YYYY-MM>
+GET /report/?site_id=<id>&end_month=<YYYY-MM>
 ```
+
+`reporting_month` in user-facing copy maps to `end_month` in route/query parameters.
 
 ### Purpose
 
@@ -35,7 +37,7 @@ POST /report/
 | Field | Required | Description |
 |-------|----------|-------------|
 | `site_id` | yes | Site being edited |
-| `reporting_month` | yes | `YYYY-MM` month key |
+| `end_month` | yes | `YYYY-MM` month key (reporting month selected by the user) |
 | `save_mode` | yes | `draft` |
 | `comments` | yes | Comment payload for all visible visual comment boxes |
 
@@ -58,7 +60,7 @@ POST /report/
 | Field | Required | Description |
 |-------|----------|-------------|
 | `site_id` | yes | Site being edited |
-| `reporting_month` | yes | `YYYY-MM` month key |
+| `end_month` | yes | `YYYY-MM` month key (reporting month selected by the user) |
 | `save_mode` | yes | `final` |
 | `comments` | yes | Comment payload for all visible visual comment boxes |
 
@@ -87,6 +89,6 @@ POST /report/
 
 | Condition | Response |
 |-----------|----------|
-| Missing `site_id` or `reporting_month` | Validation error; no save occurs |
+| Missing `site_id` or `end_month` | Validation error; no save occurs |
 | Another report already exists for the same site/month | Reopen the existing monthly report instead of creating a duplicate |
 | No final report exists for the previous month | New draft starts with blank comments |

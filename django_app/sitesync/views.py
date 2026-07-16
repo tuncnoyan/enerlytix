@@ -3,6 +3,7 @@ Views for the sitesync app.
 """
 
 import logging
+import json
 from collections import defaultdict
 from datetime import datetime, timezone as datetime_timezone
 from decimal import Decimal
@@ -26,11 +27,23 @@ from .models import (
     HalfHourlyConsumption,
     MonthlyConsumption,
     InvoiceCost,
+    MonthlyReport,
+    MonthlyReportVersion,
 )
 from .forms import SettingsForm
 from .config_service import SettingsConfigService
 from .services import EtainaibleSyncService
-from .services import ConsumptionImportService, get_consumption_display_records, month_start, reporting_month_bounds, shift_months
+from .services import (
+    carry_forward_comments_from_previous_final,
+    ConsumptionImportService,
+    create_report_version,
+    get_or_create_monthly_report,
+    get_consumption_display_records,
+    month_start,
+    normalize_reporting_month,
+    reporting_month_bounds,
+    shift_months,
+)
 from .serializers import (
     SiteSerializer,
     SupplySerializer,
@@ -247,6 +260,48 @@ def _weekday_weekend_for_supply(supply, end_month, hh_series):
     )
 
 
+
+def _report_editor_context(raw_site_id, raw_end_month, raw_reporting_month, raw_supply_ids):
+    """Build common context for the report editor view."""
+    site_id = (raw_site_id or '').strip()
+    supply_ids = (raw_supply_ids or '').strip()
+    end_month = normalize_reporting_month(raw_end_month, raw_reporting_month)
+    site = None
+    if site_id:
+        try:
+            site = Site.objects.get(id=int(site_id))
+        except (Site.DoesNotExist, TypeError, ValueError):
+            site = None
+
+    monthly_report = None
+    initial_comments = {}
+    reference_comment_keys = []
+    if site is not None:
+        monthly_report = MonthlyReport.objects.filter(site=site, reporting_month=end_month).first()
+        if monthly_report and monthly_report.current_version:
+            for comment in monthly_report.current_version.comments.all().order_by('visual_key'):
+                initial_comments[comment.visual_key] = comment.text
+                if comment.is_reference_copy:
+                    reference_comment_keys.append(comment.visual_key)
+
+    return {
+        'report_site': site,
+        'site_id': site.id if site else site_id,
+        'end_month': end_month,
+        'supply_ids': supply_ids,
+        'monthly_report': monthly_report,
+        'initial_comments_json': json.dumps(initial_comments),
+        'reference_comment_keys_json': json.dumps(reference_comment_keys),
+    }
+
+
+def _saved_reports_query(site_id=None):
+    """Return saved reports queryset for list rendering."""
+    qs = MonthlyReport.objects.select_related('site').order_by('-reporting_month', 'site__name')
+    if site_id:
+        qs = qs.filter(site_id=site_id)
+    return qs
+
 def _overview_for_site(site, report_start, report_end):
     invoice_rows = InvoiceCost.objects.filter(
         supply__site=site,
@@ -364,21 +419,106 @@ def _report_payload(site, end_month, supply_external_ids=None):
 
 
 def report_view(request):
-    site_id = request.GET.get('site_id', '').strip()
-    end_month = (request.GET.get('end_month', '') or '').strip() or _previous_complete_month_key()
-    supply_ids = request.GET.get('supply_ids', '').strip()
-    site = None
-    if site_id:
-        try:
-            site = Site.objects.get(id=int(site_id))
-        except (Site.DoesNotExist, TypeError, ValueError):
-            site = None
+    if request.method == 'POST':
+        raw_site_id = (request.POST.get('site_id') or '').strip()
+        save_mode = (request.POST.get('save_mode') or 'draft').strip().lower()
+        confirm_final_edit = (request.POST.get('confirm_final_edit') or '').strip().lower() in {'1', 'true', 'yes'}
+        end_month = normalize_reporting_month(
+            request.POST.get('end_month', ''),
+            request.POST.get('reporting_month', ''),
+        )
 
-    return render(request, 'sitesync/report.html', {
-        'report_site': site,
-        'site_id': site.id if site else site_id,
-        'end_month': end_month,
-        'supply_ids': supply_ids,
+        try:
+            site = Site.objects.get(id=int(raw_site_id))
+        except (Site.DoesNotExist, TypeError, ValueError):
+            return JsonResponse({'detail': 'site_id must be a valid integer'}, status=400)
+
+        comments_payload = {}
+        comments_raw = (request.POST.get('comments') or '').strip()
+        if comments_raw:
+            try:
+                parsed = json.loads(comments_raw)
+                if isinstance(parsed, dict):
+                    comments_payload = {str(k): str(v or '') for k, v in parsed.items()}
+            except json.JSONDecodeError:
+                return JsonResponse({'detail': 'comments must be valid JSON object'}, status=400)
+
+        report = get_or_create_monthly_report(site, end_month)
+        created_first_version = report.current_version is None
+        if save_mode == 'final':
+            if report.current_status == MonthlyReport.STATUS_FINAL and not confirm_final_edit:
+                return JsonResponse({
+                    'detail': 'This report is already final. Confirm before editing.',
+                    'warning_required': True,
+                }, status=409)
+            version_kind = (
+                MonthlyReportVersion.KIND_REPLACEMENT_FINAL
+                if report.current_status == MonthlyReport.STATUS_FINAL
+                else MonthlyReportVersion.KIND_FINAL
+            )
+        else:
+            version_kind = MonthlyReportVersion.KIND_DRAFT
+
+        version = create_report_version(
+            report=report,
+            version_kind=version_kind,
+            comments=comments_payload,
+            derived_from_version=report.current_version,
+        )
+
+        copied_reference_comments = 0
+        if save_mode == 'draft' and created_first_version and not comments_payload:
+            copied_reference_comments = carry_forward_comments_from_previous_final(report, version)
+
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'report_id': str(report.id),
+                'version_id': str(version.id),
+                'status': report.current_status,
+                'reporting_month': report.reporting_month,
+                'copied_reference_comments': copied_reference_comments,
+            })
+
+        return redirect(f"{reverse('sitesync:report')}?site_id={site.id}&end_month={end_month}")
+
+    context = _report_editor_context(
+        request.GET.get('site_id', ''),
+        request.GET.get('end_month', ''),
+        request.GET.get('reporting_month', ''),
+        request.GET.get('supply_ids', ''),
+    )
+    return render(request, 'sitesync/report.html', context)
+
+
+def saved_reports_view(request):
+    """Entry point for the saved reports browser."""
+    raw_site_id = (request.GET.get('site_id') or '').strip()
+    site_id = None
+    if raw_site_id:
+        try:
+            site_id = int(raw_site_id)
+        except (TypeError, ValueError):
+            return JsonResponse({'detail': 'site_id must be an integer'}, status=400)
+
+    reports_payload = [
+        {
+            'id': str(report.id),
+            'site_id': report.site_id,
+            'site_name': report.site.name,
+            'reporting_month': report.reporting_month,
+            'status': report.current_status,
+            'updated_at': report.updated_at.isoformat(),
+            'open_url': f"{reverse('sitesync:report')}?site_id={report.site_id}&end_month={report.reporting_month}",
+        }
+        for report in _saved_reports_query(site_id=site_id)
+    ]
+    wants_json = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.GET.get('format') == 'json'
+    if wants_json:
+        return JsonResponse({'reports': reports_payload})
+
+    return render(request, 'sitesync/saved_reports.html', {
+        'reports_json': json.dumps(reports_payload),
+        'selected_site_id': site_id,
     })
 
 

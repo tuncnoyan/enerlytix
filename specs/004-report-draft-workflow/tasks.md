@@ -18,8 +18,8 @@
 
 **Purpose**: Wire the new report workflow entry points into the existing Django app
 
-- [ ] T001 [P] Add monthly report editor and saved reports browser routes in `django_app/sitesync/urls.py`
-- [ ] T002 [P] Add view entry points for the monthly report editor and saved reports browser in `django_app/sitesync/views.py`
+- [X] T001 [P] Add monthly report editor and saved reports browser routes in `django_app/sitesync/urls.py`
+- [X] T002 [P] Add view entry points for the monthly report editor and saved reports browser in `django_app/sitesync/views.py`
 
 ---
 
@@ -29,9 +29,9 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 [P] Add `MonthlyReport`, `MonthlyReportVersion`, and `ReportComment` models plus migration `django_app/sitesync/migrations/0006_monthly_report_workflow.py`
-- [ ] T004 [P] Add report workflow helper functions for report lookup, version creation, and comment carry-forward in `django_app/sitesync/services.py`
-- [ ] T005 [P] Add shared report editor context assembly and saved-report list query helpers in `django_app/sitesync/views.py`
+- [X] T003 [P] Add `MonthlyReport`, `MonthlyReportVersion`, and `ReportComment` models plus migration `django_app/sitesync/migrations/0006_monthly_report_workflow.py`
+- [X] T004 [P] Add report workflow helper functions for report lookup, version creation, and comment carry-forward in `django_app/sitesync/services.py`
+- [X] T005 [P] Add shared report editor context assembly and saved-report list query helpers in `django_app/sitesync/views.py`
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -45,13 +45,13 @@
 
 ### Tests for User Story 1
 
-- [ ] T006 [P] [US1] Add draft-save and reopen tests in `django_app/sitesync/tests/test_report_drafts.py`
+- [X] T006 [P] [US1] Add draft-save and reopen tests in `django_app/sitesync/tests/test_report_drafts.py`
 
 ### Implementation for User Story 1
 
-- [ ] T007 [US1] Implement draft report lookup and unique-month reopen logic in `django_app/sitesync/services.py`
-- [ ] T008 [US1] Implement draft save handling and monthly report state responses in `django_app/sitesync/views.py`
-- [ ] T009 [US1] Update the report editor controls for draft saving in `django_app/templates/sitesync/report.html` and `django_app/static/sitesync/js/report.js`
+- [X] T007 [US1] Implement draft report lookup and unique-month reopen logic in `django_app/sitesync/services.py`
+- [X] T008 [US1] Implement draft save handling and monthly report state responses in `django_app/sitesync/views.py`
+- [X] T009 [US1] Update the report editor controls for draft saving in `django_app/templates/sitesync/report.html` and `django_app/static/sitesync/js/report.js`
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 
@@ -65,13 +65,13 @@
 
 ### Tests for User Story 2
 
-- [ ] T010 [P] [US2] Add finalise-and-revise tests in `django_app/sitesync/tests/test_report_finalisation.py`
+- [X] T010 [P] [US2] Add finalise-and-revise tests in `django_app/sitesync/tests/test_report_finalisation.py`
 
 ### Implementation for User Story 2
 
-- [ ] T011 [US2] Implement final-version creation and immutable original-final tracking in `django_app/sitesync/services.py`
-- [ ] T012 [US2] Implement the final-save warning and replacement-version flow in `django_app/sitesync/views.py`
-- [ ] T013 [US2] Update the report editor UI to surface final status and confirmation messaging in `django_app/templates/sitesync/report.html` and `django_app/static/sitesync/js/report.js`
+- [X] T011 [US2] Implement final-version creation and immutable original-final tracking in `django_app/sitesync/services.py`
+- [X] T012 [US2] Implement the final-save warning and replacement-version flow in `django_app/sitesync/views.py`
+- [X] T013 [US2] Update the report editor UI to surface final status and confirmation messaging in `django_app/templates/sitesync/report.html` and `django_app/static/sitesync/js/report.js`
 
 **Checkpoint**: At this point, User Stories 1 and 2 should both work independently
 
@@ -85,13 +85,13 @@
 
 ### Tests for User Story 3
 
-- [ ] T014 [P] [US3] Add carry-forward comment tests in `django_app/sitesync/tests/test_report_comment_carry_forward.py`
+- [X] T014 [P] [US3] Add carry-forward comment tests in `django_app/sitesync/tests/test_report_comment_carry_forward.py`
 
 ### Implementation for User Story 3
 
-- [ ] T015 [US3] Implement previous-month final comment cloning in `django_app/sitesync/services.py`
-- [ ] T016 [US3] Seed carried-forward comments when opening a new month in `django_app/sitesync/views.py`
-- [ ] T017 [US3] Render reference warnings for carried-forward comments in `django_app/templates/sitesync/report.html` and `django_app/static/sitesync/js/report.js`
+- [X] T015 [US3] Implement previous-month final comment cloning in `django_app/sitesync/services.py`
+- [X] T016 [US3] Seed carried-forward comments when opening a new month in `django_app/sitesync/views.py`
+- [X] T017 [US3] Render reference warnings for carried-forward comments in `django_app/templates/sitesync/report.html` and `django_app/static/sitesync/js/report.js`
 
 **Checkpoint**: At this point, User Stories 1, 2, and 3 should all be independently functional
 
@@ -105,13 +105,13 @@
 
 ### Tests for User Story 4
 
-- [ ] T018 [P] [US4] Add saved-reports browser tests in `django_app/sitesync/tests/test_saved_reports_view.py`
+- [X] T018 [P] [US4] Add saved-reports browser tests in `django_app/sitesync/tests/test_saved_reports_view.py`
 
 ### Implementation for User Story 4
 
-- [ ] T019 [US4] Implement saved-report list querying and page context in `django_app/sitesync/views.py`
-- [ ] T020 [US4] Build the saved reports browser page in `django_app/templates/sitesync/saved_reports.html`
-- [ ] T021 [US4] Add opening and filtering interactions for the saved reports browser in `django_app/static/sitesync/js/saved_reports.js`
+- [X] T019 [US4] Implement saved-report list querying and page context in `django_app/sitesync/views.py`
+- [X] T020 [US4] Build the saved reports browser page in `django_app/templates/sitesync/saved_reports.html`
+- [X] T021 [US4] Add opening and filtering interactions for the saved reports browser in `django_app/static/sitesync/js/saved_reports.js`
 
 **Checkpoint**: All user stories should now be independently functional
 
@@ -121,8 +121,8 @@
 
 **Purpose**: Final validation and small cleanup that affects the whole workflow
 
-- [ ] T022 [P] Run `python manage.py test` from `django_app/` and fix workflow regressions in `django_app/sitesync/tests/`
-- [ ] T023 [P] Update `specs/004-report-draft-workflow/quickstart.md` with final validation notes and any route changes
+- [X] T022 [P] Run `python manage.py test` from `django_app/` and fix workflow regressions in `django_app/sitesync/tests/`
+- [X] T023 [P] Update `specs/004-report-draft-workflow/quickstart.md` with final validation notes and any route changes
 
 ---
 

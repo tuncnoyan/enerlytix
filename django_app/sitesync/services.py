@@ -21,6 +21,9 @@ from .models import (
     HalfHourlyConsumption,
     MonthlyConsumption,
     InvoiceCost,
+    MonthlyReport,
+    MonthlyReportVersion,
+    ReportComment,
 )
 
 logger = logging.getLogger(__name__)
@@ -664,6 +667,99 @@ def get_monthly_window(reporting_month: str) -> Tuple[datetime, datetime]:
 def get_invoice_window(reporting_month: str) -> Tuple[datetime, datetime]:
     start, end = reporting_month_bounds(reporting_month)
     return shift_months(end, -settings.CONSUMPTION_INVOICE_MONTHS), end
+
+
+def normalize_reporting_month(end_month: Optional[str], reporting_month: Optional[str]) -> str:
+    """Normalize dual parameter naming to one canonical report month key."""
+    candidate = (end_month or '').strip() or (reporting_month or '').strip()
+    if not candidate:
+        now = dj_timezone.localtime(dj_timezone.now())
+        candidate = shift_months(month_start(now.year, now.month), -1).strftime('%Y-%m')
+    # Reuse existing bounds parser as format validation.
+    reporting_month_bounds(candidate)
+    return candidate
+
+
+def get_or_create_monthly_report(site: Site, reporting_month: str) -> MonthlyReport:
+    """Return the unique monthly report identity for site + reporting month."""
+    report, _ = MonthlyReport.objects.get_or_create(
+        site=site,
+        reporting_month=reporting_month,
+        defaults={'current_status': MonthlyReport.STATUS_DRAFT},
+    )
+    return report
+
+
+def _next_report_version_number(report: MonthlyReport) -> int:
+    latest = report.versions.order_by('-version_number').first()
+    return 1 if latest is None else latest.version_number + 1
+
+
+def create_report_version(
+    report: MonthlyReport,
+    version_kind: str,
+    comments: Optional[Dict[str, str]] = None,
+    derived_from_version: Optional[MonthlyReportVersion] = None,
+) -> MonthlyReportVersion:
+    """Create an immutable report version and update report pointers."""
+    version = MonthlyReportVersion.objects.create(
+        report=report,
+        version_number=_next_report_version_number(report),
+        version_kind=version_kind,
+        derived_from_version=derived_from_version,
+    )
+
+    for visual_key, text in (comments or {}).items():
+        ReportComment.objects.create(
+            report_version=version,
+            visual_key=str(visual_key),
+            text=str(text or ''),
+        )
+
+    report.current_version = version
+    if version_kind in {MonthlyReportVersion.KIND_FINAL, MonthlyReportVersion.KIND_REPLACEMENT_FINAL}:
+        report.current_status = MonthlyReport.STATUS_FINAL
+        report.current_final_version = version
+    else:
+        report.current_status = MonthlyReport.STATUS_DRAFT
+    report.save(update_fields=['current_version', 'current_final_version', 'current_status', 'updated_at'])
+    return version
+
+
+def get_previous_month_final_version(site: Site, reporting_month: str) -> Optional[MonthlyReportVersion]:
+    """Return the prior month final version for the same site, if available."""
+    start, _ = reporting_month_bounds(reporting_month)
+    previous_month = shift_months(start, -1).strftime('%Y-%m')
+    previous_report = MonthlyReport.objects.filter(site=site, reporting_month=previous_month).first()
+    if not previous_report:
+        return None
+    return previous_report.current_final_version
+
+
+def carry_forward_comments_from_previous_final(
+    report: MonthlyReport,
+    report_version: MonthlyReportVersion,
+) -> int:
+    """Copy previous-month final comments into this version as reference comments."""
+    previous_final = get_previous_month_final_version(report.site, report.reporting_month)
+    if previous_final is None:
+        return 0
+
+    copied = 0
+    for previous_comment in previous_final.comments.all().order_by('visual_key'):
+        ReportComment.objects.update_or_create(
+            report_version=report_version,
+            visual_key=previous_comment.visual_key,
+            defaults={
+                'text': previous_comment.text,
+                'is_reference_copy': True,
+                'source_reporting_month': previous_final.report.reporting_month,
+                'source_version': previous_final,
+            },
+        )
+        copied += 1
+
+    return copied
 
 
 def set_import_run_status(import_run: ImportRun, status: str, error_details: Optional[Dict] = None) -> None:

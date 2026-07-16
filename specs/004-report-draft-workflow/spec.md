@@ -13,6 +13,8 @@
 ### Session 2026-07-16
 
 - Q: When a final report is edited after the warning, should the original final stay immutable or be edited in place? → A: Option C — keep the original final report immutable and create a separate replacement final version for the same site and month.
+- Q: Should reporting month use a new query parameter or the existing report end-month parameter? → A: Reporting month is the selected month on the home page and it maps to the existing `end_month` query parameter used for report date calculations.
+- Q: Is authentication required in this feature? → A: Not currently; authentication is out of scope for this iteration but may be added in a future centralized multi-user deployment.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -127,8 +129,9 @@ An energy manager opens a saved reports page to review past drafts and final rep
 ## Assumptions
 
 - The reporting month is treated as a calendar month and the reporting date shown to users refers to that month.
+- The reporting month selected on the home page is the report end month and maps to the existing `end_month` route/query parameter used by the report page and calculations.
 - Draft and final are states within one monthly report identity, while post-warning edits to a final report create a separate replacement final version rather than overwriting the original final.
 - The latest saved final version is the one shown to users for that site and month after any edits are accepted, but the original final remains available as an immutable historical version.
 - Carried-forward comments come from the immediately previous month’s final report for the same site.
 - If a previous month final report contains no comments for a section, that section remains blank in the new report.
-- Existing site data, report content, and user access controls continue to work as they do today; this feature adds workflow, carry-forward, and browsing behavior.
+- Existing site data and report content continue to work as they do today; this feature adds workflow, carry-forward, and browsing behavior, while authentication changes remain out of scope for this iteration.

@@ -316,6 +316,8 @@
                 <p id="report-subtitle">Generating report...</p>
             </div>
             <div class="hero-actions">
+                <button id="save-draft-button" class="button button-primary" type="button">Save Draft</button>
+                <button id="save-final-button" class="button button-secondary" type="button">Save Final</button>
                 <button id="download-pdf-button" class="button button-secondary" type="button">Download as PDF</button>
             </div>
         </div>
@@ -339,7 +341,9 @@
             siteId: "{{ site_id|default:'' }}",
             endMonth: "{{ end_month|default:'' }}",
             siteName: "{{ report_site.name|default:''|escapejs }}",
-            supplyIds: "{{ supply_ids|default:''|escapejs }}"
+            supplyIds: "{{ supply_ids|default:''|escapejs }}",
+            initialComments: {{ initial_comments_json|default:'{}'|safe }},
+            referenceCommentKeys: {{ reference_comment_keys_json|default:'[]'|safe }}
         };
     </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.min.js"></script>

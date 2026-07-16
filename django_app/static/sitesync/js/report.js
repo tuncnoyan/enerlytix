@@ -23,8 +23,18 @@
     const state = {
         reportData: null,
         comments: new Map(),
+        referenceCommentKeys: new Set(),
         charts: new Map(),
     };
+
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) {
+            return parts.pop().split(';').shift();
+        }
+        return '';
+    }
 
     // ─── Formatters ──────────────────────────────────────────────────────────
 
@@ -121,6 +131,87 @@
 
     function getContext() { return window.ENERLYTIX_REPORT_CONTEXT || {}; }
 
+    (function initializeCommentState() {
+        const ctx = getContext();
+        const initial = ctx.initialComments || {};
+        Object.entries(initial).forEach(([key, value]) => {
+            state.comments.set(String(key), String(value || ''));
+        });
+        const refKeys = Array.isArray(ctx.referenceCommentKeys) ? ctx.referenceCommentKeys : [];
+        refKeys.forEach((key) => state.referenceCommentKeys.add(String(key)));
+    }());
+
+    async function saveDraftReport() {
+        const ctx = getContext();
+        if (!ctx.siteId || !ctx.endMonth) {
+            window.alert('Site and reporting month are required before saving a draft.');
+            return;
+        }
+
+        const payload = new URLSearchParams();
+        payload.set('site_id', String(ctx.siteId));
+        payload.set('end_month', String(ctx.endMonth));
+        payload.set('save_mode', 'draft');
+        payload.set('comments', JSON.stringify(Object.fromEntries(state.comments.entries())));
+
+        const response = await fetch('/report/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: payload.toString(),
+        });
+
+        if (!response.ok) {
+            window.alert('Unable to save draft report.');
+            return;
+        }
+
+        window.alert('Draft saved.');
+    }
+
+    async function saveFinalReport(confirmFinalEdit = false) {
+        const ctx = getContext();
+        if (!ctx.siteId || !ctx.endMonth) {
+            window.alert('Site and reporting month are required before saving final.');
+            return;
+        }
+
+        const payload = new URLSearchParams();
+        payload.set('site_id', String(ctx.siteId));
+        payload.set('end_month', String(ctx.endMonth));
+        payload.set('save_mode', 'final');
+        payload.set('confirm_final_edit', confirmFinalEdit ? 'true' : 'false');
+        payload.set('comments', JSON.stringify(Object.fromEntries(state.comments.entries())));
+
+        const response = await fetch('/report/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: payload.toString(),
+        });
+
+        if (response.status === 409 && !confirmFinalEdit) {
+            const accepted = window.confirm('This report is already final and may have been shared. Continue and save a replacement final version?');
+            if (accepted) {
+                await saveFinalReport(true);
+            }
+            return;
+        }
+
+        if (!response.ok) {
+            window.alert('Unable to save final report.');
+            return;
+        }
+
+        window.alert('Final report saved.');
+    }
+
     function renderEmptyState(message) {
         const el = document.getElementById('report-empty');
         if (el) { el.textContent = message; el.style.display = 'block'; }
@@ -129,6 +220,20 @@
     function clearEmptyState() {
         const el = document.getElementById('report-empty');
         if (el) { el.style.display = 'none'; }
+    }
+
+    const saveDraftButton = document.getElementById('save-draft-button');
+    if (saveDraftButton) {
+        saveDraftButton.addEventListener('click', () => {
+            saveDraftReport().catch(() => window.alert('Unable to save draft report.'));
+        });
+    }
+
+    const saveFinalButton = document.getElementById('save-final-button');
+    if (saveFinalButton) {
+        saveFinalButton.addEventListener('click', () => {
+            saveFinalReport(false).catch(() => window.alert('Unable to save final report.'));
+        });
     }
 
     function setSubtitle(text) {
@@ -180,7 +285,10 @@
     }
 
     function createCommentBox(id) {
-        return `<textarea class="comment-box" data-section-id="${escapeHtml(id)}" placeholder="Add a comment..." style="margin-top:0.6rem;"></textarea>`;
+        const warning = state.referenceCommentKeys.has(id)
+            ? `<div class="comment-reference-warning" style="margin-top:0.6rem;color:#7c878e;font-size:0.78rem;font-weight:700;">Reference comment from previous month. Review and update as needed.</div>`
+            : '';
+        return `${warning}<textarea class="comment-box" data-section-id="${escapeHtml(id)}" placeholder="Add a comment..." style="margin-top:0.6rem;"></textarea>`;
     }
 
     function registerCommentBoxes(root) {

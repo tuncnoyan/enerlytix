@@ -70,6 +70,15 @@
 
 ---
 
+## Route and Parameter Notes
+
+- User-facing reporting month selection maps to the existing `end_month` query parameter for report routes and calculations.
+- Saved reports browser route is `GET /reports/`.
+- Opening a saved report uses `GET /report/?site_id=<id>&end_month=<YYYY-MM>`.
+- Current implementation keeps authentication behavior unchanged; centralized multi-user authentication remains out of scope for this iteration.
+
+---
+
 ## Commands
 
 From `django_app/`:

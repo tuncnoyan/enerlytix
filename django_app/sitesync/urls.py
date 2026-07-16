@@ -13,6 +13,7 @@ urlpatterns = [
     path('supplies/', views.supply_list_view, name='supply_list'),
     path('settings/', views.settings_panel_view, name='settings_panel'),
     path('report/', views.report_view, name='report'),
+    path('reports/', views.saved_reports_view, name='saved_reports'),
     path('consumption-display/', views.consumption_display_view, name='consumption_display'),
     path('api/consumption-import/', views.consumption_import_view, name='consumption_import'),
     path('api/consumption-display/', views.consumption_display_api_view, name='consumption_display_api'),

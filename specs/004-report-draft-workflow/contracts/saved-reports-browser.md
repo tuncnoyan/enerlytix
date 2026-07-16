@@ -37,8 +37,10 @@ The page must show, at minimum:
 ## Open Report Action
 
 ```text
-GET /report/?site_id=<id>&reporting_month=<YYYY-MM>
+GET /report/?site_id=<id>&end_month=<YYYY-MM>
 ```
+
+`reporting_month` in the UI maps to `end_month` in route/query parameters.
 
 ### Behaviour
 

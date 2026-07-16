@@ -326,3 +326,129 @@ class InvoiceCost(models.Model):
 
     def __str__(self):
         return f"Invoice {self.supply_id} {self.canonical_month_key}"
+
+
+class MonthlyReport(models.Model):
+    """One report identity per site and reporting month."""
+
+    STATUS_DRAFT = 'draft'
+    STATUS_FINAL = 'final'
+    STATUS_CHOICES = [
+        (STATUS_DRAFT, 'Draft'),
+        (STATUS_FINAL, 'Final'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name='monthly_reports')
+    reporting_month = models.CharField(max_length=7, db_index=True)
+    current_status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_DRAFT)
+    current_version = models.ForeignKey(
+        'MonthlyReportVersion',
+        on_delete=models.SET_NULL,
+        related_name='+',
+        null=True,
+        blank=True,
+    )
+    current_final_version = models.ForeignKey(
+        'MonthlyReportVersion',
+        on_delete=models.SET_NULL,
+        related_name='+',
+        null=True,
+        blank=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-reporting_month', '-updated_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['site', 'reporting_month'],
+                name='uniq_monthly_report_site_month',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['site', 'reporting_month']),
+            models.Index(fields=['current_status']),
+        ]
+
+    def __str__(self):
+        return f"MonthlyReport {self.site_id} {self.reporting_month}"
+
+
+class MonthlyReportVersion(models.Model):
+    """Immutable snapshot of report content for a monthly report."""
+
+    KIND_DRAFT = 'draft'
+    KIND_FINAL = 'final'
+    KIND_REPLACEMENT_FINAL = 'replacement_final'
+    KIND_CHOICES = [
+        (KIND_DRAFT, 'Draft'),
+        (KIND_FINAL, 'Final'),
+        (KIND_REPLACEMENT_FINAL, 'Replacement Final'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    report = models.ForeignKey(MonthlyReport, on_delete=models.CASCADE, related_name='versions')
+    version_number = models.PositiveIntegerField()
+    version_kind = models.CharField(max_length=24, choices=KIND_CHOICES, default=KIND_DRAFT)
+    derived_from_version = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        related_name='derived_versions',
+        null=True,
+        blank=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['report', 'version_number'],
+                name='uniq_report_version_number',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['report', 'version_kind']),
+            models.Index(fields=['created_at']),
+        ]
+
+    def __str__(self):
+        return f"ReportVersion {self.report_id} v{self.version_number} ({self.version_kind})"
+
+
+class ReportComment(models.Model):
+    """Comment text for a specific visual box in a report version."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    report_version = models.ForeignKey(MonthlyReportVersion, on_delete=models.CASCADE, related_name='comments')
+    visual_key = models.CharField(max_length=255)
+    text = models.TextField(blank=True, default='')
+    is_reference_copy = models.BooleanField(default=False)
+    source_reporting_month = models.CharField(max_length=7, blank=True, null=True)
+    source_version = models.ForeignKey(
+        MonthlyReportVersion,
+        on_delete=models.SET_NULL,
+        related_name='copied_comments',
+        null=True,
+        blank=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['visual_key']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['report_version', 'visual_key'],
+                name='uniq_comment_version_visual',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['report_version', 'visual_key']),
+            models.Index(fields=['is_reference_copy']),
+        ]
+
+    def __str__(self):
+        return f"ReportComment {self.report_version_id} {self.visual_key}"
