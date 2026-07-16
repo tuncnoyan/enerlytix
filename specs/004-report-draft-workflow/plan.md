@@ -64,25 +64,28 @@ specs/004-report-draft-workflow/
 django_app/
 ├── sitesync/
 │   ├── models.py
+│   ├── services.py
 │   ├── views.py
 │   ├── urls.py
 │   ├── forms.py
-│   ├── templates/
-│   │   └── sitesync/
-│   │       ├── report.html
-│   │       └── saved_reports.html
-│   ├── static/
-│   │   └── sitesync/
-│   │       └── js/
-│   │           ├── report.js
-│   │           └── saved_reports.js
 │   ├── migrations/
 │   └── tests/
-│       ├── test_report_workflow.py
+│       ├── test_report_drafts.py
+│       ├── test_report_finalisation.py
+│       ├── test_report_comment_carry_forward.py
 │       └── test_saved_reports_view.py
+├── templates/
+│   └── sitesync/
+│       ├── report.html
+│       └── saved_reports.html
+└── static/
+	└── sitesync/
+		└── js/
+			├── report.js
+			└── saved_reports.js
 ```
 
-**Structure Decision**: Extend the existing single Django app (`sitesync`) with new report models, server-rendered views, templates, and focused browser JavaScript. No new app, package, or frontend framework is required.
+**Structure Decision**: Extend the existing single Django app (`sitesync`) plus the shared `django_app/templates` and `django_app/static` folders with new report models, server-rendered views, templates, and focused browser JavaScript. No new app, package, or frontend framework is required.
 
 ## Complexity Tracking
 
