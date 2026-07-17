@@ -41,7 +41,7 @@ As an operations user, I want clear validation feedback during upload so that I 
 
 **Why this priority**: Data quality controls prevent silent errors and maintain trust in report values.
 
-**Independent Test**: Upload files with missing required columns, blank key fields, duplicate key combinations, and non-numeric capacity values; verify each upload is rejected with actionable feedback.
+**Independent Test**: Upload files with missing required columns, blank key fields, duplicate eSight Meter Code values, non-numeric capacity values, and negative capacity values; verify schema-invalid files are rejected, while files with row-level validation errors import valid rows, skip invalid rows, and show actionable feedback.
 
 **Acceptance Scenarios**:
 

@@ -23,7 +23,7 @@ Expected outcome:
 - Uploaded values are persisted and shown in load-factor output for matching meters.
 
 ## Scenario 2: Partial Import with Row Errors
-1. Prepare `.xlsx` containing a mix of valid and invalid rows (blank code, non-numeric capacity, duplicate code).
+1. Prepare `.xlsx` containing a mix of valid and invalid rows (blank code, non-numeric capacity, negative capacity, duplicate code).
 2. Upload through Settings page.
 3. Confirm UI shows partial-success summary with accepted/rejected counts.
 4. Confirm row-level error messages identify rejected rows.
@@ -43,12 +43,21 @@ Expected outcome:
 
 ## Scenario 4: Incremental Refresh Behavior
 1. Upload baseline valid `.xlsx`.
-2. Upload second `.xlsx` with changed values for a subset of existing eSight Meter Codes and no entries for others.
+2. Upload second `.xlsx` with changed values for a subset of existing eSight Meter Codes, updated Name text for one of those keys, and no entries for others.
 3. Open report for affected and unaffected meters.
 
 Expected outcome:
 - Matching keys use latest uploaded values.
+- Matching keys also use the latest uploaded Name as stored reference metadata.
 - Previously stored unmatched keys remain available.
+
+## Scenario 5: Negative Capacity Rejection
+1. Prepare `.xlsx` with a valid structure but a negative `Av Cap (kVA)` value in one row.
+2. Upload through Settings page.
+
+Expected outcome:
+- The negative row is rejected with a row-level validation error.
+- Other valid rows in the same file still import successfully.
 
 ## Execution Notes (2026-07-17)
 

@@ -1,4 +1,4 @@
-# Implementation Plan: Average Capacity Integration
+# Implementation Plan: Available Capacity Upload
 
 **Branch**: `[not-set]` | **Date**: 2026-07-17 | **Spec**: [spec.md](spec.md)
 
@@ -6,7 +6,7 @@
 
 ## Summary
 
-Add manual `.xlsx` Average Capacity upload to Settings, validate required columns and row quality, persist normalized capacity reference data keyed by eSight Meter Code, apply partial-import semantics for invalid rows, and surface these values in electricity load factor output with unit label updated to `Available Capacity (kVA)`.
+Add manual `.xlsx` Available Capacity upload to Settings, validate required columns and row quality, persist normalized capacity reference data keyed by eSight Meter Code, apply partial-import semantics for invalid rows, overwrite stored Name metadata on key-matched refreshes, reject negative capacity values, and surface these values in electricity load factor output with unit label updated to `Available Capacity (kVA)`.
 
 ## Technical Context
 
@@ -24,9 +24,9 @@ Add manual `.xlsx` Average Capacity upload to Settings, validate required column
 
 **Performance Goals**: Typical upload files (<5k rows) process and return summary in under 10 seconds; report load endpoints remain within existing interactive tolerance (<2s typical page render)
 
-**Constraints**: `.xlsx` only, partial import for row-level validation errors, eSight Meter Code-only matching, no new frontend framework, preserve existing settings workflow and report architecture
+**Constraints**: `.xlsx` only, partial import for row-level validation errors, eSight Meter Code-only matching, latest uploaded Name replaces stored Name for matched keys, capacity values must be numeric and non-negative, no new frontend framework, preserve existing settings workflow and report architecture
 
-**Scale/Scope**: Single-tenant operations workflow; periodic manual uploads and read-time lookup across all electricity supplies in report generation
+**Scale/Scope**: Single-tenant operations workflow; periodic manual uploads and read-time lookup across all electricity supplies in report generation, without introducing purge/full-replacement import modes
 
 ## Constitution Check
 

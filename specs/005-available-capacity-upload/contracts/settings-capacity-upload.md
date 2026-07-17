@@ -20,10 +20,12 @@
   - Blank `Name`: reject row
   - Blank `eSight Meter Code`: reject row
   - Non-numeric `Av Cap (kVA)`: reject row
+  - Negative `Av Cap (kVA)`: reject row
   - Duplicate `eSight Meter Code` inside upload: reject duplicate rows
 
 ## Processing Contract
 - Valid rows are upserted into capacity-reference storage by normalized `eSight Meter Code`.
+- When an incoming row matches an existing normalized `eSight Meter Code`, the stored `Name` and `Av Cap (kVA)` are both replaced with the latest uploaded row values.
 - Invalid rows are skipped.
 - Existing reference rows without incoming key matches remain unchanged.
 

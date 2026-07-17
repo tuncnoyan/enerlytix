@@ -17,6 +17,7 @@
 ## Behavioral Rules
 - If a matching capacity reference exists, `available_capacity_kva` is populated.
 - If no matching key exists, `available_capacity_kva` is `null` and UI shows `N/A`.
+- Stored `name` metadata is not used for lookup and does not block a match when it differs from current supply display text.
 - Label contract for UI metric card: `Available Capacity (kVA)`.
 
 ## Non-Regression Rules
