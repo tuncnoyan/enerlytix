@@ -931,6 +931,42 @@
 
     // ─── PDF export ───────────────────────────────────────────────────────────
 
+    /**
+     * html2canvas only rasterises the visible (scrolled) viewport of a
+     * <textarea>, so multi-line comments get cropped to whatever fits in
+     * the box on screen. To capture the full comment text in the PDF we
+     * temporarily swap each non-empty textarea for a plain block element
+     * that displays the complete value and grows to fit it, then restore
+     * the textarea afterwards.
+     */
+    function swapCommentBoxForCapture(ta) {
+        const cs = window.getComputedStyle(ta);
+        const div = document.createElement('div');
+        div.textContent = ta.value;
+        div.style.whiteSpace = 'pre-wrap';
+        div.style.wordBreak = 'break-word';
+        div.style.overflow = 'visible';
+        div.style.boxSizing = cs.boxSizing;
+        div.style.width = cs.width;
+        div.style.minHeight = cs.minHeight;
+        div.style.font = cs.font;
+        div.style.lineHeight = cs.lineHeight;
+        div.style.color = cs.color;
+        div.style.padding = cs.padding;
+        div.style.border = cs.border;
+        div.style.borderRadius = cs.borderRadius;
+        div.style.background = cs.backgroundColor;
+        div.style.margin = cs.margin;
+        ta.insertAdjacentElement('afterend', div);
+        ta.style.display = 'none';
+        return div;
+    }
+
+    function restoreCommentBox(ta, div) {
+        div.remove();
+        ta.style.display = '';
+    }
+
     async function downloadPdf() {
         const sections = Array.from(document.querySelectorAll('#report-sections .section-card'))
             .filter((el) => !el.classList.contains('pdf-exclude'));
@@ -938,7 +974,7 @@
         const { jsPDF } = window.jspdf;
 
         // A4 landscape in points (1pt = 1/72 inch)
-        const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+        const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4', compress: true });
         const PW = pdf.internal.pageSize.getWidth();   // ~841.89 pt
         const PH = pdf.internal.pageSize.getHeight();  // ~595.28 pt
         const MARGIN = 32;                             // page margin all sides
@@ -973,8 +1009,11 @@
             for (let i = 0; i < sections.length; i += 1) {
                 const section = sections[i];
 
-                // Hide empty comment boxes so blank textareas don't waste space
+                // Hide empty comment boxes so blank textareas don't waste space,
+                // and swap non-empty ones for full-text blocks (see note above)
+                // so multi-line comments aren't cropped to the on-screen viewport.
                 const hiddenComments = [];
+                const swappedComments = [];
                 section.querySelectorAll('.comment-box').forEach((ta) => {
                     if (!ta.value.trim()) {
                         ta.style.visibility = 'hidden';
@@ -983,11 +1022,13 @@
                         ta.style.margin = '0';
                         ta.style.padding = '0';
                         hiddenComments.push(ta);
+                    } else {
+                        swappedComments.push({ ta, div: swapCommentBoxForCapture(ta) });
                     }
                 });
 
                 const canvas = await window.html2canvas(section, {
-                    scale: 2,
+                    scale: 1.5,
                     backgroundColor: '#ffffff',
                     useCORS: true,
                     allowTaint: false,
@@ -1002,8 +1043,12 @@
                     ta.style.margin = '';
                     ta.style.padding = '';
                 });
+                // Restore swapped comment boxes
+                swappedComments.forEach(({ ta, div }) => restoreCommentBox(ta, div));
 
-                const img = canvas.toDataURL('image/png');
+                // JPEG at 0.85 quality keeps charts legible while cutting file
+                // size by an order of magnitude versus lossless PNG output.
+                const img = canvas.toDataURL('image/jpeg', 0.85);
                 if (i > 0) { pdf.addPage(); }
 
                 // White page background
@@ -1025,7 +1070,7 @@
                 const imgW = canvas.width * ratio;
                 const imgH = canvas.height * ratio;
                 const imgX = MARGIN + (availW - imgW) / 2;
-                pdf.addImage(img, 'PNG', imgX, contentTop, imgW, imgH);
+                pdf.addImage(img, 'JPEG', imgX, contentTop, imgW, imgH, undefined, 'MEDIUM');
             }
         } finally {
             document.body.classList.remove('is-exporting');
