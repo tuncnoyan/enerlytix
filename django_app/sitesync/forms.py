@@ -29,3 +29,16 @@ class SettingsForm(forms.ModelForm):
         if api_timeout < 1:
             raise forms.ValidationError('API timeout must be at least 1 second.')
         return api_timeout
+
+
+class CapacityUploadForm(forms.Form):
+    """Form for uploading available capacity reference files."""
+
+    capacity_upload_file = forms.FileField(required=True)
+
+    def clean_capacity_upload_file(self):
+        upload = self.cleaned_data['capacity_upload_file']
+        filename = (upload.name or '').lower()
+        if not filename.endswith('.xlsx'):
+            raise forms.ValidationError('Only .xlsx files are supported.')
+        return upload

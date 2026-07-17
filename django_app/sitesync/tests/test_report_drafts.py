@@ -74,4 +74,4 @@ class ReportDraftWorkflowTest(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'endMonth: "2026-05"')
+        self.assertContains(response, '"endMonth": "2026-05"')

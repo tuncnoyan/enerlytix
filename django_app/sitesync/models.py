@@ -85,7 +85,7 @@ class Supply(models.Model):
         decimal_places=2,
         blank=True,
         null=True,
-        help_text="Available capacity in kW"
+        help_text="Available capacity in kVA"
     )
     parent_account_id = models.CharField(
         max_length=255,
@@ -174,6 +174,63 @@ class AppSettings(models.Model):
 
     def __str__(self):
         return "Application Settings"
+
+
+class CapacityReference(models.Model):
+    """Persisted capacity values keyed by normalized eSight meter code."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=500)
+    esight_meter_code = models.CharField(max_length=255, unique=True, db_index=True)
+    available_capacity_kva = models.DecimalField(max_digits=12, decimal_places=3, blank=True, null=True)
+    source_filename = models.CharField(max_length=255, blank=True, null=True)
+    last_imported_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['esight_meter_code']
+        indexes = [
+            models.Index(fields=['esight_meter_code']),
+            models.Index(fields=['last_imported_at']),
+        ]
+
+    def __str__(self):
+        return f"CapacityReference {self.esight_meter_code}"
+
+
+class CapacityUploadRun(models.Model):
+    """Tracks each available-capacity upload result summary."""
+
+    STATUS_SUCCESS = 'success'
+    STATUS_PARTIAL_SUCCESS = 'partial_success'
+    STATUS_FAILED = 'failed'
+    STATUS_CHOICES = [
+        (STATUS_SUCCESS, 'Success'),
+        (STATUS_PARTIAL_SUCCESS, 'Partial Success'),
+        (STATUS_FAILED, 'Failed'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    uploaded_filename = models.CharField(max_length=255, blank=True, null=True)
+    total_rows = models.IntegerField(default=0)
+    accepted_rows = models.IntegerField(default=0)
+    rejected_rows = models.IntegerField(default=0)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_SUCCESS)
+    error_summary = models.JSONField(default=list, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-uploaded_at']
+        indexes = [
+            models.Index(fields=['status']),
+            models.Index(fields=['uploaded_at']),
+        ]
+
+    def __str__(self):
+        return f"CapacityUploadRun {self.uploaded_at.isoformat()} ({self.status})"
 
 
 class ImportRun(models.Model):

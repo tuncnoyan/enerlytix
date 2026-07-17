@@ -12,10 +12,10 @@
 
 **Purpose**: Add baseline dependency and shared constants needed by upload implementation.
 
-- [ ] T001 Add `.xlsx` parser dependency `openpyxl` to `requirements.txt`
-- [ ] T002 [P] Add `.xlsx` parser dependency `openpyxl` to `django_app/requirements.txt`
-- [ ] T003 [P] Add `.xlsx` parser dependency `openpyxl` to `Pipfile`
-- [ ] T004 Define capacity-upload required header constants in `django_app/sitesync/services.py`
+- [X] T001 Add `.xlsx` parser dependency `openpyxl` to `requirements.txt`
+- [X] T002 [P] Add `.xlsx` parser dependency `openpyxl` to `django_app/requirements.txt`
+- [X] T003 [P] Add `.xlsx` parser dependency `openpyxl` to `Pipfile`
+- [X] T004 Define capacity-upload required header constants in `django_app/sitesync/services.py`
 
 ---
 
@@ -25,12 +25,12 @@
 
 **⚠️ CRITICAL**: No user story work should start before this phase is complete.
 
-- [ ] T005 Add `CapacityReference` model in `django_app/sitesync/models.py`
-- [ ] T006 Add `CapacityUploadRun` model in `django_app/sitesync/models.py`
-- [ ] T007 Create migration for new capacity models in `django_app/sitesync/migrations/0007_capacity_upload_models.py`
-- [ ] T008 Implement reusable eSight meter code normalization helper in `django_app/sitesync/services.py`
-- [ ] T009 Implement workbook loading/worksheet extraction helper for `.xlsx` files in `django_app/sitesync/services.py`
-- [ ] T010 Extend settings forms for file upload support in `django_app/sitesync/forms.py`
+- [X] T005 Add `CapacityReference` model in `django_app/sitesync/models.py`
+- [X] T006 Add `CapacityUploadRun` model in `django_app/sitesync/models.py`
+- [X] T007 Create migration for new capacity models in `django_app/sitesync/migrations/0007_capacity_upload_models.py`
+- [X] T008 Implement reusable eSight meter code normalization helper in `django_app/sitesync/services.py`
+- [X] T009 Implement workbook loading/worksheet extraction helper for `.xlsx` files in `django_app/sitesync/services.py`
+- [X] T010 Extend settings forms for file upload support in `django_app/sitesync/forms.py`
 
 **Checkpoint**: Foundation ready - user story implementation can begin.
 
@@ -44,12 +44,12 @@
 
 ### Implementation for User Story 1
 
-- [ ] T011 [US1] Add capacity-upload POST handling path to `settings_panel_view` in `django_app/sitesync/views.py`
-- [ ] T012 [P] [US1] Add Available Capacity upload section and file input form in `django_app/templates/sitesync/settings_panel.html`
-- [ ] T013 [US1] Implement accepted-row import path that stores capacity records by eSight code in `django_app/sitesync/services.py`
-- [ ] T014 [US1] Integrate capacity lookup by supply meter code in report payload builder in `django_app/sitesync/views.py`
-- [ ] T015 [P] [US1] Update load factor metric label to `Available Capacity (kVA)` in `django_app/static/sitesync/js/report.js`
-- [ ] T016 [US1] Render upload success summary values (total/accepted/rejected) in `django_app/templates/sitesync/settings_panel.html`
+- [X] T011 [US1] Add capacity-upload POST handling path to `settings_panel_view` in `django_app/sitesync/views.py`
+- [X] T012 [P] [US1] Add Available Capacity upload section and file input form in `django_app/templates/sitesync/settings_panel.html`
+- [X] T013 [US1] Implement accepted-row import path that stores capacity records by eSight code in `django_app/sitesync/services.py`
+- [X] T014 [US1] Integrate capacity lookup by supply meter code in report payload builder in `django_app/sitesync/views.py`
+- [X] T015 [P] [US1] Update load factor metric label to `Available Capacity (kVA)` in `django_app/static/sitesync/js/report.js`
+- [X] T016 [US1] Render upload success summary values (total/accepted/rejected) in `django_app/templates/sitesync/settings_panel.html`
 
 **Checkpoint**: User Story 1 delivers end-to-end upload + report display value.
 
@@ -63,12 +63,12 @@
 
 ### Implementation for User Story 2
 
-- [ ] T017 [US2] Validate required headers (`Name`, `eSight Meter Code`, `Av Cap (kVA)`) and fail schema-invalid files in `django_app/sitesync/services.py`
-- [ ] T018 [US2] Validate blank key fields and non-numeric capacity values with row-indexed errors in `django_app/sitesync/services.py`
-- [ ] T019 [US2] Detect duplicate eSight meter codes within a single file and skip duplicates in `django_app/sitesync/services.py`
-- [ ] T020 [US2] Enforce non-`.xlsx` upload rejection with supported-format message in `django_app/sitesync/forms.py`
-- [ ] T021 [US2] Pass partial-success/failure status and row-level error payload from `settings_panel_view` in `django_app/sitesync/views.py`
-- [ ] T022 [P] [US2] Render validation errors and partial-import notices in `django_app/templates/sitesync/settings_panel.html`
+- [X] T017 [US2] Validate required headers (`Name`, `eSight Meter Code`, `Av Cap (kVA)`) and fail schema-invalid files in `django_app/sitesync/services.py`
+- [X] T018 [US2] Validate blank key fields and non-numeric capacity values with row-indexed errors in `django_app/sitesync/services.py`
+- [X] T019 [US2] Detect duplicate eSight meter codes within a single file and skip duplicates in `django_app/sitesync/services.py`
+- [X] T020 [US2] Enforce non-`.xlsx` upload rejection with supported-format message in `django_app/sitesync/forms.py`
+- [X] T021 [US2] Pass partial-success/failure status and row-level error payload from `settings_panel_view` in `django_app/sitesync/views.py`
+- [X] T022 [P] [US2] Render validation errors and partial-import notices in `django_app/templates/sitesync/settings_panel.html`
 
 **Checkpoint**: User Story 2 produces clear, actionable import validation outcomes.
 
@@ -82,12 +82,12 @@
 
 ### Implementation for User Story 3
 
-- [ ] T023 [US3] Implement upsert-by-eSight-code refresh logic for valid rows in `django_app/sitesync/services.py`
-- [ ] T024 [US3] Preserve unmatched existing capacity records during incremental uploads in `django_app/sitesync/services.py`
-- [ ] T025 [US3] Persist upload audit metadata and row counts in `CapacityUploadRun` via `django_app/sitesync/services.py`
-- [ ] T026 [US3] Surface latest upload run summary context in `settings_panel_view` in `django_app/sitesync/views.py`
-- [ ] T027 [P] [US3] Display latest upload run details in `django_app/templates/sitesync/settings_panel.html`
-- [ ] T028 [US3] Ensure report load-factor resolution uses latest imported capacity record values in `django_app/sitesync/views.py`
+- [X] T023 [US3] Implement upsert-by-eSight-code refresh logic for valid rows in `django_app/sitesync/services.py`
+- [X] T024 [US3] Preserve unmatched existing capacity records during incremental uploads in `django_app/sitesync/services.py`
+- [X] T025 [US3] Persist upload audit metadata and row counts in `CapacityUploadRun` via `django_app/sitesync/services.py`
+- [X] T026 [US3] Surface latest upload run summary context in `settings_panel_view` in `django_app/sitesync/views.py`
+- [X] T027 [P] [US3] Display latest upload run details in `django_app/templates/sitesync/settings_panel.html`
+- [X] T028 [US3] Ensure report load-factor resolution uses latest imported capacity record values in `django_app/sitesync/views.py`
 
 **Checkpoint**: User Story 3 completes long-term maintainability for static reference data refreshes.
 
@@ -97,11 +97,11 @@
 
 **Purpose**: Final consistency, documentation, and manual validation.
 
-- [ ] T029 Update API/feature documentation for capacity upload behavior in `docs/API.md`
-- [ ] T030 Align capacity unit wording (`kVA`) in model help text and related server payload comments in `django_app/sitesync/models.py`
-- [ ] T031 Execute quickstart validation scenarios and capture run notes in `specs/005-available-capacity-upload/quickstart.md`
-- [ ] T032 Measure and record SC-001 timing (valid-row availability within 1 minute) in `specs/005-available-capacity-upload/quickstart.md`
-- [ ] T033 Measure and record SC-003 match-rate (>=95% matched electricity meters show numeric capacity) in `specs/005-available-capacity-upload/quickstart.md`
+- [X] T029 Update API/feature documentation for capacity upload behavior in `docs/API.md`
+- [X] T030 Align capacity unit wording (`kVA`) in model help text and related server payload comments in `django_app/sitesync/models.py`
+- [X] T031 Execute quickstart validation scenarios and capture run notes in `specs/005-available-capacity-upload/quickstart.md`
+- [X] T032 Measure and record SC-001 timing (valid-row availability within 1 minute) in `specs/005-available-capacity-upload/quickstart.md`
+- [X] T033 Measure and record SC-003 match-rate (>=95% matched electricity meters show numeric capacity) in `specs/005-available-capacity-upload/quickstart.md`
 
 ---
 

@@ -32,6 +32,34 @@
 - `POST /settings/`
 - Loads and saves the runtime Etainabl configuration.
 
+### Available capacity upload via Settings
+
+- Route: `POST /settings/`
+- Content type: `multipart/form-data`
+- Required file field: `capacity_upload_file` (`.xlsx` only)
+- Action marker: `capacity_upload_submit=1`
+
+Required columns in uploaded workbook:
+
+- `Name`
+- `eSight Meter Code`
+- `Av Cap (kVA)`
+
+Behavior:
+
+- Performs partial import for row-level validation failures.
+- Valid rows are upserted by normalized `eSight Meter Code`.
+- Invalid rows are skipped and returned as row-level messages.
+- Existing records not referenced by incoming keys remain unchanged.
+
+Rendered response context includes:
+
+- `capacity_upload_status` (`success`, `partial_success`, `failed`)
+- `capacity_upload_total_rows`
+- `capacity_upload_accepted_rows`
+- `capacity_upload_rejected_rows`
+- `capacity_upload_errors` (row-level messages)
+
 ## Consumption import
 
 - `POST /api/consumption-import/`

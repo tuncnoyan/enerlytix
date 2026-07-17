@@ -49,3 +49,14 @@ Expected outcome:
 Expected outcome:
 - Matching keys use latest uploaded values.
 - Previously stored unmatched keys remain available.
+
+## Execution Notes (2026-07-17)
+
+- Focused automated validation command:
+  - `python manage.py test sitesync.tests.test_capacity_upload sitesync.tests.test_settings_view sitesync.tests.test_report_drafts`
+  - Result: `OK` (8 tests)
+- SC-001 measurement (`valid rows available for report use within 1 minute`):
+  - Local measurement result: `0.0766s` for a 200-row valid `.xlsx` import.
+  - Accepted rows: `200/200`.
+- SC-003 measurement (`>=95% matched electricity meters display numeric capacity`):
+  - Local measurement result: `100.0% (5/5)` matched electricity supplies returned numeric `available_capacity_kva`.

@@ -607,7 +607,7 @@
         const values = lf.halfhourly;
         const labels = values.map((_, i) => i + 1);
         const maxDemand = Number(lf.max_demand_kw || 0);
-        const availCap = lf.available_capacity_kw === null ? null : Number(lf.available_capacity_kw || 0);
+        const availCap = lf.available_capacity_kva === null ? null : Number(lf.available_capacity_kva || 0);
         const sub = monthlySubtitle(supply.meter_number);
 
         return {
@@ -620,7 +620,7 @@
                     <div class="metric-grid" style="margin-top:0.9rem;grid-template-columns:repeat(3,minmax(0,1fr));">
                         <div class="metric"><div class="metric-label">Load Factor</div><div class="metric-value">${formatNumber(lf.load_factor_pct, 2)}%</div></div>
                         <div class="metric"><div class="metric-label">Maximum Demand (kW)</div><div class="metric-value">${formatNumber(lf.max_demand_kw, 1)}</div></div>
-                        <div class="metric"><div class="metric-label">Available Capacity (kW)</div><div class="metric-value">${availCap === null ? 'N/A' : formatNumber(availCap, 0)}</div></div>
+                        <div class="metric"><div class="metric-label">Available Capacity (kVA)</div><div class="metric-value">${availCap === null ? 'N/A' : formatNumber(availCap, 0)}</div></div>
                     </div>
                     ${createCommentBox(sectionId)}
                 </section>`,

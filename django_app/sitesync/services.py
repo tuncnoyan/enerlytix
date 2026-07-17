@@ -5,9 +5,10 @@ Etainabl API sync service for fetching and persisting site and supply data.
 import logging
 import time
 from datetime import datetime, timedelta, timezone
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Dict, List, Optional, Set, Tuple
 import requests
+from openpyxl import load_workbook
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone as dj_timezone
@@ -17,6 +18,8 @@ from .models import (
     Site,
     Supply,
     AppSettings,
+    CapacityReference,
+    CapacityUploadRun,
     ImportRun,
     HalfHourlyConsumption,
     MonthlyConsumption,
@@ -27,6 +30,12 @@ from .models import (
 )
 
 logger = logging.getLogger(__name__)
+
+CAPACITY_REQUIRED_HEADERS = (
+    'Name',
+    'eSight Meter Code',
+    'Av Cap (kVA)',
+)
 
 
 class EtainaibleSyncService:
@@ -678,6 +687,194 @@ def normalize_reporting_month(end_month: Optional[str], reporting_month: Optiona
     # Reuse existing bounds parser as format validation.
     reporting_month_bounds(candidate)
     return candidate
+
+
+def normalize_capacity_header(value: Optional[str]) -> str:
+    """Normalize upload headers with trim + casefold rules."""
+    return str(value or '').strip().casefold()
+
+
+def normalize_esight_meter_code(value: Optional[str]) -> str:
+    """Normalize eSight meter code for deterministic matching and storage."""
+    return str(value or '').strip().upper()
+
+
+def get_capacity_lookup_by_meter_codes(meter_codes: List[str]) -> Dict[str, Decimal]:
+    """Return normalized meter-code -> available_capacity_kva lookup map."""
+    normalized = [normalize_esight_meter_code(code) for code in meter_codes if normalize_esight_meter_code(code)]
+    if not normalized:
+        return {}
+    return {
+        row.esight_meter_code: row.available_capacity_kva
+        for row in CapacityReference.objects.filter(esight_meter_code__in=normalized)
+    }
+
+
+def import_capacity_upload(uploaded_file) -> Dict:
+    """Import available capacity reference rows from an uploaded .xlsx file."""
+    filename = getattr(uploaded_file, 'name', '')
+    required_headers_normalized = {
+        normalize_capacity_header(header): header
+        for header in CAPACITY_REQUIRED_HEADERS
+    }
+    row_errors = []
+    accepted_rows = 0
+    total_rows = 0
+
+    try:
+        uploaded_file.seek(0)
+        workbook = load_workbook(uploaded_file, data_only=True)
+        worksheet = workbook.active
+        row_iter = worksheet.iter_rows(values_only=True)
+        header_row = next(row_iter, None)
+
+        if header_row is None:
+            run = CapacityUploadRun.objects.create(
+                uploaded_filename=filename,
+                total_rows=0,
+                accepted_rows=0,
+                rejected_rows=0,
+                status=CapacityUploadRun.STATUS_FAILED,
+                error_summary=['File is empty or missing a header row.'],
+            )
+            return {
+                'status': run.status,
+                'total_rows': run.total_rows,
+                'accepted_rows': run.accepted_rows,
+                'rejected_rows': run.rejected_rows,
+                'errors': run.error_summary,
+                'run': run,
+            }
+
+        header_values = [normalize_capacity_header(cell) for cell in header_row]
+        missing = [
+            canonical
+            for normalized, canonical in required_headers_normalized.items()
+            if normalized not in header_values
+        ]
+        if missing:
+            run = CapacityUploadRun.objects.create(
+                uploaded_filename=filename,
+                total_rows=0,
+                accepted_rows=0,
+                rejected_rows=0,
+                status=CapacityUploadRun.STATUS_FAILED,
+                error_summary=[f"Missing required columns: {', '.join(missing)}"],
+            )
+            return {
+                'status': run.status,
+                'total_rows': run.total_rows,
+                'accepted_rows': run.accepted_rows,
+                'rejected_rows': run.rejected_rows,
+                'errors': run.error_summary,
+                'run': run,
+            }
+
+        indexes = {
+            canonical: header_values.index(normalized)
+            for normalized, canonical in required_headers_normalized.items()
+        }
+
+        seen_codes = set()
+        valid_rows = []
+        for row_index, row in enumerate(row_iter, start=2):
+            if row is None:
+                continue
+            if all(cell is None or str(cell).strip() == '' for cell in row):
+                continue
+
+            total_rows += 1
+            name_raw = row[indexes['Name']] if len(row) > indexes['Name'] else None
+            code_raw = row[indexes['eSight Meter Code']] if len(row) > indexes['eSight Meter Code'] else None
+            capacity_raw = row[indexes['Av Cap (kVA)']] if len(row) > indexes['Av Cap (kVA)'] else None
+
+            name = str(name_raw or '').strip()
+            code = normalize_esight_meter_code(code_raw)
+            current_errors = []
+
+            if not name:
+                current_errors.append('Name is blank')
+            if not code:
+                current_errors.append('eSight Meter Code is blank')
+
+            capacity_value = None
+            capacity_text = '' if capacity_raw is None else str(capacity_raw).strip()
+            if capacity_text:
+                try:
+                    capacity_value = Decimal(capacity_text)
+                except (InvalidOperation, ValueError):
+                    current_errors.append('Av Cap (kVA) must be numeric when provided')
+
+            if code and code in seen_codes:
+                current_errors.append('Duplicate eSight Meter Code in upload')
+
+            if current_errors:
+                row_errors.append(f"Row {row_index}: {', '.join(current_errors)}")
+                continue
+
+            seen_codes.add(code)
+            valid_rows.append({
+                'name': name,
+                'esight_meter_code': code,
+                'available_capacity_kva': capacity_value,
+            })
+
+        with transaction.atomic():
+            now = dj_timezone.now()
+            for valid_row in valid_rows:
+                CapacityReference.objects.update_or_create(
+                    esight_meter_code=valid_row['esight_meter_code'],
+                    defaults={
+                        'name': valid_row['name'],
+                        'available_capacity_kva': valid_row['available_capacity_kva'],
+                        'source_filename': filename,
+                        'last_imported_at': now,
+                    },
+                )
+                accepted_rows += 1
+
+            rejected_rows = len(row_errors)
+            if accepted_rows > 0 and rejected_rows == 0:
+                status = CapacityUploadRun.STATUS_SUCCESS
+            elif accepted_rows > 0 and rejected_rows > 0:
+                status = CapacityUploadRun.STATUS_PARTIAL_SUCCESS
+            else:
+                status = CapacityUploadRun.STATUS_FAILED
+
+            run = CapacityUploadRun.objects.create(
+                uploaded_filename=filename,
+                total_rows=total_rows,
+                accepted_rows=accepted_rows,
+                rejected_rows=rejected_rows,
+                status=status,
+                error_summary=row_errors,
+            )
+
+        return {
+            'status': run.status,
+            'total_rows': run.total_rows,
+            'accepted_rows': run.accepted_rows,
+            'rejected_rows': run.rejected_rows,
+            'errors': run.error_summary,
+            'run': run,
+        }
+    except Exception as exc:  # pylint: disable=broad-except
+        run = CapacityUploadRun.objects.create(
+            uploaded_filename=filename,
+            total_rows=0,
+            accepted_rows=0,
+            rejected_rows=0,
+            status=CapacityUploadRun.STATUS_FAILED,
+            error_summary=[f'Upload parsing failed: {str(exc)}'],
+        )
+        return {
+            'status': run.status,
+            'total_rows': run.total_rows,
+            'accepted_rows': run.accepted_rows,
+            'rejected_rows': run.rejected_rows,
+            'errors': run.error_summary,
+            'run': run,
+        }
 
 
 def get_or_create_monthly_report(site: Site, reporting_month: str) -> MonthlyReport:

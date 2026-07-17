@@ -112,6 +112,18 @@
             font-weight: 600;
         }
 
+        .notice-warning {
+            background: #fff5d7;
+            color: #92400e;
+            border: 1px solid #f5d18f;
+        }
+
+        .notice-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+
         .field {
             margin-bottom: 0.9rem;
         }
@@ -177,6 +189,25 @@
             font-size: 0.8rem;
             color: #5b7080;
             line-height: 1.6;
+        }
+
+        .section-divider {
+            margin: 1.2rem 0 0.9rem;
+            border: none;
+            border-top: 1px solid var(--cxg-border);
+        }
+
+        .subheading {
+            margin: 0 0 0.3rem;
+            font-size: 1.02rem;
+            font-weight: 700;
+        }
+
+        .upload-errors {
+            margin: 0.55rem 0 0;
+            padding-left: 1rem;
+            color: #991b1b;
+            font-size: 0.8rem;
         }
 
         @media (max-width: 760px) {
@@ -252,6 +283,55 @@
                 </div>
                 <div class="actions">
                     <button type="submit">Save settings</button>
+                </div>
+            </form>
+
+            <hr class="section-divider" />
+            <div>
+                <h2 class="subheading">Available Capacity Upload</h2>
+                <p>Upload a `.xlsx` file with columns Name, eSight Meter Code, and Av Cap (kVA).</p>
+            </div>
+
+            {% if capacity_upload_status == 'success' %}
+                <div class="notice">
+                    Capacity upload completed. Accepted {{ capacity_upload_accepted_rows }} of {{ capacity_upload_total_rows }} row(s).
+                </div>
+            {% elif capacity_upload_status == 'partial_success' %}
+                <div class="notice notice-warning">
+                    Capacity upload completed with warnings. Accepted {{ capacity_upload_accepted_rows }} and rejected {{ capacity_upload_rejected_rows }} row(s).
+                </div>
+            {% elif capacity_upload_status == 'failed' %}
+                <div class="notice notice-error">
+                    Capacity upload failed. No valid rows were imported.
+                </div>
+            {% endif %}
+
+            {% if capacity_upload_errors %}
+                <ul class="upload-errors">
+                    {% for upload_error in capacity_upload_errors %}
+                        <li>{{ upload_error }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+
+            {% if latest_capacity_run %}
+                <div class="summary">
+                    <strong>Latest upload:</strong> {{ latest_capacity_run.uploaded_at }}<br />
+                    <strong>Status:</strong> {{ latest_capacity_run.status }}<br />
+                    <strong>Rows:</strong> {{ latest_capacity_run.total_rows }} total, {{ latest_capacity_run.accepted_rows }} accepted, {{ latest_capacity_run.rejected_rows }} rejected
+                </div>
+            {% endif %}
+
+            <form id="capacity-upload-form" method="post" enctype="multipart/form-data" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="capacity_upload_submit" value="1" />
+                <div class="field">
+                    <label for="id_capacity_upload_file">Capacity Workbook (.xlsx)</label>
+                    {{ capacity_form.capacity_upload_file }}
+                    <div class="help">Only `.xlsx` files are accepted. Header matching is trim + case-insensitive.</div>
+                </div>
+                <div class="actions">
+                    <button type="submit">Upload Capacity File</button>
                 </div>
             </form>
         </div>

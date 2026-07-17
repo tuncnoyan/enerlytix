@@ -20,6 +20,7 @@ from rest_framework.decorators import permission_classes
 from rest_framework.response import Response
 from .models import (
     Benchmark,
+    CapacityUploadRun,
     Site,
     Supply,
     AppSettings,
@@ -30,16 +31,19 @@ from .models import (
     MonthlyReport,
     MonthlyReportVersion,
 )
-from .forms import SettingsForm
+from .forms import CapacityUploadForm, SettingsForm
 from .config_service import SettingsConfigService
 from .services import EtainaibleSyncService
 from .services import (
     carry_forward_comments_from_previous_final,
     ConsumptionImportService,
     create_report_version,
+    get_capacity_lookup_by_meter_codes,
     get_or_create_monthly_report,
     get_consumption_display_records,
+    import_capacity_upload,
     month_start,
+    normalize_esight_meter_code,
     normalize_reporting_month,
     reporting_month_bounds,
     shift_months,
@@ -184,7 +188,7 @@ def _hh_series_for_supply(supply, end_month):
     }
 
 
-def _load_factor_for_supply(supply, end_month, hh_series):
+def _load_factor_for_supply(supply, end_month, hh_series, available_capacity_kva=None):
     if supply.utility_type != 'electricity' or not hh_series or not hh_series['current']:
         return None
 
@@ -202,7 +206,7 @@ def _load_factor_for_supply(supply, end_month, hh_series):
         'monthly_kwh': _decimal_to_float(monthly_kwh),
         'max_demand_kw': _decimal_to_float(max_demand_kw),
         'load_factor_pct': _decimal_to_float(load_factor_pct),
-        'available_capacity_kw': _decimal_to_float(supply.available_capacity),
+        'available_capacity_kva': _decimal_to_float(available_capacity_kva),
         'halfhourly': hh_series['current'],
     }
 
@@ -377,11 +381,16 @@ def _report_payload(site, end_month, supply_external_ids=None):
     for supply in supplies:
         utility_counts[supply.utility_type] += 1
 
+    meter_codes = [normalize_esight_meter_code(supply.device_id) for supply in supplies if supply.device_id]
+    capacity_lookup = get_capacity_lookup_by_meter_codes(meter_codes)
+
     payload_supplies = []
     for supply in supplies:
+        meter_code = normalize_esight_meter_code(supply.device_id)
+        available_capacity_kva = capacity_lookup.get(meter_code) if meter_code else None
         monthly = _monthly_series_for_supply(supply, current_month_keys, previous_month_keys)
         hh_series = _hh_series_for_supply(supply, end_month)
-        load_factor = _load_factor_for_supply(supply, end_month, hh_series)
+        load_factor = _load_factor_for_supply(supply, end_month, hh_series, available_capacity_kva)
         day_night = _day_night_for_supply(supply, end_month, hh_series)
         weekday_comparison, weekend_comparison = _weekday_weekend_for_supply(supply, end_month, hh_series)
 
@@ -392,7 +401,7 @@ def _report_payload(site, end_month, supply_external_ids=None):
             'utility_type_display': supply.get_utility_type_display(),
             'label': _supply_label(supply, utility_counts),
             'meter_number': _meter_number_for_supply(supply),
-            'available_capacity_kw': _decimal_to_float(supply.available_capacity),
+            'available_capacity_kva': _decimal_to_float(available_capacity_kva),
             'monthly': monthly,
             'load_factor': load_factor,
             'hh_comparison': hh_series,
@@ -842,19 +851,68 @@ def manual_sync_view(request):
 def settings_panel_view(request):
     """Display and update runtime configuration settings."""
     settings_instance = SettingsConfigService.get_settings()
+    capacity_upload_result = None
+    latest_capacity_run = CapacityUploadRun.objects.order_by('-uploaded_at').first()
 
     if request.method == 'POST':
-        form = SettingsForm(request.POST, instance=settings_instance)
-        if form.is_valid():
-            logger.info("Updating application settings")
-            SettingsConfigService.update_settings(form)
+        if 'capacity_upload_submit' in request.POST:
+            form = SettingsForm(instance=settings_instance)
+            capacity_form = CapacityUploadForm(request.POST, request.FILES)
+            if capacity_form.is_valid():
+                capacity_upload_result = import_capacity_upload(capacity_form.cleaned_data['capacity_upload_file'])
+                latest_capacity_run = capacity_upload_result.get('run')
+            else:
+                upload_errors = []
+                for field_errors in capacity_form.errors.values():
+                    upload_errors.extend(field_errors)
+                capacity_upload_result = {
+                    'status': CapacityUploadRun.STATUS_FAILED,
+                    'total_rows': 0,
+                    'accepted_rows': 0,
+                    'rejected_rows': 0,
+                    'errors': [str(error) for error in upload_errors],
+                    'run': None,
+                }
+        else:
+            form = SettingsForm(request.POST, instance=settings_instance)
+            if form.is_valid():
+                logger.info("Updating application settings")
+                SettingsConfigService.update_settings(form)
+            capacity_form = CapacityUploadForm()
     else:
         form = SettingsForm(instance=settings_instance)
+        capacity_form = CapacityUploadForm()
+
+    if capacity_upload_result is not None:
+        capacity_upload_status = capacity_upload_result.get('status')
+        capacity_upload_total_rows = capacity_upload_result.get('total_rows', 0)
+        capacity_upload_accepted_rows = capacity_upload_result.get('accepted_rows', 0)
+        capacity_upload_rejected_rows = capacity_upload_result.get('rejected_rows', 0)
+        capacity_upload_errors = capacity_upload_result.get('errors', [])
+    elif latest_capacity_run is not None:
+        capacity_upload_status = latest_capacity_run.status
+        capacity_upload_total_rows = latest_capacity_run.total_rows
+        capacity_upload_accepted_rows = latest_capacity_run.accepted_rows
+        capacity_upload_rejected_rows = latest_capacity_run.rejected_rows
+        capacity_upload_errors = latest_capacity_run.error_summary or []
+    else:
+        capacity_upload_status = ''
+        capacity_upload_total_rows = 0
+        capacity_upload_accepted_rows = 0
+        capacity_upload_rejected_rows = 0
+        capacity_upload_errors = []
 
     return render(request, 'sitesync/settings_panel.html', {
         'form': form,
+        'capacity_form': capacity_form,
         'settings': settings_instance,
         'save_success': request.method == 'POST' and form.is_valid(),
+        'capacity_upload_status': capacity_upload_status,
+        'capacity_upload_total_rows': capacity_upload_total_rows,
+        'capacity_upload_accepted_rows': capacity_upload_accepted_rows,
+        'capacity_upload_rejected_rows': capacity_upload_rejected_rows,
+        'capacity_upload_errors': capacity_upload_errors,
+        'latest_capacity_run': latest_capacity_run,
     })
 
 
