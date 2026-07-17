@@ -67,7 +67,9 @@ As an operations user, I want to re-upload newer capacity files when data change
 ### Edge Cases
 
 - Upload .xlsx file has many additional non-required columns in varying order; required columns are still detected and processed.
-- Header text contains leading/trailing spaces or casing differences; required columns are matched in a tolerant way.
+- Required-column detection trims leading/trailing whitespace and is case-insensitive.
+- Only canonical required headers are accepted after normalization: Name, eSight Meter Code, Av Cap (kVA).
+- Header aliases beyond normalized canonical names are not accepted in this release.
 - Upload contains eSight Meter Code values with surrounding whitespace; keys are normalized before matching.
 - Upload file is empty or contains only headers; no data is imported and a clear warning is shown.
 - A report meter has no matching stored eSight Meter Code; Available Capacity remains unavailable for that meter.
@@ -83,15 +85,16 @@ As an operations user, I want to re-upload newer capacity files when data change
 - **FR-004**: System MUST treat eSight Meter Code as the business key for identifying each capacity record.
 - **FR-005**: System MUST validate Av Cap (kVA) as numeric before accepting a row.
 - **FR-006**: System MUST ignore non-required columns during import processing.
-- **FR-007**: System MUST reject uploads that contain duplicate eSight Meter Code values within the same file.
+- **FR-007**: System MUST treat rows with duplicate eSight Meter Code values within the same upload as invalid rows, skip those duplicate rows, continue importing non-duplicate valid rows, and include duplicate-row details in the row-level error report.
 - **FR-008**: System MUST provide a user-visible import result summary including total rows read, accepted rows, and rejected rows with reasons.
 - **FR-009**: System MUST store uploaded capacity records so they persist across sessions and are available for report rendering.
 - **FR-010**: System MUST use stored available capacity values when rendering electricity load factor outputs for matched meters.
 - **FR-011**: System MUST update the label from "Available Capacity (kW)" to "Available Capacity (kVA)" in the electricity load factor section.
 - **FR-012**: System MUST allow later uploads to refresh existing eSight Meter Code-matched records with newly provided Av Cap (kVA) values.
-- **FR-013**: System MUST preserve existing unmatched records when processing incremental uploads.
+- **FR-013**: System MUST use append-update mode for incremental uploads: only eSight Meter Code keys present in the upload are created or updated; existing records with keys not present in the upload remain unchanged.
 - **FR-014**: System MUST reject non-.xlsx uploads and return a user-visible supported-format validation message.
 - **FR-015**: System MUST perform partial import for data-row validation failures: valid rows are imported, invalid rows are skipped, and row-level errors are reported.
+- **FR-016**: System MUST normalize uploaded header values by trimming surrounding whitespace and comparing case-insensitively against canonical required headers only.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -118,3 +121,4 @@ As an operations user, I want to re-upload newer capacity files when data change
 - Existing settings access controls are reused for who can perform uploads.
 - Uploaded capacity records are considered business reference data and remain in place between periodic manual updates.
 - Source files for this feature are provided in .xlsx format.
+- Full replacement or purge mode is out of scope for this release.
