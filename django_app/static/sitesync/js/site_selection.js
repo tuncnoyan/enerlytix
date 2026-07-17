@@ -298,48 +298,49 @@ function getReportRefreshModeValue() {
     return input ? input.checked : false;
 }
 
-function reportPayloadHasData(payload) {
+function supplyHasUsableReportData(supply) {
     "use strict";
 
-    if (!payload || !Array.isArray(payload.supplies)) {
+    if (!supply) {
         return false;
     }
 
-    const hasOverviewCost = payload.overview
-        && payload.overview.total_cost !== null
-        && payload.overview.total_cost !== undefined
-        && Number(payload.overview.total_cost) > 0;
+    const monthly = supply.monthly || {};
+    const hasCurrentMonthly = (Array.isArray(monthly.current_kwh) && monthly.current_kwh.some((value) => value !== null && value !== undefined))
+        || (Array.isArray(monthly.current_m3) && monthly.current_m3.some((value) => value !== null && value !== undefined));
+    const hhComparison = supply.hh_comparison || null;
+    const hasHhData = Boolean(hhComparison && (
+        (Array.isArray(hhComparison.current) && hhComparison.current.length > 0)
+        || (Array.isArray(hhComparison.previous_year) && hhComparison.previous_year.length > 0)
+    ));
 
-    if (hasOverviewCost) {
-        return true;
+    if (supply.utility_type === 'electricity' || supply.utility_type === 'gas') {
+        return hasCurrentMonthly || hasHhData;
     }
 
-    return payload.supplies.some((supply) => {
-        const monthly = supply && supply.monthly ? supply.monthly : {};
-        const monthlyKeys = [
-            'current_kwh',
-            'current_m3',
-            'previous_year_kwh',
-            'previous_year_m3',
-            'benchmark_kwh',
-            'benchmark_m3',
-        ];
-        const hasMonthly = monthlyKeys.some((key) => Array.isArray(monthly[key])
-            && monthly[key].some((value) => value !== null && value !== undefined));
+    if (supply.utility_type === 'water') {
+        return hasCurrentMonthly;
+    }
 
-        if (hasMonthly) {
-            return true;
-        }
+    return hasCurrentMonthly || hasHhData;
+}
 
-        const hhComparison = supply && supply.hh_comparison ? supply.hh_comparison : null;
-        if (hhComparison && ((Array.isArray(hhComparison.current) && hhComparison.current.length > 0)
-            || (Array.isArray(hhComparison.previous_year) && hhComparison.previous_year.length > 0))) {
-            return true;
-        }
+function reportPayloadHasData(payload, selectedSupplyIds) {
+    "use strict";
 
-        const loadFactor = supply && supply.load_factor ? supply.load_factor : null;
-        return Boolean(loadFactor && Array.isArray(loadFactor.halfhourly) && loadFactor.halfhourly.length > 0);
-    });
+    if (!payload || !Array.isArray(payload.supplies) || payload.supplies.length === 0) {
+        return false;
+    }
+
+    const suppliesToEvaluate = selectedSupplyIds.length
+        ? payload.supplies.filter((supply) => selectedSupplyIds.includes(supply.external_id))
+        : payload.supplies;
+
+    if (!suppliesToEvaluate.length) {
+        return false;
+    }
+
+    return suppliesToEvaluate.every((supply) => supplyHasUsableReportData(supply));
 }
 
 function getSupplyIdsForReportImport(selectedSupplyIds, reportPayload) {
@@ -462,7 +463,7 @@ async function triggerReportView() {
         } else {
             setReportStatus('Checking report data availability...', false);
             reportPayload = await fetchReportPayload(siteId, reportMonth, selectedSupplyIds);
-            if (!reportPayloadHasData(reportPayload)) {
+            if (!reportPayloadHasData(reportPayload, selectedSupplyIds)) {
                 shouldImport = true;
                 supplyIdsForImport = getSupplyIdsForReportImport(selectedSupplyIds, reportPayload);
                 setReportStatus('Required report data is missing. Downloading required data now; this may take a moment...', false);
