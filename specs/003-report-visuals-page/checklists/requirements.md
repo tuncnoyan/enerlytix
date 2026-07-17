@@ -33,5 +33,6 @@
 
 - SC-007 references desktop resolution — acceptable as a user-facing measurable outcome, not an implementation detail.
 - Comment persistence is explicitly scoped to session-only; database persistence is deferred to a future iteration and noted in Assumptions.
+- Benchmark requirements now specify site-floor-area-based calculation, square-foot conversion handling, and omission rules when benchmark inputs are unavailable.
 - Available Capacity field is flagged in Assumptions as needing verification against the current Supply model schema.
-- All checklist items pass. Spec is ready for `/speckit.plan`.
+- All checklist items pass. Spec remains ready for `/speckit.plan`.

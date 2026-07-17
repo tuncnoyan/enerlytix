@@ -31,4 +31,6 @@
 
 ## Notes
 
-- This spec is ready for `/speckit.plan` after the initial containerised sync and display requirements are reviewed.
+- Floor area persistence, unit capture, and placeholder-value normalisation are now explicitly covered in the sync requirements.
+- Settings requirements now include the three utility benchmark intensity parameters needed by report benchmarks.
+- All checklist items pass. This spec remains ready for `/speckit.plan`.

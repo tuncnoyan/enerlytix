@@ -15,6 +15,8 @@
 - Q: Which meter-matching rule should be used when applying uploaded capacity values to report meters? -> A: Match by eSight Meter Code only.
 - Q: Which upload file format should be accepted for this feature? -> A: Accept .xlsx files only.
 - Q: How should imports behave when some rows are invalid? -> A: Use partial import; import valid rows and skip invalid rows with row-level error reporting.
+- Q: When an uploaded row matches an existing eSight Meter Code but has a different Name, how should the system handle it? -> A: Update the existing record and overwrite the stored Name with the latest uploaded Name.
+- Q: What numeric range should be valid for Av Cap (kVA) values in uploaded rows? -> A: Zero and positive values are valid; negative values are rejected.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -47,7 +49,8 @@ As an operations user, I want clear validation feedback during upload so that I 
 2. **Given** a row has blank Name or eSight Meter Code, **When** I upload it, **Then** the row is flagged as invalid and is not imported.
 3. **Given** duplicate eSight Meter Code values exist in one upload, **When** I submit the file, **Then** duplicate rows are flagged and skipped while non-duplicate valid rows are imported.
 4. **Given** Av Cap (kVA) is not numeric in a row, **When** I upload it, **Then** that row is flagged with a data-type validation error.
-5. **Given** a file contains both valid and invalid rows, **When** I upload it, **Then** valid rows are imported and invalid rows are skipped with row-level error reasons.
+5. **Given** Av Cap (kVA) is negative in a row, **When** I upload it, **Then** that row is flagged as invalid and is not imported.
+6. **Given** a file contains both valid and invalid rows, **When** I upload it, **Then** valid rows are imported and invalid rows are skipped with row-level error reasons.
 
 ---
 
@@ -63,6 +66,7 @@ As an operations user, I want to re-upload newer capacity files when data change
 
 1. **Given** a key already exists from a prior upload, **When** a new file includes that key with a different Av Cap (kVA), **Then** the latest uploaded value is used for future reporting.
 2. **Given** a new upload omits previously imported keys, **When** the upload completes, **Then** existing previously stored keys remain available unless explicitly replaced by matching keys.
+3. **Given** a new upload includes an existing eSight Meter Code with a different Name value, **When** the upload completes successfully, **Then** the stored record keeps the same business key and updates its Name to the latest uploaded value.
 
 ### Edge Cases
 
@@ -74,6 +78,7 @@ As an operations user, I want to re-upload newer capacity files when data change
 - Upload file is empty or contains only headers; no data is imported and a clear warning is shown.
 - A report meter has no matching stored eSight Meter Code; Available Capacity remains unavailable for that meter.
 - Uploaded file is not .xlsx (for example .xls or .csv); upload is rejected with a supported-format message.
+- Upload row contains a negative Av Cap (kVA) value; the row is rejected with a validation error rather than normalized automatically.
 
 ## Requirements *(mandatory)*
 
@@ -83,7 +88,7 @@ As an operations user, I want to re-upload newer capacity files when data change
 - **FR-002**: System MUST accept manual upload of .xlsx spreadsheet files for available capacity maintenance.
 - **FR-003**: System MUST require the columns Name, eSight Meter Code, and Av Cap (kVA) to be present in an uploaded file.
 - **FR-004**: System MUST treat eSight Meter Code as the business key for identifying each capacity record.
-- **FR-005**: System MUST validate Av Cap (kVA) as numeric before accepting a row.
+- **FR-005**: System MUST validate Av Cap (kVA) as numeric and reject negative values before accepting a row.
 - **FR-006**: System MUST ignore non-required columns during import processing.
 - **FR-007**: System MUST treat rows with duplicate eSight Meter Code values within the same upload as invalid rows, skip those duplicate rows, continue importing non-duplicate valid rows, and include duplicate-row details in the row-level error report.
 - **FR-008**: System MUST provide a user-visible import result summary including total rows read, accepted rows, and rejected rows with reasons.
@@ -92,6 +97,7 @@ As an operations user, I want to re-upload newer capacity files when data change
 - **FR-011**: System MUST update the label from "Available Capacity (kW)" to "Available Capacity (kVA)" in the electricity load factor section.
 - **FR-012**: System MUST allow later uploads to refresh existing eSight Meter Code-matched records with newly provided Av Cap (kVA) values.
 - **FR-013**: System MUST use append-update mode for incremental uploads: only eSight Meter Code keys present in the upload are created or updated; existing records with keys not present in the upload remain unchanged.
+- **FR-013a**: When an uploaded row matches an existing eSight Meter Code, the system MUST update the stored Av Cap (kVA) and replace the stored Name with the latest uploaded Name from that row.
 - **FR-014**: System MUST reject non-.xlsx uploads and return a user-visible supported-format validation message.
 - **FR-015**: System MUST perform partial import for data-row validation failures: valid rows are imported, invalid rows are skipped, and row-level errors are reported.
 - **FR-016**: System MUST normalize uploaded header values by trimming surrounding whitespace and comparing case-insensitively against canonical required headers only.
@@ -99,7 +105,7 @@ As an operations user, I want to re-upload newer capacity files when data change
 ### Key Entities *(include if feature involves data)*
 
 - **Capacity Upload File**: User-provided spreadsheet containing variable columns, with required fields Name, eSight Meter Code, and Av Cap (kVA).
-- **Capacity Record**: Persisted available-capacity data identified by eSight Meter Code and containing Name, Av Cap (kVA), source upload timestamp, and record status.
+- **Capacity Record**: Persisted available-capacity data identified by eSight Meter Code and containing the latest uploaded Name, Av Cap (kVA), source upload timestamp, and record status.
 - **Capacity Import Result**: Summary artifact returned after each upload, including processed row counts and validation outcomes.
 - **Electricity Meter Match Context**: Reporting-time mapping between report meter identity and stored capacity record key to determine whether capacity can be displayed.
 

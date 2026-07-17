@@ -14,7 +14,7 @@
 
 ### User Story 1 - Generate and View Utility Report (Priority: P1)
 
-An energy manager navigates to the Enerlytix dashboard and clicks the "Create Report" button. They are taken to the Report Visuals page, which automatically loads all available utility data for the site and displays the full suite of charts and tables — organised by utility type in the order Electricity, Gas, Water. Sections for utility types with no associated supply are skipped automatically.
+An energy manager navigates to the Enerlytix dashboard and clicks the "Create Report" button. They are taken to the Report Visuals page, which automatically loads all available utility data for the site and displays the full suite of charts and tables — organised by utility type in the order Electricity, Gas, Water. Sections for utility types with no associated supply are skipped automatically. The monthly usage visuals also include benchmark reference values derived from the site's floor area and the configured utility benchmark settings.
 
 **Why this priority**: This is the primary deliverable of the sprint. Without the ability to view the visuals, none of the supporting features have value.
 
@@ -26,6 +26,7 @@ An energy manager navigates to the Enerlytix dashboard and clicks the "Create Re
 2. **Given** a site with electricity supplies only (no gas), **When** the report page loads, **Then** the Gas section is absent and Water follows directly after Electricity.
 3. **Given** a site with multiple supplies of the same utility type, **When** the report page loads, **Then** all supplies for that utility type are grouped within the same section.
 4. **Given** the report page is open, **When** the user views the page, **Then** a left-side navigation pane lists all visual sections with anchor links, enabling single-click scroll-to-section.
+5. **Given** the site has a stored floor area greater than `0` and a benchmark setting is configured for a utility, **When** the monthly usage visual renders for that utility, **Then** it shows a benchmark reference line calculated from the benchmark setting and the site's floor area.
 
 ---
 
@@ -83,6 +84,8 @@ The energy manager can navigate within the report page using both the left navig
 - What happens when only one month of data exists for a supply? Monthly charts must render with a single bar/data point and not error.
 - What happens if a site has no supplies at all? The report page must display a user-friendly "No data available" message rather than an empty visual area.
 - What happens when the reporting period contains an incomplete month (e.g., the current month mid-stream)? Partial months must be shown without distorting benchmark comparisons.
+- What happens when the site floor area is unavailable because it was missing or normalised from Etainabl's placeholder value? Benchmark series must be omitted and the visual must not imply a zero benchmark target.
+- What happens when a site's floor area is stored in square feet? The benchmark calculation must convert it to square metres before deriving the displayed reference value.
 
 ---
 
@@ -111,7 +114,10 @@ The energy manager can navigate within the report page using both the left navig
 - **FR-009**: The report MUST display a Total Utility Usage (£) summary as the first visual on the report page, showing a table of all utility meters with their total costs and a pie chart showing cost distribution by utility type, labelled with utility name and percentage. This visual is site-wide and is not repeated within individual utility sections. It MUST also appear as the first entry in the left navigation pane (e.g., labelled "Overview").
 
 **Electricity Visuals** *(per electricity supply)*
-- **FR-010**: The report MUST display a Monthly Electricity Usage bar chart showing current consumption (kWh), previous year same month (kWh), and benchmark (kWh) series for each month in the 12-month reporting period.
+- **FR-010**: The report MUST display a Monthly Electricity Usage visual showing current consumption (kWh), previous year same month (kWh), and a benchmark reference value for each month in the 12-month reporting period.
+- **FR-010a**: The electricity benchmark reference shown on the Monthly Electricity Usage visual MUST be derived from the annual electricity benchmark setting and the site's floor area expressed in square metres.
+- **FR-010b**: If the site's stored floor area is in square feet, the system MUST convert it to square metres before calculating the electricity benchmark reference.
+- **FR-010c**: The electricity benchmark reference MUST be displayed as a constant monthly line by dividing the annual site-level benchmark total evenly across the 12 months shown in the visual.
 - **FR-011**: The report MUST display a Monthly Electricity Usage table with columns: Date, Last 12 Months (kWh), Prev. 12 Months (kWh), Gross Variance (kWh), Relative Variance (%).
 - **FR-012**: The report MUST display an Electricity Load Factor visual, showing a time-series line chart plotting halfhourly consumption (kWh), Maximum Demand (kW) as a constant line for the month, and Available Capacity (kW) as a constant line. Below the chart, three KPI cards MUST display: Load Factor (%), Maximum Demand (kW), and Available Capacity (kW). The Load Factor visual covers the most recent complete month by default.
 - **FR-013**: Maximum Demand (kW) MUST be calculated as: the highest single halfhourly consumption value (kWh) in the reporting month divided by 0.5.
@@ -123,15 +129,20 @@ The energy manager can navigate within the report page using both the left navig
 - **FR-019**: The report MUST display a Daily Comparison – Weekend Usage chart showing halfhourly consumption profiles for each individual weekend day in the most recent complete month, rendered as overlaid line series, one per day.
 
 **Gas Visuals** *(per gas supply)*
-- **FR-020**: The report MUST display a Monthly Gas Usage bar chart showing current consumption (kWh), previous year same month (kWh), and benchmark (kWh) series for each month in the 12-month reporting period.
+- **FR-020**: The report MUST display a Monthly Gas Usage visual showing current consumption (kWh), previous year same month (kWh), and a benchmark reference value for each month in the 12-month reporting period.
+- **FR-020a**: The gas benchmark reference shown on the Monthly Gas Usage visual MUST be derived from the annual gas benchmark setting and the site's floor area expressed in square metres.
+- **FR-020b**: The gas benchmark reference MUST be displayed as a constant monthly line by dividing the annual site-level benchmark total evenly across the 12 months shown in the visual.
 - **FR-021**: The report MUST display a Monthly Gas Usage table with columns: Date, Last 12 Months (kWh), Prev. 12 Months (kWh), Gross Variance (kWh), Relative Variance (%).
 - **FR-022**: The report MUST display an HH Gas Data Comparison – Last Month chart showing halfhourly gas consumption for the current year and previous year same month.
 - **FR-023**: The report MUST display a Daily Comparison – Weekday Usage (Gas) chart showing halfhourly gas consumption profiles per weekday in the most recent complete month.
 - **FR-024**: The report MUST display a Daily Comparison – Weekend Usage (Gas) chart showing halfhourly gas consumption profiles per weekend day in the most recent complete month.
 
 **Water Visuals** *(per water supply)*
-- **FR-025**: The report MUST display a Monthly Water Usage bar chart showing current consumption (m³), previous year same month (m³), and benchmark (m³) series for each month in the 12-month reporting period.
+- **FR-025**: The report MUST display a Monthly Water Usage visual showing current consumption (m³), previous year same month (m³), and a benchmark reference value for each month in the 12-month reporting period.
+- **FR-025a**: The water benchmark reference shown on the Monthly Water Usage visual MUST be derived from the annual water benchmark setting and the site's floor area expressed in square metres.
+- **FR-025b**: The water benchmark reference MUST be displayed as a constant monthly line by dividing the annual site-level benchmark total evenly across the 12 months shown in the visual.
 - **FR-026**: The report MUST display a Monthly Water Usage table with columns: Date, Last 12 Months (m³), Prev. 12 Months (m³), Gross Variance (m³), Relative Variance (%).
+- **FR-026a**: If a utility benchmark setting is missing or the site's normalised floor area is `0`, the corresponding monthly usage visual MUST omit the benchmark reference line rather than display a misleading zero value.
 
 **Comment Boxes**
 - **FR-027**: Each chart and table visual MUST have an editable text area directly beneath it on the report page.
@@ -147,11 +158,12 @@ The energy manager can navigate within the report page using both the left navig
 ### Key Entities
 
 - **Report**: A transient, session-scoped view aggregating visual data for one site and one 12-month reporting period. Not persisted in the database.
+- **Site Floor Area**: The stored site area and source unit used to derive site-level monthly benchmark references for report visuals.
 - **Supply**: An existing entity representing an electricity, gas, or water meter associated with a site, with attributes including utility type, meter number, and available capacity.
 - **HalfHourlyConsumption**: An existing entity storing 30-minute interval energy readings per supply per timestamp.
 - **MonthlyConsumption**: An existing entity storing aggregated monthly consumption per supply.
 - **InvoiceCost**: An existing entity storing financial cost data per supply per billing period.
-- **Benchmark**: A configured reference value (kWh or m³) per supply per month, used for benchmark series in charts.
+- **Utility Benchmark Setting**: A configured annual benchmark intensity for electricity, gas, or water that is combined with the site's floor area to produce a monthly benchmark reference line.
 - **VisualComment**: A transient, session-scoped text entry associated with a specific visual section on the report page. Not persisted.
 
 ---
@@ -167,6 +179,8 @@ The energy manager can navigate within the report page using both the left navig
 - **SC-005**: Visual sections for utility types with no supplies are absent from both the on-screen report and the downloaded PDF with 100% consistency.
 - **SC-006**: Load Factor, Maximum Demand, and Available Capacity KPI values on the Electricity Load Factor visual are arithmetically correct (verifiable by manual calculation from raw halfhourly data).
 - **SC-007**: The report page is usable on standard desktop resolutions (1280×768 and above) without horizontal scroll or layout breakage.
+- **SC-008**: For 100% of monthly usage visuals where a utility benchmark setting exists and the site has a normalised floor area greater than `0`, the displayed benchmark reference value matches the configured annual intensity multiplied by the site's floor area in square metres and distributed evenly by month.
+- **SC-009**: For 100% of sites with missing benchmark settings or a normalised floor area of `0`, the report omits the benchmark reference line without showing an incorrect zero benchmark.
 
 ---
 
@@ -184,11 +198,12 @@ The energy manager can navigate within the report page using both the left navig
 
 ## Assumptions
 
-- All required data (halfhourly consumption, monthly consumption, invoice cost, benchmark, available capacity) is already stored in the existing Enerlytix database and accessible via the current data models.
+- All required data except site floor area and utility benchmark settings is already stored in the existing Enerlytix database and accessible via the current data models.
 - The "reporting period" is the 12-month window ending on the last day of the user-selected end month. It defaults to the most recent complete calendar month when the report page is first accessed.
 - The "most recent complete month" used for load factor and HH charts is the last fully elapsed calendar month.
 - Available Capacity (kW) is stored as an existing attribute on the Supply model; if no value is present, the Available Capacity KPI card shows "N/A" and the Available Capacity line is omitted from the Load Factor chart.
-- Benchmark values are optional; if no benchmark is configured for a supply, the benchmark series is omitted from charts rather than shown as zero.
+- Benchmark values are optional; if no utility benchmark setting is configured or the site's normalised floor area is `0`, the benchmark series is omitted from charts rather than shown as zero.
+- Annual benchmark intensity settings are converted into monthly benchmark reference lines by multiplying by site floor area in square metres and dividing evenly across the 12 displayed months.
 - Comment box content is session-only and is not persisted to the database in this feature iteration.
 - The colour scheme guideline referenced is the one already defined and used in the existing Enerlytix UI; no new brand colours will be introduced.
 - PDF generation will be handled client-side (browser-based) to avoid server-side rendering complexity.

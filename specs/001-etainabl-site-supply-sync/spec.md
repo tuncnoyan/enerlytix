@@ -27,6 +27,8 @@ Users need the application to fetch the current site and supply catalog from the
 
 1. **Given** valid Etainabl API credentials and connectivity, **When** the application performs initial sync, **Then** it creates or updates a persistent site table and a supply table with the latest records.
 2. **Given** a site or supply already exists in the database, **When** the same record is returned by the Etainabl API, **Then** the existing database row is updated rather than duplicated.
+3. **Given** Etainabl asset data includes a floor area value and unit, **When** the site record is created or updated, **Then** the site stores the floor area and its original unit for later benchmark calculations.
+4. **Given** Etainabl provides a floor area value of `1` in either square metres or square feet as a placeholder for unknown data, **When** the site record is persisted, **Then** the stored floor area is normalised to `0` while preserving the reported unit.
 
 ---
 
@@ -65,13 +67,14 @@ Users need a single settings page that displays application parameters and runti
 
 **Why this priority**: Centralized visibility of integration settings and operational parameters reduces configuration errors and makes troubleshooting easier.
 
-**Independent Test**: Verify the settings page loads and shows the configured Etainabl base URL, download page size, timeout values, and other runtime parameters.
+**Independent Test**: Verify the settings page loads and shows the configured Etainabl base URL, download page size, timeout values, benchmark parameters for electricity, gas, and water, and other runtime parameters.
 
 **Acceptance Scenarios**:
 
 1. **Given** a valid application configuration, **When** the user navigates to the settings page, **Then** the page displays Etainabl base URL, download page size, timeout values, and relevant API configuration settings.
 2. **Given** the application is running in development or test, **When** configuration values are loaded, **Then** secret keys and similar sensitive parameters are sourced from the `.env` file and never displayed in plaintext on the settings panel (user edits override `.env` values only in the database, not in the file).
 3. **Given** the application is deployed to production on a platform that supports secure secret management, **When** runtime configuration is resolved, **Then** the platform-native secret store is preferred over `.env` while still allowing `.env` as a documented fallback if no better method exists.
+4. **Given** an operations user opens the settings page, **When** the benchmark settings panel loads, **Then** it shows editable annual benchmark intensity values for electricity and gas in kWh per square metre and for water in cubic metres per square metre.
 
 ---
 
@@ -81,6 +84,8 @@ Users need a single settings page that displays application parameters and runti
 - If a selected site has no related supplies, the supply section displays a message that no supplies are available for that site.
 - If API pagination returns partial pages or repeated records, the sync process deduplicates and persists only the latest unique site and supply records.
 - If the API key or connection fails, the UI surfaces a recoverable error message and preserves the last known database state.
+- If Etainabl supplies floor area in square feet, the application preserves the original unit so downstream features can convert it before benchmark calculations.
+- If Etainabl omits floor area or provides the placeholder value `1`, the stored floor area is treated as unavailable by normalising it to `0`.
 
 ## Requirements *(mandatory)*
 
@@ -99,13 +104,18 @@ Users need a single settings page that displays application parameters and runti
 - **FR-011**: In development and test environments, API keys and similar secret keys MUST be stored in a `.env` file and loaded from environment configuration.
 - **FR-012**: In production, the application MUST prefer a platform-provided secure secret store when available (e.g., Kubernetes Secrets, Azure Key Vault, Docker Secrets), while still allowing `.env` as a documented fallback if the target platform does not provide a better method.
 - **FR-013**: The application MUST include a settings page that displays key runtime parameters such as the Etainabl base URL, download page size, timeout values, and other configuration settings on a single panel.
+- **FR-014**: The application MUST persist each site's floor area value from Etainabl asset data together with the unit reported by Etainabl.
+- **FR-015**: The application MUST support floor area units reported in either square metres or square feet.
+- **FR-016**: The application MUST normalise Etainabl floor area values of `1` to `0` before storing them, because `1` is used as a placeholder for unknown area values.
+- **FR-017**: The settings page MUST expose three editable benchmark parameters at the top of the page: electricity benchmark intensity, gas benchmark intensity, and water benchmark intensity.
+- **FR-018**: The benchmark parameter labels MUST make their annual intensity units explicit: electricity and gas in kWh per square metre per year, and water in cubic metres per square metre per year.
 
 ### Key Entities *(include if feature involves data)*
 
-- **Site (Asset)**: Represents a customer property or location, including the site name and the Etainabl site identifier.
+- **Site (Asset)**: Represents a customer property or location, including the site name, the Etainabl site identifier, floor area, and floor area unit.
 - **Supply (Account)**: Represents a meter or service line associated with a site, including supply name, utility type, and device ID.
 - **API Configuration**: Represents the Etainabl API key and request parameters required to authenticate and fetch site/supply data.
-- **Application Settings**: Represents runtime parameters such as the Etainabl base URL, download page sizes, timeout values, and other operational configuration values.
+- **Application Settings**: Represents runtime parameters such as the Etainabl base URL, download page sizes, timeout values, benchmark intensity values for each utility, and other operational configuration values.
 
 ## Success Criteria *(mandatory)*
 ### Measurable Outcomes
@@ -116,6 +126,8 @@ Users need a single settings page that displays application parameters and runti
 - **SC-004**: When a site is selected, its related supplies render with name, utility type, and device ID visible on at least 90% of supported data rows.
 - **SC-005**: The application can be built and run as a container image in the initial version.
 - **SC-006**: The settings page displays the key configuration values within 2 seconds and makes the current runtime parameters visible in one place. **Note**: Sensitive values (API keys, passwords) are masked or hidden on display but may be edited. **Validation**: Performance test measures settings page load time on a standard development machine.
+- **SC-007**: For 100% of synced sites where Etainabl provides floor area data, the stored site record includes both the normalised floor area value and the reported unit after sync completion.
+- **SC-008**: Operations users can view and update the three benchmark intensity settings from the settings page in under 1 minute.
 
 ## Assumptions
 
@@ -124,6 +136,8 @@ Users need a single settings page that displays application parameters and runti
 - The first version is focused on data synchronization and display; report generation and advanced filtering are out of scope.
 - The sample Python code and Excel-based configuration in `sample_app` provide the required API access patterns and field mappings.
 - The containerisation requirement means the application can be packaged and executed in a container environment, not necessarily orchestrated by Kubernetes in v1.
+- Floor area values supplied by Etainabl are limited to square metres or square feet for this feature scope.
+- A stored floor area value of `0` means the site's area is unavailable and downstream benchmark visuals should treat benchmark output as unavailable rather than as a real zero-sized site.
 - **Retry Strategy**: API sync failures are retried up to 10 times with exponential backoff (initial 1s, max 120s interval). Transient errors (5xx, timeouts) trigger retries; permanent errors (4xx, auth failures) fail immediately.
 - **Platform-Native Secret Stores**: Supported in production: Kubernetes Secrets, Azure Key Vault, Docker Secrets (Swarm mode). Other platforms default to `.env` with documented fallback policy per FR-012.
 - **Security & Encryption**: All data in transit uses TLS/HTTPS; database connections require SSL; sensitive values in logs are redacted; credentials are never logged or exposed in error messages. Database encryption at rest is optional in v1 but supported via PostgreSQL pgcrypto extension.
