@@ -33,7 +33,16 @@ class SupplyAdmin(admin.ModelAdmin):
 
 @admin.register(AppSettings)
 class AppSettingsAdmin(admin.ModelAdmin):
-    list_display = ('id', 'etainabl_api_url', 'page_size', 'api_timeout', 'updated_at')
+    list_display = (
+        'id',
+        'electricity_benchmark_intensity',
+        'gas_benchmark_intensity',
+        'water_benchmark_intensity',
+        'etainabl_api_url',
+        'page_size',
+        'api_timeout',
+        'updated_at',
+    )
     readonly_fields = ('created_at', 'updated_at')
     
     def has_add_permission(self, request):

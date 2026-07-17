@@ -12,7 +12,7 @@ class InitialSyncTest(TestCase):
             mock_resp = Mock()
             if url.endswith('/assets') or '/assets' in url:
                 mock_resp.status_code = 200
-                mock_resp.json.return_value = {'data': [{'id': 'site-1', 'name': 'Site 1'}], 'total': 1}
+                mock_resp.json.return_value = {'data': [{'id': 'site-1', 'name': 'Site 1', 'floorArea': 1200, 'floorAreaUnit': 'sq ft'}], 'total': 1}
                 return mock_resp
             if url.endswith('/accounts') or '/accounts' in url:
                 mock_resp.status_code = 200
@@ -29,3 +29,6 @@ class InitialSyncTest(TestCase):
         self.assertEqual(result['supplies_created'], 1)
         self.assertEqual(Site.objects.count(), 1)
         self.assertEqual(Supply.objects.count(), 1)
+        site = Site.objects.get(external_id='site-1')
+        self.assertEqual(float(site.floor_area), 1200.0)
+        self.assertEqual(site.floor_area_unit, 'sqft')

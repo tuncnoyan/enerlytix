@@ -3,6 +3,7 @@ Forms for runtime configuration.
 """
 
 from django import forms
+
 from .models import AppSettings
 
 
@@ -11,12 +12,46 @@ class SettingsForm(forms.ModelForm):
 
     class Meta:
         model = AppSettings
-        fields = ['etainabl_api_url', 'page_size', 'api_timeout']
+        fields = [
+            'electricity_benchmark_intensity',
+            'gas_benchmark_intensity',
+            'water_benchmark_intensity',
+            'etainabl_api_url',
+            'page_size',
+            'api_timeout',
+        ]
         widgets = {
+            'electricity_benchmark_intensity': forms.NumberInput(attrs={'min': 0, 'step': '0.001'}),
+            'gas_benchmark_intensity': forms.NumberInput(attrs={'min': 0, 'step': '0.001'}),
+            'water_benchmark_intensity': forms.NumberInput(attrs={'min': 0, 'step': '0.001'}),
             'etainabl_api_url': forms.URLInput(attrs={'placeholder': 'https://api.etainabl.com/2.0'}),
             'page_size': forms.NumberInput(attrs={'min': 1, 'step': 1}),
             'api_timeout': forms.NumberInput(attrs={'min': 1, 'step': 1}),
         }
+
+    def _clean_non_negative_decimal(self, field_name, label):
+        value = self.cleaned_data[field_name]
+        if value < 0:
+            raise forms.ValidationError(f'{label} must be zero or greater.')
+        return value
+
+    def clean_electricity_benchmark_intensity(self):
+        return self._clean_non_negative_decimal(
+            'electricity_benchmark_intensity',
+            'Electricity benchmark intensity',
+        )
+
+    def clean_gas_benchmark_intensity(self):
+        return self._clean_non_negative_decimal(
+            'gas_benchmark_intensity',
+            'Gas benchmark intensity',
+        )
+
+    def clean_water_benchmark_intensity(self):
+        return self._clean_non_negative_decimal(
+            'water_benchmark_intensity',
+            'Water benchmark intensity',
+        )
 
     def clean_page_size(self):
         page_size = self.cleaned_data['page_size']

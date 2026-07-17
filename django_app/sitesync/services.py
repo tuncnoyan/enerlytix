@@ -36,6 +36,108 @@ CAPACITY_REQUIRED_HEADERS = (
     'eSight Meter Code',
     'Av Cap (kVA)',
 )
+CAPACITY_UPLOAD_STATUS_SUCCESS = CapacityUploadRun.STATUS_SUCCESS
+CAPACITY_UPLOAD_STATUS_PARTIAL_SUCCESS = CapacityUploadRun.STATUS_PARTIAL_SUCCESS
+CAPACITY_UPLOAD_STATUS_FAILED = CapacityUploadRun.STATUS_FAILED
+CAPACITY_UPLOAD_ERROR_FILE_EMPTY = 'File is empty or missing a header row.'
+CAPACITY_UPLOAD_ERROR_PARSE_PREFIX = 'Upload parsing failed:'
+SITE_FLOOR_AREA_UNIT_SQM = 'sqm'
+SITE_FLOOR_AREA_UNIT_SQFT = 'sqft'
+
+
+def _build_capacity_upload_result(run: CapacityUploadRun) -> Dict:
+    """Normalize upload-run persistence into the view-facing result contract."""
+    return {
+        'status': run.status,
+        'total_rows': run.total_rows,
+        'accepted_rows': run.accepted_rows,
+        'rejected_rows': run.rejected_rows,
+        'errors': run.error_summary,
+        'run': run,
+    }
+
+
+def _normalize_floor_area_unit(value: Optional[str]) -> Optional[str]:
+    """Normalize Etainabl floor-area unit values into sqm/sqft."""
+    raw = str(value or '').strip().casefold()
+    if not raw:
+        return None
+    if raw in {'sqm', 'sq m', 'sq metre', 'sq meter', 'square metre', 'square meter', 'm2', 'm^2', 'metric'}:
+        return SITE_FLOOR_AREA_UNIT_SQM
+    if raw in {'sqft', 'sq ft', 'square foot', 'square feet', 'ft2', 'ft^2', 'imperial'}:
+        return SITE_FLOOR_AREA_UNIT_SQFT
+    return None
+
+
+def _extract_floor_area_from_value(value) -> Tuple[Optional[Decimal], Optional[str]]:
+    """Extract floor-area value and unit from a direct or nested asset payload value."""
+    if isinstance(value, dict):
+        area_value = (
+            value.get('value')
+            or value.get('amount')
+            or value.get('area')
+            or value.get('size')
+            or value.get('measurement')
+        )
+        unit_value = (
+            value.get('unit')
+            or value.get('uom')
+            or value.get('unitType')
+            or value.get('measurementUnit')
+        )
+        if area_value is None:
+            return None, _normalize_floor_area_unit(unit_value)
+        try:
+            area = Decimal(str(area_value).strip())
+        except (InvalidOperation, ValueError, AttributeError):
+            return None, _normalize_floor_area_unit(unit_value)
+        normalized_unit = _normalize_floor_area_unit(unit_value)
+        if area == Decimal('1'):
+            area = Decimal('0')
+        return area, normalized_unit
+
+    if value is None or str(value).strip() == '':
+        return None, None
+    try:
+        area = Decimal(str(value).strip())
+    except (InvalidOperation, ValueError):
+        return None, None
+    if area == Decimal('1'):
+        area = Decimal('0')
+    return area, None
+
+
+def _extract_site_floor_area(asset_data: Dict) -> Tuple[Optional[Decimal], Optional[str]]:
+    """Extract site floor area and original unit from known or likely Etainabl asset keys."""
+    candidates = [
+        ('floorArea', 'floorAreaUnit'),
+        ('floor_area', 'floor_area_unit'),
+        ('grossInternalArea', 'grossInternalAreaUnit'),
+        ('netInternalArea', 'netInternalAreaUnit'),
+        ('internalArea', 'internalAreaUnit'),
+        ('buildingArea', 'buildingAreaUnit'),
+        ('area', 'areaUnit'),
+    ]
+
+    for area_key, unit_key in candidates:
+        if area_key not in asset_data:
+            continue
+        area, unit = _extract_floor_area_from_value(asset_data.get(area_key))
+        if unit is None:
+            unit = _normalize_floor_area_unit(asset_data.get(unit_key))
+        if area is not None or unit is not None:
+            return area, unit
+
+    for key, value in asset_data.items():
+        if not isinstance(value, dict):
+            continue
+        if 'area' not in str(key).casefold() and 'floor' not in str(key).casefold():
+            continue
+        area, unit = _extract_floor_area_from_value(value)
+        if area is not None or unit is not None:
+            return area, unit
+
+    return None, None
 
 
 class EtainaibleSyncService:
@@ -461,12 +563,15 @@ class EtainaibleSyncService:
 
             if isinstance(description_value, dict):
                 description_value = str(description_value)
+            floor_area_value, floor_area_unit = _extract_site_floor_area(asset_data)
             
             site, created = Site.objects.update_or_create(
                 external_id=external_id,
                 defaults={
                     'name': str(name_value or 'Unknown'),
                     'description': str(description_value or ''),
+                    'floor_area': floor_area_value,
+                    'floor_area_unit': floor_area_unit,
                 }
             )
             
@@ -734,17 +839,10 @@ def import_capacity_upload(uploaded_file) -> Dict:
                 total_rows=0,
                 accepted_rows=0,
                 rejected_rows=0,
-                status=CapacityUploadRun.STATUS_FAILED,
-                error_summary=['File is empty or missing a header row.'],
+                status=CAPACITY_UPLOAD_STATUS_FAILED,
+                error_summary=[CAPACITY_UPLOAD_ERROR_FILE_EMPTY],
             )
-            return {
-                'status': run.status,
-                'total_rows': run.total_rows,
-                'accepted_rows': run.accepted_rows,
-                'rejected_rows': run.rejected_rows,
-                'errors': run.error_summary,
-                'run': run,
-            }
+            return _build_capacity_upload_result(run)
 
         header_values = [normalize_capacity_header(cell) for cell in header_row]
         missing = [
@@ -758,17 +856,10 @@ def import_capacity_upload(uploaded_file) -> Dict:
                 total_rows=0,
                 accepted_rows=0,
                 rejected_rows=0,
-                status=CapacityUploadRun.STATUS_FAILED,
+                status=CAPACITY_UPLOAD_STATUS_FAILED,
                 error_summary=[f"Missing required columns: {', '.join(missing)}"],
             )
-            return {
-                'status': run.status,
-                'total_rows': run.total_rows,
-                'accepted_rows': run.accepted_rows,
-                'rejected_rows': run.rejected_rows,
-                'errors': run.error_summary,
-                'run': run,
-            }
+            return _build_capacity_upload_result(run)
 
         indexes = {
             canonical: header_values.index(normalized)
@@ -799,9 +890,13 @@ def import_capacity_upload(uploaded_file) -> Dict:
 
             capacity_value = None
             capacity_text = '' if capacity_raw is None else str(capacity_raw).strip()
-            if capacity_text:
+            if not capacity_text:
+                current_errors.append('Av Cap (kVA) is blank')
+            else:
                 try:
                     capacity_value = Decimal(capacity_text)
+                    if capacity_value < 0:
+                        current_errors.append('Av Cap (kVA) cannot be negative')
                 except (InvalidOperation, ValueError):
                     current_errors.append('Av Cap (kVA) must be numeric when provided')
 
@@ -835,11 +930,11 @@ def import_capacity_upload(uploaded_file) -> Dict:
 
             rejected_rows = len(row_errors)
             if accepted_rows > 0 and rejected_rows == 0:
-                status = CapacityUploadRun.STATUS_SUCCESS
+                status = CAPACITY_UPLOAD_STATUS_SUCCESS
             elif accepted_rows > 0 and rejected_rows > 0:
-                status = CapacityUploadRun.STATUS_PARTIAL_SUCCESS
+                status = CAPACITY_UPLOAD_STATUS_PARTIAL_SUCCESS
             else:
-                status = CapacityUploadRun.STATUS_FAILED
+                status = CAPACITY_UPLOAD_STATUS_FAILED
 
             run = CapacityUploadRun.objects.create(
                 uploaded_filename=filename,
@@ -850,31 +945,17 @@ def import_capacity_upload(uploaded_file) -> Dict:
                 error_summary=row_errors,
             )
 
-        return {
-            'status': run.status,
-            'total_rows': run.total_rows,
-            'accepted_rows': run.accepted_rows,
-            'rejected_rows': run.rejected_rows,
-            'errors': run.error_summary,
-            'run': run,
-        }
+        return _build_capacity_upload_result(run)
     except Exception as exc:  # pylint: disable=broad-except
         run = CapacityUploadRun.objects.create(
             uploaded_filename=filename,
             total_rows=0,
             accepted_rows=0,
             rejected_rows=0,
-            status=CapacityUploadRun.STATUS_FAILED,
-            error_summary=[f'Upload parsing failed: {str(exc)}'],
+            status=CAPACITY_UPLOAD_STATUS_FAILED,
+            error_summary=[f'{CAPACITY_UPLOAD_ERROR_PARSE_PREFIX} {str(exc)}'],
         )
-        return {
-            'status': run.status,
-            'total_rows': run.total_rows,
-            'accepted_rows': run.accepted_rows,
-            'rejected_rows': run.rejected_rows,
-            'errors': run.error_summary,
-            'run': run,
-        }
+        return _build_capacity_upload_result(run)
 
 
 def get_or_create_monthly_report(site: Site, reporting_month: str) -> MonthlyReport:

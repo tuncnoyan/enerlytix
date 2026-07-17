@@ -49,7 +49,9 @@ Behavior:
 
 - Performs partial import for row-level validation failures.
 - Valid rows are upserted by normalized `eSight Meter Code`.
+- When an incoming row matches an existing normalized `eSight Meter Code`, the stored `Name` and `Av Cap (kVA)` are replaced with the latest uploaded values.
 - Invalid rows are skipped and returned as row-level messages.
+- Blank, non-numeric, or negative `Av Cap (kVA)` values are rejected at row level.
 - Existing records not referenced by incoming keys remain unchanged.
 
 Rendered response context includes:

@@ -93,6 +93,9 @@ class AppSettingsSerializer(serializers.ModelSerializer):
         model = AppSettings
         fields = [
             'id',
+            'electricity_benchmark_intensity',
+            'gas_benchmark_intensity',
+            'water_benchmark_intensity',
             'etainabl_api_url',
             'page_size',
             'api_timeout',

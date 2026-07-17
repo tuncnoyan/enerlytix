@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from io import BytesIO
 
-from django.test import TestCase
+from django.test import RequestFactory, TestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from openpyxl import Workbook
@@ -17,11 +17,13 @@ from sitesync.models import (
     Site,
     Supply,
 )
+from sitesync.views import settings_panel_view
 
 
 class CapacityUploadTests(TestCase):
     def setUp(self):
         AppSettings.objects.create()
+        self.factory = RequestFactory()
 
     def _build_workbook_bytes(self, rows):
         workbook = Workbook()
@@ -40,6 +42,7 @@ class CapacityUploadTests(TestCase):
             ['', 'MTR-002', 50],
             ['Duplicate', 'MTR-001', 100],
             ['Bad Number', 'MTR-003', 'n/a'],
+            ['Negative Value', 'MTR-004', -10],
         ])
         upload = SimpleUploadedFile(
             'capacity.xlsx',
@@ -47,13 +50,14 @@ class CapacityUploadTests(TestCase):
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         )
 
-        response = self.client.post(
+        request = self.factory.post(
             reverse('sitesync:settings_panel'),
-            {
+            data={
                 'capacity_upload_submit': '1',
                 'capacity_upload_file': upload,
             },
         )
+        response = settings_panel_view(request)
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(CapacityReference.objects.count(), 1)
@@ -61,11 +65,12 @@ class CapacityUploadTests(TestCase):
 
         run = CapacityUploadRun.objects.latest('uploaded_at')
         self.assertEqual(run.status, CapacityUploadRun.STATUS_PARTIAL_SUCCESS)
-        self.assertEqual(run.total_rows, 4)
+        self.assertEqual(run.total_rows, 5)
         self.assertEqual(run.accepted_rows, 1)
-        self.assertEqual(run.rejected_rows, 3)
+        self.assertEqual(run.rejected_rows, 4)
+        self.assertTrue(any('Av Cap (kVA) cannot be negative' in error for error in run.error_summary))
 
-    def test_capacity_upload_accepts_blank_or_null_capacity_as_null(self):
+    def test_capacity_upload_rejects_blank_capacity_values(self):
         payload = self._build_workbook_bytes([
             ['Meter A', 'MTR-010', None],
             ['Meter B', 'MTR-011', ''],
@@ -77,26 +82,56 @@ class CapacityUploadTests(TestCase):
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         )
 
-        response = self.client.post(
+        request = self.factory.post(
             reverse('sitesync:settings_panel'),
-            {
+            data={
                 'capacity_upload_submit': '1',
                 'capacity_upload_file': upload,
             },
         )
+        response = settings_panel_view(request)
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(CapacityReference.objects.count(), 3)
-
-        self.assertIsNone(CapacityReference.objects.get(esight_meter_code='MTR-010').available_capacity_kva)
-        self.assertIsNone(CapacityReference.objects.get(esight_meter_code='MTR-011').available_capacity_kva)
+        self.assertEqual(CapacityReference.objects.count(), 1)
         self.assertEqual(float(CapacityReference.objects.get(esight_meter_code='MTR-012').available_capacity_kva), 88.25)
 
         run = CapacityUploadRun.objects.latest('uploaded_at')
-        self.assertEqual(run.status, CapacityUploadRun.STATUS_SUCCESS)
+        self.assertEqual(run.status, CapacityUploadRun.STATUS_PARTIAL_SUCCESS)
         self.assertEqual(run.total_rows, 3)
-        self.assertEqual(run.accepted_rows, 3)
-        self.assertEqual(run.rejected_rows, 0)
+        self.assertEqual(run.accepted_rows, 1)
+        self.assertEqual(run.rejected_rows, 2)
+        self.assertTrue(any('Av Cap (kVA) is blank' in error for error in run.error_summary))
+
+    def test_capacity_upload_overwrites_name_and_capacity_for_existing_code(self):
+        CapacityReference.objects.create(
+            name='Old Meter Name',
+            esight_meter_code='MTR-200',
+            available_capacity_kva=50,
+            last_imported_at=datetime(2026, 7, 17, 9, 0, tzinfo=timezone.utc),
+        )
+
+        payload = self._build_workbook_bytes([
+            ['Updated Meter Name', 'MTR-200', 75.25],
+        ])
+        upload = SimpleUploadedFile(
+            'capacity-refresh.xlsx',
+            payload,
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+
+        request = self.factory.post(
+            reverse('sitesync:settings_panel'),
+            data={
+                'capacity_upload_submit': '1',
+                'capacity_upload_file': upload,
+            },
+        )
+        response = settings_panel_view(request)
+
+        self.assertEqual(response.status_code, 200)
+        refreshed = CapacityReference.objects.get(esight_meter_code='MTR-200')
+        self.assertEqual(refreshed.name, 'Updated Meter Name')
+        self.assertEqual(float(refreshed.available_capacity_kva), 75.25)
 
     def test_report_data_uses_uploaded_capacity_by_meter_code(self):
         site = Site.objects.create(external_id='site-1', name='Site 1')

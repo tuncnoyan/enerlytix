@@ -63,7 +63,7 @@ Expected outcome:
 
 - Focused automated validation command:
   - `python manage.py test sitesync.tests.test_capacity_upload sitesync.tests.test_settings_view sitesync.tests.test_report_drafts`
-  - Result: `OK` (8 tests)
+  - Result: `OK` (13 tests)
 - SC-001 measurement (`valid rows available for report use within 1 minute`):
   - Local measurement result: `0.0766s` for a 200-row valid `.xlsx` import.
   - Accepted rows: `200/200`.

@@ -2,8 +2,9 @@
 Data models for the Etainabl site and supply synchronization.
 """
 
-from django.db import models
 import uuid
+
+from django.db import models
 
 
 class Site(models.Model):
@@ -25,6 +26,19 @@ class Site(models.Model):
         blank=True,
         null=True,
         help_text="Site description"
+    )
+    floor_area = models.DecimalField(
+        max_digits=14,
+        decimal_places=3,
+        blank=True,
+        null=True,
+        help_text="Site floor area from Etainabl asset data"
+    )
+    floor_area_unit = models.CharField(
+        max_length=16,
+        blank=True,
+        null=True,
+        help_text="Original Etainabl floor area unit (sqm or sqft)"
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -165,6 +179,24 @@ class AppSettings(models.Model):
     api_timeout = models.IntegerField(
         default=30,
         help_text="API request timeout in seconds"
+    )
+    electricity_benchmark_intensity = models.DecimalField(
+        max_digits=10,
+        decimal_places=3,
+        default=0,
+        help_text="Electricity benchmark intensity in kWh per square metre per year"
+    )
+    gas_benchmark_intensity = models.DecimalField(
+        max_digits=10,
+        decimal_places=3,
+        default=0,
+        help_text="Gas benchmark intensity in kWh per square metre per year"
+    )
+    water_benchmark_intensity = models.DecimalField(
+        max_digits=10,
+        decimal_places=3,
+        default=0,
+        help_text="Water benchmark intensity in m3 per square metre per year"
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

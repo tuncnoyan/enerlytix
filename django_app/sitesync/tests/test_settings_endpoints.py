@@ -15,6 +15,9 @@ class SettingsEndpointContractTest(TestCase):
             etainabl_api_url='https://api.example.com/2.0',
             page_size=75,
             api_timeout=45,
+            electricity_benchmark_intensity=80.5,
+            gas_benchmark_intensity=54.25,
+            water_benchmark_intensity=1.5,
         )
 
     def test_settings_serializer_response_structure(self):
@@ -23,6 +26,9 @@ class SettingsEndpointContractTest(TestCase):
 
         required_fields = [
             'id',
+            'electricity_benchmark_intensity',
+            'gas_benchmark_intensity',
+            'water_benchmark_intensity',
             'etainabl_api_url',
             'page_size',
             'api_timeout',
@@ -38,6 +44,9 @@ class SettingsEndpointContractTest(TestCase):
         data = serializer.data
 
         self.assertIsInstance(data['id'], int)
+        self.assertIsInstance(data['electricity_benchmark_intensity'], str)
+        self.assertIsInstance(data['gas_benchmark_intensity'], str)
+        self.assertIsInstance(data['water_benchmark_intensity'], str)
         self.assertIsInstance(data['etainabl_api_url'], str)
         self.assertIsInstance(data['page_size'], int)
         self.assertIsInstance(data['api_timeout'], int)
@@ -48,6 +57,9 @@ class SettingsEndpointContractTest(TestCase):
         serializer = AppSettingsSerializer(self.settings)
         data = serializer.data
 
+        self.assertEqual(data['electricity_benchmark_intensity'], '80.500')
+        self.assertEqual(data['gas_benchmark_intensity'], '54.250')
+        self.assertEqual(data['water_benchmark_intensity'], '1.500')
         self.assertEqual(data['etainabl_api_url'], 'https://api.example.com/2.0')
         self.assertEqual(data['page_size'], 75)
         self.assertEqual(data['api_timeout'], 45)

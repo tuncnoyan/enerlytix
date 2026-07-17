@@ -6,7 +6,7 @@ import logging
 import json
 from collections import defaultdict
 from datetime import datetime, timezone as datetime_timezone
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 from django.db.models import Count, Q, Sum
 from django.http import JsonResponse
@@ -102,7 +102,39 @@ def _supply_label(supply, utility_counts):
     return supply.name or supply.device_id or supply.external_id or supply.get_utility_type_display()
 
 
-def _monthly_series_for_supply(supply, current_month_keys, previous_month_keys):
+def _site_floor_area_sqm(site):
+    if site.floor_area in (None, ''):
+        return None
+    if site.floor_area <= 0:
+        return None
+    unit = (site.floor_area_unit or '').strip().lower()
+    if unit == 'sqft':
+        return (site.floor_area * Decimal('0.09290304')).quantize(Decimal('0.001'), rounding=ROUND_HALF_UP)
+    return site.floor_area
+
+
+def _monthly_benchmark_value(site, utility_type, settings_instance):
+    floor_area_sqm = _site_floor_area_sqm(site)
+    if floor_area_sqm is None:
+        return None
+
+    if utility_type == 'electricity':
+        intensity = settings_instance.electricity_benchmark_intensity
+    elif utility_type == 'gas':
+        intensity = settings_instance.gas_benchmark_intensity
+    elif utility_type == 'water':
+        intensity = settings_instance.water_benchmark_intensity
+    else:
+        return None
+
+    if intensity is None or intensity <= 0:
+        return None
+
+    annual_total = intensity * floor_area_sqm
+    return (annual_total / Decimal('12')).quantize(Decimal('0.001'), rounding=ROUND_HALF_UP)
+
+
+def _monthly_series_for_supply(supply, current_month_keys, previous_month_keys, settings_instance):
     current_rows = {
         row.canonical_month_key: row
         for row in MonthlyConsumption.objects.filter(supply=supply, canonical_month_key__in=current_month_keys)
@@ -111,14 +143,10 @@ def _monthly_series_for_supply(supply, current_month_keys, previous_month_keys):
         row.canonical_month_key: row
         for row in MonthlyConsumption.objects.filter(supply=supply, canonical_month_key__in=previous_month_keys)
     }
-    benchmark_rows = {
-        row.canonical_month_key: row
-        for row in Benchmark.objects.filter(supply=supply, canonical_month_key__in=current_month_keys)
-    }
-
     current_key = 'current_m3' if supply.utility_type == 'water' else 'current_kwh'
     previous_key = 'previous_year_m3' if supply.utility_type == 'water' else 'previous_year_kwh'
     benchmark_key = 'benchmark_m3' if supply.utility_type == 'water' else 'benchmark_kwh'
+    monthly_benchmark_value = _monthly_benchmark_value(supply.site, supply.utility_type, settings_instance)
 
     table_rows = []
     current_values = []
@@ -127,10 +155,9 @@ def _monthly_series_for_supply(supply, current_month_keys, previous_month_keys):
     for index, month_key in enumerate(current_month_keys):
         current_row = current_rows.get(month_key)
         previous_row = previous_rows.get(previous_month_keys[index])
-        benchmark_row = benchmark_rows.get(month_key)
         current_value = _decimal_to_float(current_row.consumption) if current_row else None
         previous_value = _decimal_to_float(previous_row.consumption) if previous_row else None
-        benchmark_value = _decimal_to_float(benchmark_row.value) if benchmark_row else None
+        benchmark_value = _decimal_to_float(monthly_benchmark_value)
         variance = current_value - previous_value if current_value is not None and previous_value is not None else None
         relative_variance = (variance / previous_value * 100) if variance is not None and previous_value not in (None, 0) else None
 
@@ -368,6 +395,7 @@ def _report_payload(site, end_month, supply_external_ids=None):
     previous_month_keys = [_previous_year_month_key(month_key) for month_key in current_month_keys]
     report_start, report_end = reporting_month_bounds(end_month)
     report_start = shift_months(report_start, -11)
+    settings_instance = SettingsConfigService.get_settings()
 
     supplies = list(site.supplies.filter(
         utility_type__in=REPORT_UTILITY_ORDER,
@@ -388,7 +416,7 @@ def _report_payload(site, end_month, supply_external_ids=None):
     for supply in supplies:
         meter_code = normalize_esight_meter_code(supply.device_id)
         available_capacity_kva = capacity_lookup.get(meter_code) if meter_code else None
-        monthly = _monthly_series_for_supply(supply, current_month_keys, previous_month_keys)
+        monthly = _monthly_series_for_supply(supply, current_month_keys, previous_month_keys, settings_instance)
         hh_series = _hh_series_for_supply(supply, end_month)
         load_factor = _load_factor_for_supply(supply, end_month, hh_series, available_capacity_kva)
         day_night = _day_night_for_supply(supply, end_month, hh_series)

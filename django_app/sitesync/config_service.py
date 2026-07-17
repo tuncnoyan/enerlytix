@@ -2,6 +2,8 @@
 Configuration loading and persistence helpers.
 """
 
+from decimal import Decimal
+
 from django.conf import settings as django_settings
 from .models import AppSettings
 
@@ -15,6 +17,9 @@ class SettingsConfigService:
             'etainabl_api_url': getattr(django_settings, 'ETAINABL_API_URL', 'https://api.etainabl.com/2.0'),
             'page_size': int(getattr(django_settings, 'PAGE_SIZE', 50)),
             'api_timeout': int(getattr(django_settings, 'API_TIMEOUT', 30)),
+            'electricity_benchmark_intensity': Decimal('0'),
+            'gas_benchmark_intensity': Decimal('0'),
+            'water_benchmark_intensity': Decimal('0'),
         }
 
     @classmethod
