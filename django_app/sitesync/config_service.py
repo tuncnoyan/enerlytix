@@ -20,6 +20,8 @@ class SettingsConfigService:
             'electricity_benchmark_intensity': Decimal('0'),
             'gas_benchmark_intensity': Decimal('0'),
             'water_benchmark_intensity': Decimal('0'),
+            'invoice_page_limit': 100,
+            'invoice_start_page': 1,
         }
 
     @classmethod

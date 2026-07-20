@@ -99,6 +99,8 @@ class AppSettingsSerializer(serializers.ModelSerializer):
             'etainabl_api_url',
             'page_size',
             'api_timeout',
+            'invoice_page_limit',
+            'invoice_start_page',
             'created_at',
             'updated_at',
         ]

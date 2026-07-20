@@ -50,37 +50,49 @@ class EtainablApiClient:
             params['source'] = source
         return self.get('/consumption', params=params)
 
-    def get_invoices(self, account_id, start_date=None, end_date=None, limit=100):
-        skip = 0
+    def get_invoices(self, account_id, limit=100, start_page=1):
+        """Fetch all invoices for an account using page-based pagination.
+
+        The `/invoices` endpoint's `skip` parameter does not reliably advance
+        through results (it silently truncated invoice history to the first
+        page). `page`/`limit` params paginate correctly instead, so all
+        invoice history is downloaded starting from `start_page` using
+        `limit` records per page, with no server-side date filtering.
+        """
+        limit = max(1, int(limit or 100))
+        page = max(1, int(start_page or 1))
         all_rows = []
+
         while True:
             params = {
                 'accountId': account_id,
                 'limit': limit,
-                'skip': skip,
+                'page': page,
             }
-            if start_date:
-                params['startDate'] = start_date
-            if end_date:
-                params['endDate'] = end_date
 
             payload = self.get('/invoices', params=params)
             rows = payload.get('data') or payload.get('results') or payload.get('items') or []
             if not isinstance(rows, list):
                 rows = []
 
-            all_rows.extend(rows)
-            total = payload.get('total') if isinstance(payload, dict) else None
-
             if not rows:
                 break
-            if isinstance(total, int) and len(all_rows) >= total:
+
+            all_rows.extend(rows)
+
+            total = payload.get('total') if isinstance(payload, dict) else None
+            if isinstance(total, int):
+                reported_limit = payload.get('limit') if isinstance(payload, dict) else None
+                limit_used = reported_limit if isinstance(reported_limit, int) else len(rows)
+                offset = (page - 1) * limit
+                if offset + limit_used >= total:
+                    break
+
+            # Safety: if total is unknown or inconsistent, stop when a page
+            # returns fewer rows than requested (final page reached).
+            if len(rows) < limit:
                 break
-            # Advance by the number of rows actually received to avoid gaps when
-            # the API returns fewer than `limit` rows on a non-final page.
-            skip += len(rows)
-            # Safety: if total is unknown, stop when we get a short page.
-            if not isinstance(total, int) and len(rows) < limit:
-                break
+
+            page += 1
 
         return all_rows

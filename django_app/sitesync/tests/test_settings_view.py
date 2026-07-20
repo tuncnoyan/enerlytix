@@ -25,6 +25,8 @@ class SettingsViewIntegrationTest(TestCase):
             electricity_benchmark_intensity=90.5,
             gas_benchmark_intensity=60.25,
             water_benchmark_intensity=1.75,
+            invoice_page_limit=100,
+            invoice_start_page=1,
         )
 
     def _build_workbook_bytes(self, rows):
@@ -51,6 +53,8 @@ class SettingsViewIntegrationTest(TestCase):
         self.assertIn('90.5', content)
         self.assertIn('60.25', content)
         self.assertIn('1.75', content)
+        self.assertIn('Invoice Data Page Limit', content)
+        self.assertIn('Invoice Data Start Page Number', content)
 
     def test_settings_page_persists_valid_post(self):
         request = self.factory.post('/settings/', data={
@@ -60,6 +64,8 @@ class SettingsViewIntegrationTest(TestCase):
             'etainabl_api_url': 'https://api.updated.example.com/2.0',
             'page_size': 75,
             'api_timeout': 45,
+            'invoice_page_limit': 200,
+            'invoice_start_page': 2,
         })
         response = settings_panel_view(request)
 
@@ -71,6 +77,8 @@ class SettingsViewIntegrationTest(TestCase):
         self.assertEqual(float(self.settings.electricity_benchmark_intensity), 95.5)
         self.assertEqual(float(self.settings.gas_benchmark_intensity), 63.75)
         self.assertEqual(float(self.settings.water_benchmark_intensity), 2.05)
+        self.assertEqual(self.settings.invoice_page_limit, 200)
+        self.assertEqual(self.settings.invoice_start_page, 2)
 
     def test_settings_page_rejects_invalid_post(self):
         request = self.factory.post('/settings/', data={
@@ -80,6 +88,8 @@ class SettingsViewIntegrationTest(TestCase):
             'etainabl_api_url': 'not-a-url',
             'page_size': -1,
             'api_timeout': 0,
+            'invoice_page_limit': 100,
+            'invoice_start_page': 1,
         })
         response = settings_panel_view(request)
 

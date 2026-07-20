@@ -14,6 +14,7 @@ from django.db import transaction
 from django.utils import timezone as dj_timezone
 
 from .api_client import EtainablApiClient
+from .config_service import SettingsConfigService
 from .models import (
     Site,
     Supply,
@@ -1166,6 +1167,9 @@ class ConsumptionImportService:
         self.client = api_client or EtainablApiClient()
         self.retry_count = max(0, int(settings.CONSUMPTION_IMPORT_RETRY_COUNT))
         self.retry_backoff = max(1, int(settings.CONSUMPTION_IMPORT_RETRY_BACKOFF_SECONDS))
+        app_settings = SettingsConfigService.get_settings()
+        self.invoice_page_limit = max(1, int(app_settings.invoice_page_limit or 100))
+        self.invoice_start_page = max(1, int(app_settings.invoice_start_page or 1))
 
     def run(self, supply_external_ids: List[str], reporting_month: str, refresh_mode: bool = True) -> ImportRun:
         import_run = ImportRun.objects.create(
@@ -1375,11 +1379,7 @@ class ConsumptionImportService:
             })
         else:
             try:
-                invoice_rows, retries, account_id_used = self._fetch_invoices_for_supply(
-                    supply=supply,
-                    start_date=format_api_datetime(invoice_start),
-                    end_date=format_api_datetime(invoice_end),
-                )
+                invoice_rows, retries, account_id_used = self._fetch_invoices_for_supply(supply=supply)
                 retries_used += retries
                 skipped_invoice_rows = 0
                 with transaction.atomic():
@@ -1466,15 +1466,15 @@ class ConsumptionImportService:
                 errors.append(f"{account_id}: {exc}")
         raise Exception('All accountId candidates failed for consumption: ' + ' | '.join(errors))
 
-    def _fetch_invoices_for_supply(self, supply: Supply, start_date: str, end_date: str):
+    def _fetch_invoices_for_supply(self, supply: Supply):
         errors = []
         for account_id in self._account_id_candidates(supply):
             try:
                 payload, retries = self._fetch_with_retry(
                     lambda: self.client.get_invoices(
                         account_id=account_id,
-                        start_date=start_date,
-                        end_date=end_date,
+                        limit=self.invoice_page_limit,
+                        start_page=self.invoice_start_page,
                     ),
                 )
                 logger.info(

@@ -252,7 +252,9 @@
                 <strong>Water benchmark:</strong> {{ settings.water_benchmark_intensity }} m3/sq m/year<br />
                 <strong>Current base URL:</strong> {{ settings.etainabl_api_url }}<br />
                 <strong>Current page size:</strong> {{ settings.page_size }}<br />
-                <strong>Current timeout:</strong> {{ settings.api_timeout }} seconds
+                <strong>Current timeout:</strong> {{ settings.api_timeout }} seconds<br />
+                <strong>Invoice data page limit:</strong> {{ settings.invoice_page_limit }}<br />
+                <strong>Invoice data start page number:</strong> {{ settings.invoice_start_page }}
             </div>
 
             <form id="settings-form" method="post" novalidate>
@@ -318,6 +320,29 @@
                         <div class="errors">{{ form.api_timeout.errors|striptags }}</div>
                     {% else %}
                         <div class="help">Timeout in seconds for Etainabl requests.</div>
+                    {% endif %}
+                </div>
+                <hr class="section-divider" />
+                <div>
+                    <h2 class="subheading">Invoice Data Settings</h2>
+                    <p>Pagination settings used when downloading invoice data from Etainabl.</p>
+                </div>
+                <div class="field">
+                    <label for="id_invoice_page_limit">Invoice Data Page Limit</label>
+                    {{ form.invoice_page_limit }}
+                    {% if form.invoice_page_limit.errors %}
+                        <div class="errors">{{ form.invoice_page_limit.errors|striptags }}</div>
+                    {% else %}
+                        <div class="help">Number of invoice records fetched per API page.</div>
+                    {% endif %}
+                </div>
+                <div class="field">
+                    <label for="id_invoice_start_page">Invoice Data Start Page Number</label>
+                    {{ form.invoice_start_page }}
+                    {% if form.invoice_start_page.errors %}
+                        <div class="errors">{{ form.invoice_start_page.errors|striptags }}</div>
+                    {% else %}
+                        <div class="help">Page number invoice downloads start from on every import.</div>
                     {% endif %}
                 </div>
                 <div class="actions">

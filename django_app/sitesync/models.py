@@ -198,6 +198,14 @@ class AppSettings(models.Model):
         default=0,
         help_text="Water benchmark intensity in m3 per square metre per year"
     )
+    invoice_page_limit = models.IntegerField(
+        default=100,
+        help_text="Number of invoice records to fetch per API page"
+    )
+    invoice_start_page = models.IntegerField(
+        default=1,
+        help_text="Page number invoice downloads start from"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

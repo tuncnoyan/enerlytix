@@ -18,6 +18,8 @@ class SettingsModelTest(TestCase):
         self.assertEqual(float(settings.electricity_benchmark_intensity), 0.0)
         self.assertEqual(float(settings.gas_benchmark_intensity), 0.0)
         self.assertEqual(float(settings.water_benchmark_intensity), 0.0)
+        self.assertEqual(settings.invoice_page_limit, 100)
+        self.assertEqual(settings.invoice_start_page, 1)
 
     def test_app_settings_save_and_reload(self):
         settings = AppSettings.objects.create(
@@ -27,6 +29,8 @@ class SettingsModelTest(TestCase):
             electricity_benchmark_intensity=85.5,
             gas_benchmark_intensity=55.25,
             water_benchmark_intensity=1.75,
+            invoice_page_limit=150,
+            invoice_start_page=3,
         )
 
         settings.page_size = 125
@@ -34,6 +38,8 @@ class SettingsModelTest(TestCase):
         settings.electricity_benchmark_intensity = 92.125
         settings.gas_benchmark_intensity = 61.5
         settings.water_benchmark_intensity = 2.125
+        settings.invoice_page_limit = 200
+        settings.invoice_start_page = 5
         settings.save()
         settings.refresh_from_db()
 
@@ -43,6 +49,8 @@ class SettingsModelTest(TestCase):
         self.assertEqual(float(settings.electricity_benchmark_intensity), 92.125)
         self.assertEqual(float(settings.gas_benchmark_intensity), 61.5)
         self.assertEqual(float(settings.water_benchmark_intensity), 2.125)
+        self.assertEqual(settings.invoice_page_limit, 200)
+        self.assertEqual(settings.invoice_start_page, 5)
 
     def test_app_settings_string_representation(self):
         settings = AppSettings.objects.create()

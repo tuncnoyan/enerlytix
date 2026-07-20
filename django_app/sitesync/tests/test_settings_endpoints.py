@@ -18,6 +18,8 @@ class SettingsEndpointContractTest(TestCase):
             electricity_benchmark_intensity=80.5,
             gas_benchmark_intensity=54.25,
             water_benchmark_intensity=1.5,
+            invoice_page_limit=200,
+            invoice_start_page=2,
         )
 
     def test_settings_serializer_response_structure(self):
@@ -32,6 +34,8 @@ class SettingsEndpointContractTest(TestCase):
             'etainabl_api_url',
             'page_size',
             'api_timeout',
+            'invoice_page_limit',
+            'invoice_start_page',
             'created_at',
             'updated_at',
         ]
@@ -50,6 +54,8 @@ class SettingsEndpointContractTest(TestCase):
         self.assertIsInstance(data['etainabl_api_url'], str)
         self.assertIsInstance(data['page_size'], int)
         self.assertIsInstance(data['api_timeout'], int)
+        self.assertIsInstance(data['invoice_page_limit'], int)
+        self.assertIsInstance(data['invoice_start_page'], int)
         self.assertIsInstance(data['created_at'], str)
         self.assertIsInstance(data['updated_at'], str)
 
@@ -63,6 +69,8 @@ class SettingsEndpointContractTest(TestCase):
         self.assertEqual(data['etainabl_api_url'], 'https://api.example.com/2.0')
         self.assertEqual(data['page_size'], 75)
         self.assertEqual(data['api_timeout'], 45)
+        self.assertEqual(data['invoice_page_limit'], 200)
+        self.assertEqual(data['invoice_start_page'], 2)
 
     def test_settings_serializer_readonly_fields(self):
         serializer = AppSettingsSerializer(self.settings)

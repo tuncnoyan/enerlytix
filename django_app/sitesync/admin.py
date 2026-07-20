@@ -41,6 +41,8 @@ class AppSettingsAdmin(admin.ModelAdmin):
         'etainabl_api_url',
         'page_size',
         'api_timeout',
+        'invoice_page_limit',
+        'invoice_start_page',
         'updated_at',
     )
     readonly_fields = ('created_at', 'updated_at')

@@ -19,6 +19,8 @@ class SettingsForm(forms.ModelForm):
             'etainabl_api_url',
             'page_size',
             'api_timeout',
+            'invoice_page_limit',
+            'invoice_start_page',
         ]
         widgets = {
             'electricity_benchmark_intensity': forms.NumberInput(attrs={'min': 0, 'step': '0.001'}),
@@ -27,6 +29,8 @@ class SettingsForm(forms.ModelForm):
             'etainabl_api_url': forms.URLInput(attrs={'placeholder': 'https://api.etainabl.com/2.0'}),
             'page_size': forms.NumberInput(attrs={'min': 1, 'step': 1}),
             'api_timeout': forms.NumberInput(attrs={'min': 1, 'step': 1}),
+            'invoice_page_limit': forms.NumberInput(attrs={'min': 1, 'step': 1}),
+            'invoice_start_page': forms.NumberInput(attrs={'min': 1, 'step': 1}),
         }
 
     def _clean_non_negative_decimal(self, field_name, label):
@@ -64,6 +68,18 @@ class SettingsForm(forms.ModelForm):
         if api_timeout < 1:
             raise forms.ValidationError('API timeout must be at least 1 second.')
         return api_timeout
+
+    def clean_invoice_page_limit(self):
+        invoice_page_limit = self.cleaned_data['invoice_page_limit']
+        if invoice_page_limit < 1:
+            raise forms.ValidationError('Invoice data page limit must be at least 1.')
+        return invoice_page_limit
+
+    def clean_invoice_start_page(self):
+        invoice_start_page = self.cleaned_data['invoice_start_page']
+        if invoice_start_page < 1:
+            raise forms.ValidationError('Invoice data start page number must be at least 1.')
+        return invoice_start_page
 
 
 class CapacityUploadForm(forms.Form):
