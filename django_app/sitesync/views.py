@@ -41,6 +41,7 @@ from .services import (
     get_capacity_lookup_by_meter_codes,
     get_or_create_monthly_report,
     get_consumption_display_records,
+    get_previous_month_final_version,
     import_capacity_upload,
     month_start,
     normalize_esight_meter_code,
@@ -314,6 +315,15 @@ def _report_editor_context(raw_site_id, raw_end_month, raw_reporting_month, raw_
                 initial_comments[comment.visual_key] = comment.text
                 if comment.is_reference_copy:
                     reference_comment_keys.append(comment.visual_key)
+        else:
+            # Brand-new report for this site/month: preview the previous
+            # month's final comments as reference copies before any save,
+            # per the report-workflow contract (carry-forward on open).
+            previous_final = get_previous_month_final_version(site, end_month)
+            if previous_final:
+                for comment in previous_final.comments.all().order_by('visual_key'):
+                    initial_comments[comment.visual_key] = comment.text
+                    reference_comment_keys.append(comment.visual_key)
 
     report_context = {
         'siteId': site.id if site else site_id,
@@ -514,7 +524,7 @@ def report_view(request):
         )
 
         copied_reference_comments = 0
-        if save_mode == 'draft' and created_first_version and not comments_payload:
+        if save_mode == 'draft' and created_first_version:
             copied_reference_comments = carry_forward_comments_from_previous_final(report, version)
 
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':

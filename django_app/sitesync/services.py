@@ -1018,13 +1018,25 @@ def carry_forward_comments_from_previous_final(
     report: MonthlyReport,
     report_version: MonthlyReportVersion,
 ) -> int:
-    """Copy previous-month final comments into this version as reference comments."""
+    """Copy previous-month final comments into this version as reference comments.
+
+    A comment is (re)tagged as a reference copy unless the version already has
+    a saved comment for that visual key with different text - which means the
+    user edited the prefilled reference comment before saving, so their edit
+    is preserved as-is.
+    """
     previous_final = get_previous_month_final_version(report.site, report.reporting_month)
     if previous_final is None:
         return 0
 
+    existing_comments = {comment.visual_key: comment for comment in report_version.comments.all()}
+
     copied = 0
     for previous_comment in previous_final.comments.all().order_by('visual_key'):
+        existing = existing_comments.get(previous_comment.visual_key)
+        if existing is not None and existing.text != previous_comment.text:
+            continue
+
         ReportComment.objects.update_or_create(
             report_version=report_version,
             visual_key=previous_comment.visual_key,
