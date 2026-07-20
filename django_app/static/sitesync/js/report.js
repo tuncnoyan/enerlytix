@@ -973,10 +973,11 @@
         if (!sections.length || !window.jspdf || !window.html2canvas) { return; }
         const { jsPDF } = window.jspdf;
 
-        // A4 landscape in points (1pt = 1/72 inch)
-        const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4', compress: true });
-        const PW = pdf.internal.pageSize.getWidth();   // ~841.89 pt
-        const PH = pdf.internal.pageSize.getHeight();  // ~595.28 pt
+        // 16:9 widescreen landscape in points (1pt = 1/72 inch) - standard
+        // 13.333in x 7.5in slide size, replacing the previous A4 (~4:3-ish) page.
+        const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: [960, 540], compress: true });
+        const PW = pdf.internal.pageSize.getWidth();   // 960 pt
+        const PH = pdf.internal.pageSize.getHeight();  // 540 pt
         const MARGIN = 32;                             // page margin all sides
         const LOGO_AREA_H = 36;                        // vertical space reserved for logo
         const LOGO_PAD = 10;                           // gap between logo and content
