@@ -12,6 +12,12 @@
 3. A report page with at least one site and a populated report month.
 4. A PowerPoint-compatible editor installed for opening the downloaded deck.
 
+## Export Assumptions
+
+- PPTX export uses the currently rendered report page as its source of truth.
+- The export is browser-based and does not require a backend generation service.
+- The downloaded deck is landscape 16:9 and is intended to be edited in a PowerPoint-compatible editor.
+
 ---
 
 ## Validation Scenarios

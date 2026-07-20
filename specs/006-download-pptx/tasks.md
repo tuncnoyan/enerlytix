@@ -26,9 +26,9 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 [P] Add the PPTX library script include and a new export button placeholder to `django_app/templates/sitesync/report.html`
-- [ ] T004 [P] Prepare the client-side export entrypoint and shared slide-building helpers in `django_app/static/sitesync/js/report.js`
-- [ ] T005 Define the 16:9 slide size and export guard conditions in `django_app/static/sitesync/js/report.js`
+- [X] T003 [P] Add the PPTX library script include and a new export button placeholder to `django_app/templates/sitesync/report.html`
+- [X] T004 [P] Prepare the client-side export entrypoint and shared slide-building helpers in `django_app/static/sitesync/js/report.js`
+- [X] T005 Define the 16:9 slide size and export guard conditions in `django_app/static/sitesync/js/report.js`
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -42,10 +42,10 @@
 
 ### Implementation for User Story 1
 
-- [ ] T006 [US1] Add the Download as PPTX button beside the PDF button in `django_app/templates/sitesync/report.html`
-- [ ] T007 [US1] Implement the PPTX export function and click handler in `django_app/static/sitesync/js/report.js`
-- [ ] T008 [US1] Reuse the current report-section iteration, export lifecycle, and filename generation in `django_app/static/sitesync/js/report.js`
-- [ ] T009 [US1] Verify the PPTX export starts cleanly without changing the PDF export path in `django_app/static/sitesync/js/report.js`
+- [X] T006 [US1] Add the Download as PPTX button beside the PDF button in `django_app/templates/sitesync/report.html`
+- [X] T007 [US1] Implement the PPTX export function and click handler in `django_app/static/sitesync/js/report.js`
+- [X] T008 [US1] Reuse the current report-section iteration, export lifecycle, and filename generation in `django_app/static/sitesync/js/report.js`
+- [X] T009 [US1] Verify the PPTX export starts cleanly without changing the PDF export path in `django_app/static/sitesync/js/report.js`
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 
@@ -59,10 +59,10 @@
 
 ### Implementation for User Story 2
 
-- [ ] T010 [US2] Rebuild comment boxes as editable text objects during PPTX export in `django_app/static/sitesync/js/report.js`
-- [ ] T011 [US2] Rebuild section headers and key labels as editable text objects during PPTX export in `django_app/static/sitesync/js/report.js`
-- [ ] T012 [US2] Preserve the comment/reference warning treatment while exporting editable comment text in `django_app/static/sitesync/js/report.js`
-- [ ] T013 [US2] Validate that exported comment boxes and headers remain editable in PowerPoint-compatible software using the validation steps in `specs/006-download-pptx/quickstart.md`
+- [X] T010 [US2] Rebuild comment boxes as editable text objects during PPTX export in `django_app/static/sitesync/js/report.js`
+- [X] T011 [US2] Rebuild section headers and key labels as editable text objects during PPTX export in `django_app/static/sitesync/js/report.js`
+- [X] T012 [US2] Preserve the comment/reference warning treatment while exporting editable comment text in `django_app/static/sitesync/js/report.js`
+- [X] T013 [US2] Validate that exported comment boxes and headers remain editable in PowerPoint-compatible software using the validation steps in `specs/006-download-pptx/quickstart.md`
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 
@@ -76,9 +76,9 @@
 
 ### Implementation for User Story 3
 
-- [ ] T014 [US3] Place report visuals and section images as independent slide objects that can be resized in `django_app/static/sitesync/js/report.js`
-- [ ] T015 [US3] Position header text and comment boxes as separate movable slide objects in `django_app/static/sitesync/js/report.js`
-- [ ] T016 [US3] Keep slide margins, logo placement, and content bounds adjustable within the 16:9 layout in `django_app/static/sitesync/js/report.js`
+- [X] T014 [US3] Place report visuals and section images as independent slide objects that can be resized in `django_app/static/sitesync/js/report.js`
+- [X] T015 [US3] Position header text and comment boxes as separate movable slide objects in `django_app/static/sitesync/js/report.js`
+- [X] T016 [US3] Keep slide margins, logo placement, and content bounds adjustable within the 16:9 layout in `django_app/static/sitesync/js/report.js`
 
 **Checkpoint**: At this point, User Stories 1, 2, and 3 should remain independently usable
 
@@ -92,10 +92,10 @@
 
 ### Implementation for User Story 4
 
-- [ ] T017 [US4] Capture report visuals and tables as images that preserve the on-screen appearance in `django_app/static/sitesync/js/report.js`
-- [ ] T018 [US4] Keep the exported deck in landscape 16:9 format and one slide per report section in `django_app/static/sitesync/js/report.js`
-- [ ] T019 [US4] Preserve report ordering, headers, and section structure across the exported PPTX in `django_app/static/sitesync/js/report.js`
-- [ ] T020 [US4] Tune image scale and compression for acceptable file size and render time in `django_app/static/sitesync/js/report.js`
+- [X] T017 [US4] Capture report visuals and tables as images that preserve the on-screen appearance in `django_app/static/sitesync/js/report.js`
+- [X] T018 [US4] Keep the exported deck in landscape 16:9 format and one slide per report section in `django_app/static/sitesync/js/report.js`
+- [X] T019 [US4] Preserve report ordering, headers, and section structure across the exported PPTX in `django_app/static/sitesync/js/report.js`
+- [X] T020 [US4] Tune image scale and compression for acceptable file size and render time in `django_app/static/sitesync/js/report.js`
 
 **Checkpoint**: All user stories should now be independently functional
 
@@ -105,10 +105,10 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T021 Update `specs/006-download-pptx/quickstart.md` with the final validation flow and export assumptions
-- [ ] T022 Run a focused diagnostics pass on `django_app/templates/sitesync/report.html` and `django_app/static/sitesync/js/report.js` after the PPTX export changes
+- [X] T021 Update `specs/006-download-pptx/quickstart.md` with the final validation flow and export assumptions
+- [X] T022 Run a focused diagnostics pass on `django_app/templates/sitesync/report.html` and `django_app/static/sitesync/js/report.js` after the PPTX export changes
 - [ ] T023 Perform manual end-to-end validation of PDF and PPTX export flows from the report page
-- [ ] T024 [US1] Add user-facing PPTX export failure messaging and recovery handling in `django_app/static/sitesync/js/report.js`
+- [X] T024 [US1] Add user-facing PPTX export failure messaging and recovery handling in `django_app/static/sitesync/js/report.js`
 - [ ] T025 [US1] Verify the report page remains usable after a failed PPTX export in `django_app/static/sitesync/js/report.js`
 
 ---

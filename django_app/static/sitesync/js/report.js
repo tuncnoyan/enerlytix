@@ -967,6 +967,255 @@
         ta.style.display = '';
     }
 
+    function firstFontFamily(fontFamily) {
+        return String(fontFamily || 'Arial').split(',')[0].replace(/["']/g, '').trim() || 'Arial';
+    }
+
+    function cssColorToHex(color) {
+        const value = String(color || '').trim();
+        if (!value) { return '333333'; }
+        if (/^#[0-9a-fA-F]{6}$/.test(value)) {
+            return value.slice(1).toUpperCase();
+        }
+        if (/^#[0-9a-fA-F]{3}$/.test(value)) {
+            return value.slice(1).split('').map((ch) => `${ch}${ch}`).join('').toUpperCase();
+        }
+        const rgbaMatch = value.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/i);
+        if (rgbaMatch) {
+            const alpha = rgbaMatch[4] === undefined ? 1 : Number.parseFloat(rgbaMatch[4]);
+            if (Number.isFinite(alpha) && alpha <= 0) { return 'FFFFFF'; }
+            return [rgbaMatch[1], rgbaMatch[2], rgbaMatch[3]].map((part) => Number(part).toString(16).padStart(2, '0')).join('').toUpperCase();
+        }
+        const rgbMatch = value.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/i);
+        if (rgbMatch) {
+            return [rgbMatch[1], rgbMatch[2], rgbMatch[3]].map((part) => Number(part).toString(16).padStart(2, '0')).join('').toUpperCase();
+        }
+        return '333333';
+    }
+
+    function pxToPt(px) {
+        const value = Number.parseFloat(px);
+        return Number.isFinite(value) ? value * 0.75 : 11;
+    }
+
+    function getPptxConstructor() {
+        return window.PptxGenJS || window.pptxgen || window.pptxgenjs || null;
+    }
+
+    function collectPptxTextBlocks(section) {
+        const textSelectors = 'h2, h3, .card-subtitle-screen, .metric-label, .metric-value, .comment-reference-warning, .comment-box, th';
+        return Array.from(section.querySelectorAll(textSelectors)).map((el) => {
+            const isCommentBox = el.classList.contains('comment-box');
+            const isCommentNote = el.classList.contains('comment-reference-warning');
+            const commentValue = isCommentBox ? String(el.value || '').trim() : '';
+
+            if (isCommentBox && !commentValue) {
+                return null;
+            }
+            if (isCommentNote) {
+                const nextComment = el.nextElementSibling;
+                if (!nextComment || !nextComment.classList || !nextComment.classList.contains('comment-box') || !String(nextComment.value || '').trim()) {
+                    return null;
+                }
+            }
+
+            return {
+                el,
+                kind: isCommentBox ? 'comment'
+                    : isCommentNote ? 'comment-note'
+                        : el.classList.contains('metric-label') ? 'metric-label'
+                            : el.classList.contains('metric-value') ? 'metric-value'
+                                : el.classList.contains('card-subtitle-screen') ? 'subtitle'
+                                    : el.tagName === 'TH' ? 'table-header'
+                                        : 'heading',
+                text: isCommentBox
+                    ? commentValue
+                    : (el.textContent || '').trim(),
+                rect: el.getBoundingClientRect(),
+                style: window.getComputedStyle(el),
+            };
+        }).filter(Boolean).filter((item) => item.text || item.kind === 'comment');
+    }
+
+    function hidePptxTextBlocks(blocks) {
+        blocks.forEach(({ el }) => {
+            el.dataset.pptxPreviousVisibility = el.style.visibility;
+            el.style.visibility = 'hidden';
+        });
+    }
+
+    function restorePptxTextBlocks(blocks) {
+        blocks.forEach(({ el }) => {
+            el.style.visibility = el.dataset.pptxPreviousVisibility || '';
+            delete el.dataset.pptxPreviousVisibility;
+        });
+    }
+
+    function addPptxTextBlock(slide, block, sectionRect, imagePlacement, imageScale) {
+        const relativeLeft = block.rect.left - sectionRect.left;
+        const relativeTop = block.rect.top - sectionRect.top;
+        const x = imagePlacement.x + (relativeLeft * imageScale);
+        const y = imagePlacement.y + (relativeTop * imageScale);
+        const w = Math.max(0.18, block.rect.width * imageScale);
+        const h = Math.max(0.14, block.rect.height * imageScale);
+        const fontWeight = Number.parseInt(block.style.fontWeight, 10);
+        const baseOptions = {
+            x,
+            y,
+            w,
+            h,
+            fontFace: firstFontFamily(block.style.fontFamily),
+            fontSize: Math.max(8, pxToPt(block.style.fontSize)),
+            color: cssColorToHex(block.style.color),
+            bold: Number.isFinite(fontWeight) ? fontWeight >= 600 : block.style.fontWeight === 'bold',
+            italic: block.style.fontStyle === 'italic',
+            align: (block.style.textAlign || 'left').toLowerCase(),
+            fit: 'shrink',
+            margin: 0.02,
+            valign: 'mid',
+            breakLine: false,
+        };
+
+        if (block.kind === 'comment') {
+            slide.addText(block.text, {
+                ...baseOptions,
+                fill: { color: 'FFFFFF' },
+                line: { color: 'FFFFFF', transparency: 100, pt: 0 },
+                margin: 0.06,
+                valign: 'top',
+            });
+            return;
+        }
+
+        slide.addText(block.text || ' ', {
+            ...baseOptions,
+            fill: { color: 'FFFFFF', transparency: 100 },
+            line: { color: 'FFFFFF', transparency: 100 },
+        });
+    }
+
+    async function loadLogoDataUrl() {
+        try {
+            const response = await fetch('/static/sitesync/images/logo.png');
+            if (!response.ok) { return null; }
+            const blob = await response.blob();
+            return await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => resolve(null);
+                reader.readAsDataURL(blob);
+            });
+        } catch (_error) {
+            return null;
+        }
+    }
+
+    async function downloadPptx() {
+        const sections = Array.from(document.querySelectorAll('#report-sections .section-card'))
+            .filter((el) => !el.classList.contains('pdf-exclude'));
+
+        if (!sections.length) {
+            window.alert('No report sections are available to export as PPTX.');
+            return;
+        }
+
+        const PptxCtor = getPptxConstructor();
+        if (!PptxCtor || !window.html2canvas) {
+            window.alert('PPTX export is not available in this browser.');
+            return;
+        }
+
+        const pptx = new PptxCtor();
+        if (typeof pptx.defineLayout === 'function') {
+            pptx.defineLayout({ name: 'ENERLYTIX_WIDE', width: 13.333, height: 7.5 });
+            pptx.layout = 'ENERLYTIX_WIDE';
+        } else {
+            pptx.layout = 'LAYOUT_WIDE';
+        }
+        pptx.author = 'Enerlytix';
+        pptx.company = 'Enerlytix';
+        pptx.subject = 'Report export';
+        pptx.title = 'Enerlytix Report';
+        pptx.lang = 'en-GB';
+
+        const slideW = 13.333;
+        const slideH = 7.5;
+        const margin = 0.35;
+        const logoAreaH = 0.38;
+        const logoPad = 0.1;
+        const logoDataUrl = await loadLogoDataUrl();
+        const logoAspect = logoDataUrl
+            ? await new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => resolve(img.naturalWidth && img.naturalHeight ? img.naturalWidth / img.naturalHeight : 1);
+                img.onerror = () => resolve(1);
+                img.src = logoDataUrl;
+            })
+            : 1;
+
+        document.body.classList.add('is-exporting');
+
+        try {
+            for (let index = 0; index < sections.length; index += 1) {
+                const section = sections[index];
+                const sectionRect = section.getBoundingClientRect();
+                const textBlocks = collectPptxTextBlocks(section);
+                hidePptxTextBlocks(textBlocks);
+
+                let canvas;
+                try {
+                    canvas = await window.html2canvas(section, {
+                        scale: 1.5,
+                        backgroundColor: '#ffffff',
+                        useCORS: true,
+                        allowTaint: false,
+                        logging: false,
+                    });
+                } finally {
+                    restorePptxTextBlocks(textBlocks);
+                }
+
+                const slide = pptx.addSlide();
+                slide.background = { color: 'FFFFFF' };
+
+                let imageX = margin;
+                let imageY = margin + logoAreaH + logoPad;
+                const availableW = slideW - (margin * 2);
+                const availableH = slideH - imageY - margin;
+                const ratio = Math.min(availableW / canvas.width, availableH / canvas.height);
+                const imageW = canvas.width * ratio;
+                const imageH = canvas.height * ratio;
+                imageX += (availableW - imageW) / 2;
+
+                if (logoDataUrl) {
+                    const logoH = logoAreaH;
+                    const logoW = logoH * logoAspect;
+                    slide.addImage({ data: logoDataUrl, x: margin, y: margin, w: logoW, h: logoH });
+                }
+
+                slide.addImage({
+                    data: canvas.toDataURL('image/jpeg', 0.85),
+                    x: imageX,
+                    y: imageY,
+                    w: imageW,
+                    h: imageH,
+                });
+
+                const textScale = imageW / sectionRect.width;
+                textBlocks.forEach((block) => addPptxTextBlock(slide, block, sectionRect, { x: imageX, y: imageY }, textScale));
+            }
+
+            const ctx = getContext();
+            const fileName = `Enerlytix_Report_${ctx.siteName || 'Site'}_${ctx.endMonth || 'report'}.pptx`;
+            await pptx.writeFile({ fileName });
+        } catch (error) {
+            console.error('Unable to generate PPTX export.', error);
+            window.alert('Unable to generate PPTX export. Please try again.');
+        } finally {
+            document.body.classList.remove('is-exporting');
+        }
+    }
+
     async function downloadPdf() {
         const sections = Array.from(document.querySelectorAll('#report-sections .section-card'))
             .filter((el) => !el.classList.contains('pdf-exclude'));
@@ -1099,6 +1348,8 @@
     document.addEventListener('DOMContentLoaded', () => {
         const btn = document.getElementById('download-pdf-button');
         if (btn) { btn.addEventListener('click', downloadPdf); }
+        const pptxBtn = document.getElementById('download-pptx-button');
+        if (pptxBtn) { pptxBtn.addEventListener('click', downloadPptx); }
         syncAnchorScrolling();
         loadReport();
     });
