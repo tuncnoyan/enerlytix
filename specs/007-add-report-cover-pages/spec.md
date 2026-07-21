@@ -15,6 +15,7 @@
 - Q: What file types and size limits are allowed for replacing the first-cover background image? → A: Allow JPG/JPEG/PNG/WebP up to 10 MB.
 - Q: What date format should the first-cover date field use? → A: Fixed format DD MMMM YYYY (for example, 21 July 2026).
 - Q: What is the required page order for the three cover pages in generated outputs? → A: Front cover page 1 then front cover page 2 at the beginning, and back cover as the final page.
+- Q: How long must cover edits persist? → A: Cover edits are session-scoped and report-scoped; they persist while the report page session is active and apply to draft, final, PDF, and PPTX generated in that session. On page reload/new session, defaults are reloaded unless re-edited.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -48,6 +49,7 @@ As a report user, I can edit defined fields on the first front cover page so the
 3. **Given** the report is being prepared today, **When** first cover defaults are loaded, **Then** the date field is prefilled with the current date in DD MMMM YYYY format.
 4. **Given** the user wants different branding, **When** they upload a replacement background image for the current report, **Then** the first cover uses the uploaded image instead of the default image.
 5. **Given** the user provides a client logo, **When** the report is generated, **Then** the logo appears in the optional logo region on the first cover.
+6. **Given** the user uploads an invalid client logo file type or size, **When** validation runs, **Then** the system shows a clear message and continues report generation without a logo.
 
 ---
 
@@ -92,6 +94,7 @@ As a report user, I can download report outputs in PDF and PPTX with cover pages
 - What happens if a user uploads an unsupported image type or a file larger than 10 MB? The upload is rejected with a clear validation message and the default image remains active.
 - What happens if report generation runs in a different user locale? The first-cover date still uses the fixed DD MMMM YYYY format.
 - What happens if no client logo is provided? The optional logo area remains empty without blocking report generation.
+- What happens if the uploaded client logo is invalid or has unusual dimensions? The upload is rejected with a clear message; generation continues with no logo, and valid logos are resized to fit while preserving aspect ratio.
 - What happens if a site name or meter name is unusually long? Text remains visible and readable without overlapping other cover elements.
 - What happens if a report has no available meter name for a visual line? The line is still shown without parentheses content.
 
@@ -103,6 +106,9 @@ As a report user, I can download report outputs in PDF and PPTX with cover pages
 - **FR-001a**: The system MUST place front cover page 1 and front cover page 2 at the start of the report and place the back cover as the final page.
 - **FR-002**: The three cover pages MUST be included in both draft and final report versions.
 - **FR-003**: Front cover page 1 MUST provide editable fields for site name, report month/title text, report date, and an optional client logo area.
+- **FR-003a**: Optional client logo uploads MUST accept PNG, JPG, or SVG files up to 2 MB.
+- **FR-003b**: If a client logo upload is invalid, the system MUST show a validation message and continue report generation without a logo.
+- **FR-003c**: Client logo rendering MUST preserve aspect ratio and fit within the reserved logo region without overlapping required text fields.
 - **FR-004**: Front cover page 1 MUST default the site field to the selected site name for the report.
 - **FR-005**: Front cover page 1 MUST default the report month/title field to "[Month Year] Energy Report" based on the report period.
 - **FR-006**: Front cover page 1 MUST default the date field to the current date at the time of report generation.
@@ -113,6 +119,7 @@ As a report user, I can download report outputs in PDF and PPTX with cover pages
 - **FR-010**: If a replacement first-cover upload is invalid due to type or size, the system MUST reject the upload with a clear validation message and preserve the default background image.
 - **FR-011**: Front cover page 2 MUST provide editable title and body text areas for both Scope and Contents sections.
 - **FR-012**: Front cover page 2 scope body text MUST use the provided baseline wording and substitute the site reference with a variable value.
+- **FR-012a**: The default Scope body text MUST exactly match the canonical baseline text in the "Canonical Default Scope Text" section, with only `[SITE_NAME]` substituted at runtime.
 - **FR-013**: Front cover page 2 contents section MUST list report visual titles in display order.
 - **FR-014**: For front cover page 2 contents entries, meter names MUST be appended in parentheses for each line except "Total Utility Usage (£)".
 - **FR-015**: The back cover page MUST use the provided static image content without requiring editable fields.
@@ -120,6 +127,12 @@ As a report user, I can download report outputs in PDF and PPTX with cover pages
 - **FR-017**: PPTX downloads MUST include all three cover pages.
 - **FR-018**: In PPTX outputs, editable fields on front cover pages 1 and 2 MUST remain editable after download.
 - **FR-019**: If any optional cover content is omitted (such as client logo), report generation MUST still succeed with a valid layout.
+- **FR-020**: Cover field edits MUST be scoped to the active report context (site + month) and persist for the active browser session.
+- **FR-021**: Draft, final, PDF, and PPTX outputs generated within the same active session MUST use the same latest cover field values.
+
+### Canonical Default Scope Text
+
+This monthly energy report provides a consolidated overview of utility performance at [SITE_NAME]. It summarises electricity and water consumption using monthly invoice data, half-hourly electricity profiles, and daily usage comparisons. The report aims to highlight key trends, seasonal changes, and anomalies in consumption to support ongoing energy-performance management and cost-efficiency planning.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -139,6 +152,12 @@ As a report user, I can download report outputs in PDF and PPTX with cover pages
 - **SC-004**: 100% of PPTX exports preserve editability of designated first- and second-cover text fields.
 - **SC-005**: 100% of second-cover default contents entries reflect report visual titles, with meter-name suffix behavior correctly applied for all eligible lines.
 - **SC-006**: At least 95% of report generations with covers complete without layout-breaking text or missing required cover content.
+
+### Success Criteria Measurement Protocol
+
+- **MP-001** (for SC-003): Validate first-cover editing usability with a minimum of 20 independent edit attempts across at least 5 users in the Docker-hosted app session flow. Success condition is at least 19 out of 20 attempts completed without assistance.
+- **MP-002** (for SC-006): Validate generation stability with a minimum of 50 report generations that include covers across representative site and month combinations in the Docker-hosted app flow. Success condition is at least 48 out of 50 generations completing without layout-breaking text or missing required cover content.
+- **MP-003** (evidence recording): Record results for MP-001 and MP-002 in the validation section of `specs/007-add-report-cover-pages/quickstart.md`, including total runs, successful runs, failure reasons, and calculated pass percentage.
 
 ## Assumptions
 
