@@ -1,0 +1,10 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\django_app",
+    "\\django_app\\docker",
+    "\\django_app\\sitesync"
+  ],
+  "SelectedNode": "\\django_app\\sitesync\\views.py",
+  "PreviewInSolutionExplorer": false
+}
