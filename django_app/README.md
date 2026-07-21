@@ -14,6 +14,24 @@
 - Supply panel endpoint at `/supplies/`
 - Settings page at `/settings/`
 - Consumption display page at `/consumption-display/`
+- Report visuals and export page at `/report/`
+
+## Report cover pages
+
+- The report editor includes three integrated cover pages:
+	- Front cover page 1 (editable fields)
+	- Front cover page 2 (editable Scope and Contents)
+	- Back cover page (static image)
+- Front cover page 1 editable defaults:
+	- Site title from selected site
+	- Report month title in `[Month Year] Energy Report` format
+	- Date in `DD MMMM YYYY` format
+	- Optional client logo area
+- Upload validation:
+	- Front background: JPG/JPEG/PNG/WebP up to 10 MB
+	- Client logo: PNG/JPG/SVG up to 2 MB
+- Cover sequence is consistent across draft, final, PDF, and PPTX exports.
+- In PPTX exports, front-cover text fields remain editable.
 
 ## Usage and invoice import
 

@@ -5,6 +5,26 @@
 - `GET /`
 - Returns the searchable site dashboard.
 
+## Report editor and cover pages
+
+- `GET /report/?site_id=<id>&end_month=YYYY-MM`
+- Renders report visuals with integrated cover pages:
+  - Front cover page 1
+  - Front cover page 2
+  - Report body pages
+  - Back cover page
+- Front cover page 1 editable fields:
+  - Site title
+  - Reporting month title (`[Month Year] Energy Report`)
+  - Date (`DD MMMM YYYY`)
+  - Optional client logo
+- Front cover page 1 background replacement rules:
+  - Allowed: JPG/JPEG/PNG/WebP
+  - Max size: 10 MB
+- Client logo replacement rules:
+  - Allowed: PNG/JPG/SVG
+  - Max size: 2 MB
+
 ## Manual sync
 
 - `POST /sync/`
@@ -119,6 +139,16 @@ Response payload:
   ]
 }
 ```
+
+## Report data API
+
+- `GET /api/report-data/?site_id=<id>&end_month=YYYY-MM`
+- Includes a `cover_defaults` object for shared cover rendering in draft/final/PDF/PPTX workflows.
+- `cover_defaults` includes:
+  - `sequence`: `front_cover_1`, `front_cover_2`, `body_pages`, `back_cover`
+  - `front_cover_1` defaults
+  - `front_cover_2` defaults and contents entries
+  - `back_cover` static asset descriptor
 
 ## Consumption display page
 

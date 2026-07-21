@@ -4,6 +4,7 @@ Etainabl API sync service for fetching and persisting site and supply data.
 
 import logging
 import time
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Dict, List, Optional, Set, Tuple
@@ -44,6 +45,141 @@ CAPACITY_UPLOAD_ERROR_FILE_EMPTY = 'File is empty or missing a header row.'
 CAPACITY_UPLOAD_ERROR_PARSE_PREFIX = 'Upload parsing failed:'
 SITE_FLOOR_AREA_UNIT_SQM = 'sqm'
 SITE_FLOOR_AREA_UNIT_SQFT = 'sqft'
+COVER_SCOPE_TEMPLATE = (
+    'This monthly energy report provides a consolidated overview of utility performance at {site_name}. '
+    'It summarises electricity and water consumption using monthly invoice data, half-hourly electricity '
+    'profiles, and daily usage comparisons. The report aims to highlight key trends, seasonal changes, and '
+    'anomalies in consumption to support ongoing energy-performance management and cost-efficiency planning.'
+)
+
+
+@dataclass
+class CoverContentsEntry:
+    """Single line in front-cover-2 contents with optional meter suffix."""
+
+    title: str
+    meter_name: str = ''
+    display_line: str = ''
+
+
+@dataclass
+class FrontCoverOneFields:
+    """Editable fields and assets for front cover page 1."""
+
+    site_title: str
+    report_month_title: str
+    report_date: str
+    client_logo_asset: str = ''
+    background_asset: str = '/static/sitesync/images/Green%20and%20Leafy%20Office.jpg'
+
+
+@dataclass
+class FrontCoverTwoFields:
+    """Editable fields for front cover page 2."""
+
+    scope_title: str = 'SCOPE'
+    scope_body: str = ''
+    contents_title: str = 'CONTENTS'
+    contents_entries: List[CoverContentsEntry] = field(default_factory=list)
+
+
+@dataclass
+class ReportCoverSet:
+    """Full cover package used by draft/final/PDF/PPTX variants."""
+
+    report_context_id: str
+    front_cover_1: FrontCoverOneFields
+    front_cover_2: FrontCoverTwoFields
+    back_cover: Dict[str, str]
+    sequence: List[str] = field(default_factory=lambda: ['front_cover_1', 'front_cover_2', 'body_pages', 'back_cover'])
+
+
+def format_cover_report_date(now_dt: Optional[datetime] = None) -> str:
+    """Return fixed DD MMMM YYYY date string for cover rendering."""
+
+    moment = now_dt or dj_timezone.now()
+    return moment.strftime('%d %B %Y')
+
+
+def build_scope_body_text(site_name: str) -> str:
+    """Return canonical default scope text with site substitution."""
+
+    resolved_site_name = (site_name or '').strip() or 'the selected site'
+    return COVER_SCOPE_TEMPLATE.format(site_name=resolved_site_name)
+
+
+def build_cover_contents_entries(supplies: Optional[List[Dict]]) -> List[CoverContentsEntry]:
+    """Build default contents lines from visual titles and meter names."""
+
+    entries: List[CoverContentsEntry] = [
+        CoverContentsEntry(title='Total Utility Usage (\u00a3)', meter_name='', display_line='Total Utility Usage (\u00a3)'),
+    ]
+
+    for supply in supplies or []:
+        utility = str(supply.get('utility_type_display') or supply.get('utility_type') or 'Utility').strip()
+        utility_lower = utility.lower()
+        meter_number = str(supply.get('meter_number') or '').strip()
+
+        section_titles = [
+            f'Monthly {utility_lower} usage overview',
+            f'Monthly {utility_lower} consumption analysis',
+        ]
+        if utility_lower == 'electricity':
+            section_titles.extend([
+                'Electricity load factor and demand performance',
+                'Half-hourly electricity usage comparison',
+                'Daily electricity usage comparison \u2013 weekdays',
+                'Daily electricity usage comparison \u2013 weekends',
+            ])
+
+        for title in section_titles:
+            display_line = title
+            if title != 'Total Utility Usage (\u00a3)' and meter_number:
+                display_line = f'{title} ({meter_number})'
+            entries.append(CoverContentsEntry(title=title, meter_name=meter_number, display_line=display_line))
+
+    # Preserve order while de-duplicating repeated visual labels.
+    deduped: List[CoverContentsEntry] = []
+    seen_lines: Set[str] = set()
+    for entry in entries:
+        key = entry.display_line.casefold().strip()
+        if key in seen_lines:
+            continue
+        seen_lines.add(key)
+        deduped.append(entry)
+
+    return deduped
+
+
+def build_report_cover_set(site_name: str, end_month: str, supplies: Optional[List[Dict]] = None) -> Dict:
+    """Build default report cover package for UI and export composition."""
+
+    try:
+        month_label = datetime.strptime(end_month, '%Y-%m').strftime('%B %Y')
+    except (TypeError, ValueError):
+        month_label = end_month or ''
+
+    front_cover_1 = FrontCoverOneFields(
+        site_title=(site_name or '').strip(),
+        report_month_title=f'{month_label} Energy Report'.strip(),
+        report_date=format_cover_report_date(),
+    )
+
+    front_cover_2 = FrontCoverTwoFields(
+        scope_body=build_scope_body_text(site_name),
+        contents_entries=build_cover_contents_entries(supplies),
+    )
+
+    cover_set = ReportCoverSet(
+        report_context_id=f'{(site_name or '').strip()}::{(end_month or '').strip()}',
+        front_cover_1=front_cover_1,
+        front_cover_2=front_cover_2,
+        back_cover={'image_asset': '/static/sitesync/images/Report%20Back%20Cover%20Page.jpg', 'is_editable': 'false'},
+    )
+
+    payload = asdict(cover_set)
+    payload['front_cover_2']['contents_text'] = '\n'.join([entry['display_line'] for entry in payload['front_cover_2']['contents_entries']])
+    return payload
 
 
 def _build_capacity_upload_result(run: CapacityUploadRun) -> Dict:

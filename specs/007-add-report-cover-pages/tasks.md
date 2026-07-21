@@ -18,9 +18,9 @@
 
 **Purpose**: Prepare static assets and baseline cover-page configuration points in the existing Dockerized Django app structure.
 
-- [ ] T001 Add first-cover default background and static back-cover image assets in django_app/static/sitesync/images/
-- [ ] T002 Add cover-page container placeholders and metadata hooks in django_app/templates/sitesync/report.html
-- [ ] T003 [P] Add cover-page constants (dimensions, field keys, format strings) in django_app/static/sitesync/js/report.js
+- [X] T001 Add first-cover default background and static back-cover image assets in django_app/static/sitesync/images/
+- [X] T002 Add cover-page container placeholders and metadata hooks in django_app/templates/sitesync/report.html
+- [X] T003 [P] Add cover-page constants (dimensions, field keys, format strings) in django_app/static/sitesync/js/report.js
 
 ---
 
@@ -30,11 +30,11 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Implement report cover composition structures (`ReportCoverSet`, `FrontCoverOneFields`, `FrontCoverTwoFields`) in django_app/sitesync/services.py
-- [ ] T005 [P] Implement first-cover upload validation rules (JPG/JPEG/PNG/WebP, <=10 MB) in django_app/static/sitesync/js/report.js
-- [ ] T006 [P] Implement fixed `DD MMMM YYYY` date formatter utility for cover rendering in django_app/static/sitesync/js/report.js
-- [ ] T007 Implement report payload enrichment for cover defaults and visual contents entries in django_app/sitesync/views.py
-- [ ] T008 Implement shared cover sequence assembler (front1, front2, body, back) for draft/final/PDF/PPTX in django_app/static/sitesync/js/report.js
+- [X] T004 Implement report cover composition structures (`ReportCoverSet`, `FrontCoverOneFields`, `FrontCoverTwoFields`) in django_app/sitesync/services.py
+- [X] T005 [P] Implement first-cover upload validation rules (JPG/JPEG/PNG/WebP, <=10 MB) in django_app/static/sitesync/js/report.js
+- [X] T006 [P] Implement fixed `DD MMMM YYYY` date formatter utility for cover rendering in django_app/static/sitesync/js/report.js
+- [X] T007 Implement report payload enrichment for cover defaults and visual contents entries in django_app/sitesync/views.py
+- [X] T008 Implement shared cover sequence assembler (front1, front2, body, back) for draft/final/PDF/PPTX in django_app/static/sitesync/js/report.js
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -48,11 +48,11 @@
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Render front cover page 1 and front cover page 2 before report body in django_app/templates/sitesync/report.html
-- [ ] T010 [US1] Render back cover page after report body in django_app/templates/sitesync/report.html
-- [ ] T011 [US1] Bind cover sequence assembly to report load/generation lifecycle in django_app/static/sitesync/js/report.js
-- [ ] T012 [US1] Ensure draft/final report rendering paths use the same cover sequence in django_app/static/sitesync/js/report.js
-- [ ] T013 [US1] Add graceful fallback to default assets if cover composition data is incomplete in django_app/static/sitesync/js/report.js
+- [X] T009 [US1] Render front cover page 1 and front cover page 2 before report body in django_app/templates/sitesync/report.html
+- [X] T010 [US1] Render back cover page after report body in django_app/templates/sitesync/report.html
+- [X] T011 [US1] Bind cover sequence assembly to report load/generation lifecycle in django_app/static/sitesync/js/report.js
+- [X] T012 [US1] Ensure draft/final report rendering paths use the same cover sequence in django_app/static/sitesync/js/report.js
+- [X] T013 [US1] Add graceful fallback to default assets if cover composition data is incomplete in django_app/static/sitesync/js/report.js
 
 **Checkpoint**: User Story 1 is fully functional and independently testable.
 
@@ -66,13 +66,13 @@
 
 ### Implementation for User Story 2
 
-- [ ] T014 [US2] Add editable first-cover inputs (site title, month title, date, client logo area) in django_app/templates/sitesync/report.html
-- [ ] T015 [US2] Populate first-cover default values from selected site/report month/current date in django_app/static/sitesync/js/report.js
-- [ ] T016 [US2] Implement first-cover replacement image upload handling scoped to current report context in django_app/static/sitesync/js/report.js
-- [ ] T017 [US2] Implement invalid upload error messaging and default-image fallback in django_app/templates/sitesync/report.html
-- [ ] T018 [US2] Map first-cover editable fields and logo/background assets into generated cover render state in django_app/static/sitesync/js/report.js
-- [ ] T018a [US2] Implement client-logo upload validation rules (PNG/JPG/SVG, <=2 MB) and user-facing validation messages in django_app/static/sitesync/js/report.js
-- [ ] T018b [US2] Implement aspect-ratio-safe logo fit behavior inside the reserved logo region in django_app/templates/sitesync/report.html and django_app/static/sitesync/js/report.js
+- [X] T014 [US2] Add editable first-cover inputs (site title, month title, date, client logo area) in django_app/templates/sitesync/report.html
+- [X] T015 [US2] Populate first-cover default values from selected site/report month/current date in django_app/static/sitesync/js/report.js
+- [X] T016 [US2] Implement first-cover replacement image upload handling scoped to current report context in django_app/static/sitesync/js/report.js
+- [X] T017 [US2] Implement invalid upload error messaging and default-image fallback in django_app/templates/sitesync/report.html
+- [X] T018 [US2] Map first-cover editable fields and logo/background assets into generated cover render state in django_app/static/sitesync/js/report.js
+- [X] T018a [US2] Implement client-logo upload validation rules (PNG/JPG/SVG, <=2 MB) and user-facing validation messages in django_app/static/sitesync/js/report.js
+- [X] T018b [US2] Implement aspect-ratio-safe logo fit behavior inside the reserved logo region in django_app/templates/sitesync/report.html and django_app/static/sitesync/js/report.js
 
 **Checkpoint**: User Story 2 is fully functional and independently testable.
 
@@ -86,11 +86,11 @@
 
 ### Implementation for User Story 3
 
-- [ ] T019 [US3] Add editable second-cover title/body fields for Scope and Contents in django_app/templates/sitesync/report.html
-- [ ] T020 [US3] Populate default scope text with site variable substitution in django_app/static/sitesync/js/report.js
-- [ ] T021 [US3] Generate contents entries from visual titles in display order in django_app/static/sitesync/js/report.js
-- [ ] T022 [US3] Apply conditional meter-name suffix rule for contents entries (except `Total Utility Usage (£)`) in django_app/static/sitesync/js/report.js
-- [ ] T023 [US3] Persist second-cover edited values through report generation lifecycle in django_app/static/sitesync/js/report.js
+- [X] T019 [US3] Add editable second-cover title/body fields for Scope and Contents in django_app/templates/sitesync/report.html
+- [X] T020 [US3] Populate default scope text with site variable substitution in django_app/static/sitesync/js/report.js
+- [X] T021 [US3] Generate contents entries from visual titles in display order in django_app/static/sitesync/js/report.js
+- [X] T022 [US3] Apply conditional meter-name suffix rule for contents entries (except `Total Utility Usage (£)`) in django_app/static/sitesync/js/report.js
+- [X] T023 [US3] Persist second-cover edited values through report generation lifecycle in django_app/static/sitesync/js/report.js
 
 **Checkpoint**: User Story 3 is fully functional and independently testable.
 
@@ -104,11 +104,11 @@
 
 ### Implementation for User Story 4
 
-- [ ] T024 [US4] Include front and back cover pages in PDF export assembly flow in django_app/static/sitesync/js/report.js
-- [ ] T025 [US4] Include front and back cover pages in PPTX export assembly flow in django_app/static/sitesync/js/report.js
-- [ ] T026 [US4] Map first- and second-cover text fields to native editable PPTX text objects in django_app/static/sitesync/js/report.js
-- [ ] T027 [US4] Export back cover as static image page in PPTX output in django_app/static/sitesync/js/report.js
-- [ ] T028 [US4] Align PDF/PPTX cover page ordering to the shared sequence contract in django_app/static/sitesync/js/report.js
+- [X] T024 [US4] Include front and back cover pages in PDF export assembly flow in django_app/static/sitesync/js/report.js
+- [X] T025 [US4] Include front and back cover pages in PPTX export assembly flow in django_app/static/sitesync/js/report.js
+- [X] T026 [US4] Map first- and second-cover text fields to native editable PPTX text objects in django_app/static/sitesync/js/report.js
+- [X] T027 [US4] Export back cover as static image page in PPTX output in django_app/static/sitesync/js/report.js
+- [X] T028 [US4] Align PDF/PPTX cover page ordering to the shared sequence contract in django_app/static/sitesync/js/report.js
 
 **Checkpoint**: User Story 4 is fully functional and independently testable.
 
@@ -118,12 +118,12 @@
 
 **Purpose**: Final hardening, Docker-based validation, and documentation alignment.
 
-- [ ] T029 [P] Add/update focused report cover feature tests in django_app/sitesync/tests/test_report_cover_pages.py
-- [ ] T030 [P] Add/update export integration checks in tests/integration/test_report_cover_exports.py
-- [ ] T031 Run Docker-based Django test suite via `docker compose -f django_app/docker/docker-compose.yml exec web python manage.py test` and address failures
+- [X] T029 [P] Add/update focused report cover feature tests in django_app/sitesync/tests/test_report_cover_pages.py
+- [X] T030 [P] Add/update export integration checks in tests/integration/test_report_cover_exports.py
+- [X] T031 Run Docker-based Django test suite via `docker compose -f django_app/docker/docker-compose.yml exec web python manage.py test` and address failures
 - [ ] T032 Execute SC measurement protocol from spec (MP-001 and MP-002) in Docker-hosted flow and record pass/fail results in specs/007-add-report-cover-pages/quickstart.md
-- [ ] T033 [P] Update report export behavior notes in docs/API.md and django_app/README.md
-- [ ] T034 [P] Add a validation evidence table template for SC-003 and SC-006 in specs/007-add-report-cover-pages/quickstart.md (fields: run id, scenario, outcome, failure reason, threshold, pass rate)
+- [X] T033 [P] Update report export behavior notes in docs/API.md and django_app/README.md
+- [X] T034 [P] Add a validation evidence table template for SC-003 and SC-006 in specs/007-add-report-cover-pages/quickstart.md (fields: run id, scenario, outcome, failure reason, threshold, pass rate)
 - [ ] T035 Compute and document final pass-rate calculations for SC-003 and SC-006 in specs/007-add-report-cover-pages/quickstart.md and confirm threshold compliance (SC-003 >= 95%, SC-006 >= 95%)
 
 ---

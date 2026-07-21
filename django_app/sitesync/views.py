@@ -35,6 +35,7 @@ from .forms import CapacityUploadForm, SettingsForm
 from .config_service import SettingsConfigService
 from .services import EtainaibleSyncService
 from .services import (
+    build_report_cover_set,
     carry_forward_comments_from_previous_final,
     ConsumptionImportService,
     create_report_version,
@@ -332,6 +333,7 @@ def _report_editor_context(raw_site_id, raw_end_month, raw_reporting_month, raw_
         'supplyIds': supply_ids,
         'initialComments': initial_comments,
         'referenceCommentKeys': reference_comment_keys,
+        'coverDefaults': build_report_cover_set(site.name if site else '', end_month),
     }
 
     return {
@@ -471,6 +473,7 @@ def _report_payload(site, end_month, supply_external_ids=None):
             ],
         },
         'overview': _overview_for_site(site, report_start, report_end),
+        'cover_defaults': build_report_cover_set(site.name, end_month, payload_supplies),
         'supplies': payload_supplies,
     }
 
@@ -618,6 +621,7 @@ def report_data_api_view(request):
                 'total_cost': 0,
                 'by_utility': [],
             },
+            'cover_defaults': build_report_cover_set(site.name, end_month, []),
             'supplies': [],
         })
 

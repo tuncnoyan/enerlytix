@@ -25,7 +25,25 @@
         comments: new Map(),
         referenceCommentKeys: new Set(),
         charts: new Map(),
+        cover: null,
+        coverEditorBound: false,
     };
+
+    const COVER_DEFAULT_BACKGROUND_CANDIDATES = [
+        '/static/sitesync/images/Green%20and%20Leafy%20Office.jpg',
+        '/static/sitesync/images/cover-front-default.svg',
+    ];
+    const COVER_BACK_STATIC_CANDIDATES = [
+        '/static/sitesync/images/Report%20Back%20Cover%20Page.jpg',
+        '/static/sitesync/images/cover-back-static.svg',
+    ];
+    const COVER_SCOPE_TEMPLATE = 'This monthly energy report provides a consolidated overview of utility performance at [SITE_NAME]. It summarises electricity and water consumption using monthly invoice data, half-hourly electricity profiles, and daily usage comparisons. The report aims to highlight key trends, seasonal changes, and anomalies in consumption to support ongoing energy-performance management and cost-efficiency planning.';
+    const ALLOWED_BACKGROUND_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+    const ALLOWED_BACKGROUND_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp']);
+    const ALLOWED_LOGO_TYPES = new Set(['image/png', 'image/jpeg', 'image/svg+xml']);
+    const ALLOWED_LOGO_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'svg']);
+    const MAX_BACKGROUND_BYTES = 10 * 1024 * 1024;
+    const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 
     function getCookie(name) {
         const value = `; ${document.cookie}`;
@@ -72,6 +90,176 @@
         if (!isoStr) { return ''; }
         const parts = isoStr.slice(0, 10).split('-');
         return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : isoStr;
+    }
+
+    function formatDateDdMmmmYyyy(dateObj) {
+        if (!(dateObj instanceof Date) || Number.isNaN(dateObj.getTime())) {
+            return '';
+        }
+        return dateObj.toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+        });
+    }
+
+    function formatMonthYear(endMonth) {
+        if (!endMonth || !/^\d{4}-\d{2}$/.test(endMonth)) {
+            return endMonth || '';
+        }
+        const [year, month] = endMonth.split('-').map(Number);
+        const dt = new Date(Date.UTC(year, month - 1, 1));
+        return dt.toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+    }
+
+    function getCoverSessionKey() {
+        const ctx = getContext();
+        return `enerlytix-cover::${ctx.siteId || ''}::${ctx.endMonth || ''}`;
+    }
+
+    function inferExtension(fileName) {
+        const name = String(fileName || '');
+        const idx = name.lastIndexOf('.');
+        return idx >= 0 ? name.slice(idx + 1).toLowerCase() : '';
+    }
+
+    function validateUpload(file, allowedTypes, allowedExtensions, maxBytes) {
+        if (!file) {
+            return { ok: false, message: 'No file selected.' };
+        }
+        const ext = inferExtension(file.name);
+        const typeAllowed = allowedTypes.has(String(file.type || '').toLowerCase());
+        const extAllowed = allowedExtensions.has(ext);
+        if (!typeAllowed && !extAllowed) {
+            return { ok: false, message: 'Unsupported file type.' };
+        }
+        if (Number(file.size || 0) > maxBytes) {
+            return { ok: false, message: `File exceeds ${Math.round(maxBytes / (1024 * 1024))} MB limit.` };
+        }
+        return { ok: true, message: '' };
+    }
+
+    function fileToDataUrl(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result || ''));
+            reader.onerror = () => reject(new Error('Unable to read file.'));
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function buildDefaultContentsLines(reportData) {
+        const lines = ['Total Utility Usage (\u00a3)'];
+        (reportData.supplies || []).forEach((supply) => {
+            const utility = String(supply.utility_type_display || supply.utility_type || 'Utility').trim();
+            const utilityLower = utility.toLowerCase();
+            const meter = String(supply.meter_number || '').trim();
+            const withMeter = (title) => (meter ? `${title} (${meter})` : title);
+            lines.push(withMeter(`Monthly ${utilityLower} usage overview`));
+            lines.push(withMeter(`Monthly ${utilityLower} consumption analysis`));
+            if (utilityLower === 'electricity') {
+                lines.push(withMeter('Electricity load factor and demand performance'));
+                lines.push(withMeter('Half-hourly electricity usage comparison'));
+                lines.push(withMeter('Daily electricity usage comparison - weekdays'));
+                lines.push(withMeter('Daily electricity usage comparison - weekends'));
+            }
+        });
+        return [...new Set(lines)];
+    }
+
+    async function resolveFirstAvailableAsset(candidates) {
+        const seen = new Set();
+        const list = (candidates || []).filter((asset) => {
+            const key = String(asset || '').trim();
+            if (!key || seen.has(key)) {
+                return false;
+            }
+            seen.add(key);
+            return true;
+        });
+
+        for (const asset of list) {
+            if (/^data:/i.test(asset)) {
+                return asset;
+            }
+            try {
+                const response = await fetch(asset, { method: 'GET', cache: 'no-store' });
+                if (response.ok) {
+                    return asset;
+                }
+            } catch (_error) {
+                // Try next candidate.
+            }
+        }
+
+        return list[list.length - 1] || '';
+    }
+
+    async function resolveCoverDefaultAssets(reportData) {
+        const coverDefaults = reportData.cover_defaults || {};
+        const apiFront = coverDefaults.front_cover_1?.background_asset;
+        const apiBack = coverDefaults.back_cover?.image_asset;
+
+        const frontBackground = await resolveFirstAvailableAsset([
+            apiFront,
+            ...COVER_DEFAULT_BACKGROUND_CANDIDATES,
+        ]);
+
+        const backCover = await resolveFirstAvailableAsset([
+            apiBack,
+            ...COVER_BACK_STATIC_CANDIDATES,
+        ]);
+
+        return { frontBackground, backCover };
+    }
+
+    function buildDefaultCoverState(reportData, resolvedAssets) {
+        const coverDefaults = reportData.cover_defaults || {};
+        const fc1 = coverDefaults.front_cover_1 || {};
+        const fc2 = coverDefaults.front_cover_2 || {};
+        const monthTitle = fc1.report_month_title || `${formatMonthYear(reportData.reporting_period?.end_month)} Energy Report`.trim();
+        const scopeBody = fc2.scope_body || COVER_SCOPE_TEMPLATE.replace('[SITE_NAME]', reportData.site?.name || 'the selected site');
+        const defaultContentsLines = (fc2.contents_entries || []).length
+            ? fc2.contents_entries.map((entry) => entry.display_line || entry.title).filter(Boolean)
+            : buildDefaultContentsLines(reportData);
+
+        return {
+            siteTitle: fc1.site_title || reportData.site?.name || '',
+            monthTitle,
+            dateText: fc1.report_date || formatDateDdMmmmYyyy(new Date()),
+            scopeTitle: fc2.scope_title || 'SCOPE',
+            scopeBody,
+            contentsTitle: fc2.contents_title || 'CONTENTS',
+            contentsText: fc2.contents_text || defaultContentsLines.join('\n'),
+            backgroundDataUrl: resolvedAssets?.frontBackground || fc1.background_asset || COVER_DEFAULT_BACKGROUND_CANDIDATES[0],
+            logoDataUrl: fc1.client_logo_asset || '',
+            backCoverDataUrl: resolvedAssets?.backCover || (coverDefaults.back_cover || {}).image_asset || COVER_BACK_STATIC_CANDIDATES[0],
+        };
+    }
+
+    function loadCoverState(reportData, resolvedAssets) {
+        const defaults = buildDefaultCoverState(reportData, resolvedAssets);
+        let restored = {};
+        try {
+            restored = JSON.parse(sessionStorage.getItem(getCoverSessionKey()) || '{}');
+        } catch (_err) {
+            restored = {};
+        }
+
+        const restoredBackground = String(restored.backgroundDataUrl || '');
+        const keepRestoredBackground = /^data:image\//i.test(restoredBackground);
+
+        state.cover = {
+            ...defaults,
+            ...(restored || {}),
+            backgroundDataUrl: keepRestoredBackground ? restoredBackground : defaults.backgroundDataUrl,
+            backCoverDataUrl: defaults.backCoverDataUrl,
+        };
+    }
+
+    function persistCoverState() {
+        if (!state.cover) { return; }
+        sessionStorage.setItem(getCoverSessionKey(), JSON.stringify(state.cover));
     }
 
     // ─── Subtitle builders ────────────────────────────────────────────────────
@@ -856,6 +1044,224 @@
         };
     }
 
+    function coverContentsLines() {
+        return String(state.cover?.contentsText || '')
+            .split('\n')
+            .map((line) => line.trim())
+            .filter(Boolean);
+    }
+
+    function renderCoverSections() {
+        const clientLogoHtml = `
+            <div class="cover-front-logo${state.cover.logoDataUrl ? ' is-visible' : ''}" id="cover-front-logo-view">
+                ${state.cover.logoDataUrl ? `<img id="cover-front-logo-preview" src="${escapeHtml(state.cover.logoDataUrl)}" alt="Client logo" />` : ''}
+            </div>`;
+
+        const contentsItems = coverContentsLines()
+            .map((line) => `<li class="cover-text-block">${escapeHtml(line)}</li>`)
+            .join('');
+
+        const frontCover = {
+            id: 'cover-front-page-1',
+            html: `
+                <section class="section section-card cover-page" id="cover-front-page-1">
+                    <div class="cover-page-front">
+                        <div class="cover-front-left">
+                            <div class="cover-front-brand"><img src="/static/sitesync/images/logo.png" alt="Carbonxgen logo" /></div>
+                            <div class="cover-front-box cover-text-block cover-front-site-title" id="cover-front-site-title-view">${escapeHtml(state.cover.siteTitle)}</div>
+                            <div class="cover-front-site-rule" aria-hidden="true"></div>
+                            <div class="cover-front-box cover-text-block cover-front-month-title" id="cover-front-month-title-view">${escapeHtml(state.cover.monthTitle)}</div>
+                            <div class="cover-front-box cover-text-block cover-front-date" id="cover-front-date-view">${escapeHtml(state.cover.dateText)}</div>
+                            ${clientLogoHtml}
+                        </div>
+                        <div class="cover-front-image" id="cover-front-bg-view" style="background-image:url('${escapeHtml(state.cover.backgroundDataUrl || COVER_DEFAULT_BACKGROUND_CANDIDATES[0])}');"></div>
+                    </div>
+                </section>`,
+            init() {},
+        };
+
+        const secondCover = {
+            id: 'cover-front-page-2',
+            html: `
+                <section class="section section-card cover-page" id="cover-front-page-2">
+                    <div class="cover-page-two">
+                        <div class="cover-page-two-brand"><img src="/static/sitesync/images/logo.png" alt="Carbonxgen logo" /></div>
+                        <h3 class="cover-text-block cover-page-two-scope-title" id="cover-scope-title-view">${escapeHtml(state.cover.scopeTitle)}</h3>
+                        <p class="cover-text-block" id="cover-scope-body-view">${escapeHtml(state.cover.scopeBody)}</p>
+                        <h3 class="cover-text-block" id="cover-contents-title-view">${escapeHtml(state.cover.contentsTitle)}</h3>
+                        <ol id="cover-contents-list-view" style="margin:0.25rem 0 0 1.45rem;">${contentsItems}</ol>
+                    </div>
+                </section>`,
+            init() {},
+        };
+
+        const backCover = {
+            id: 'cover-back-page',
+            html: `
+                <section class="section section-card cover-page" id="cover-back-page" aria-label="Back cover">
+                    <div class="cover-page-back" id="cover-back-bg-view" style="background-image:url('${escapeHtml(state.cover.backCoverDataUrl || COVER_BACK_STATIC_CANDIDATES[0])}');"></div>
+                </section>`,
+            init() {},
+        };
+
+        return { frontCover, secondCover, backCover };
+    }
+
+    function syncCoverEditorFromState() {
+        const mapping = {
+            'cover-site-title-input': 'siteTitle',
+            'cover-month-title-input': 'monthTitle',
+            'cover-date-input': 'dateText',
+            'cover-scope-title-input': 'scopeTitle',
+            'cover-scope-body-input': 'scopeBody',
+            'cover-contents-title-input': 'contentsTitle',
+            'cover-contents-body-input': 'contentsText',
+        };
+        Object.entries(mapping).forEach(([id, key]) => {
+            const el = document.getElementById(id);
+            if (el) { el.value = state.cover[key] || ''; }
+        });
+    }
+
+    function updateCoverPreviewFromState() {
+        const siteTitle = document.getElementById('cover-front-site-title-view');
+        if (siteTitle) { siteTitle.textContent = state.cover.siteTitle || ''; }
+
+        const monthTitle = document.getElementById('cover-front-month-title-view');
+        if (monthTitle) { monthTitle.textContent = state.cover.monthTitle || ''; }
+
+        const dateTitle = document.getElementById('cover-front-date-view');
+        if (dateTitle) { dateTitle.textContent = state.cover.dateText || ''; }
+
+        const bgView = document.getElementById('cover-front-bg-view');
+        if (bgView) {
+            bgView.style.backgroundImage = `url('${state.cover.backgroundDataUrl || COVER_DEFAULT_BACKGROUND_CANDIDATES[0]}')`;
+        }
+
+        const logoView = document.getElementById('cover-front-logo-view');
+        if (logoView) {
+            if (state.cover.logoDataUrl) {
+                logoView.classList.add('is-visible');
+                logoView.innerHTML = `<img id="cover-front-logo-preview" src="${escapeHtml(state.cover.logoDataUrl)}" alt="Client logo" />`;
+            } else {
+                logoView.classList.remove('is-visible');
+                logoView.innerHTML = '';
+            }
+        }
+
+        const scopeTitle = document.getElementById('cover-scope-title-view');
+        if (scopeTitle) { scopeTitle.textContent = state.cover.scopeTitle || ''; }
+
+        const scopeBody = document.getElementById('cover-scope-body-view');
+        if (scopeBody) { scopeBody.textContent = state.cover.scopeBody || ''; }
+
+        const contentsTitle = document.getElementById('cover-contents-title-view');
+        if (contentsTitle) { contentsTitle.textContent = state.cover.contentsTitle || ''; }
+
+        const contentsList = document.getElementById('cover-contents-list-view');
+        if (contentsList) {
+            contentsList.innerHTML = coverContentsLines().map((line) => `<li class="cover-text-block">${escapeHtml(line)}</li>`).join('');
+        }
+    }
+
+    function updateCoverStateField(key, value) {
+        state.cover[key] = value;
+        persistCoverState();
+        updateCoverPreviewFromState();
+    }
+
+    async function handleBackgroundUpload(inputEl) {
+        const messageEl = document.getElementById('cover-background-validation');
+        const file = inputEl?.files?.[0];
+        if (!file) { return; }
+        const result = validateUpload(file, ALLOWED_BACKGROUND_TYPES, ALLOWED_BACKGROUND_EXTENSIONS, MAX_BACKGROUND_BYTES);
+        if (!result.ok) {
+            state.cover.backgroundDataUrl = COVER_DEFAULT_BACKGROUND_CANDIDATES[0];
+            persistCoverState();
+            updateCoverPreviewFromState();
+            if (messageEl) { messageEl.textContent = result.message; }
+            inputEl.value = '';
+            return;
+        }
+        try {
+            state.cover.backgroundDataUrl = await fileToDataUrl(file);
+            persistCoverState();
+            updateCoverPreviewFromState();
+            if (messageEl) { messageEl.textContent = ''; }
+        } catch (_error) {
+            if (messageEl) { messageEl.textContent = 'Unable to read selected image.'; }
+        }
+    }
+
+    async function handleLogoUpload(inputEl) {
+        const messageEl = document.getElementById('cover-logo-validation');
+        const file = inputEl?.files?.[0];
+        if (!file) { return; }
+        const result = validateUpload(file, ALLOWED_LOGO_TYPES, ALLOWED_LOGO_EXTENSIONS, MAX_LOGO_BYTES);
+        if (!result.ok) {
+            state.cover.logoDataUrl = '';
+            persistCoverState();
+            updateCoverPreviewFromState();
+            if (messageEl) { messageEl.textContent = result.message; }
+            inputEl.value = '';
+            return;
+        }
+        try {
+            state.cover.logoDataUrl = await fileToDataUrl(file);
+            persistCoverState();
+            updateCoverPreviewFromState();
+            if (messageEl) { messageEl.textContent = ''; }
+        } catch (_error) {
+            if (messageEl) { messageEl.textContent = 'Unable to read selected logo.'; }
+        }
+    }
+
+    function initializeCoverEditor() {
+        if (!state.cover) { return; }
+        syncCoverEditorFromState();
+
+        if (state.coverEditorBound) {
+            return;
+        }
+
+        const mapping = {
+            'cover-site-title-input': 'siteTitle',
+            'cover-month-title-input': 'monthTitle',
+            'cover-date-input': 'dateText',
+            'cover-scope-title-input': 'scopeTitle',
+            'cover-scope-body-input': 'scopeBody',
+            'cover-contents-title-input': 'contentsTitle',
+            'cover-contents-body-input': 'contentsText',
+        };
+        Object.entries(mapping).forEach(([id, key]) => {
+            const el = document.getElementById(id);
+            if (!el) { return; }
+            el.addEventListener('input', () => updateCoverStateField(key, el.value));
+        });
+
+        const bgUpload = document.getElementById('cover-background-upload-input');
+        if (bgUpload) {
+            bgUpload.addEventListener('change', () => {
+                handleBackgroundUpload(bgUpload).catch(() => {
+                    const messageEl = document.getElementById('cover-background-validation');
+                    if (messageEl) { messageEl.textContent = 'Unable to process selected image.'; }
+                });
+            });
+        }
+
+        const logoUpload = document.getElementById('cover-logo-upload-input');
+        if (logoUpload) {
+            logoUpload.addEventListener('change', () => {
+                handleLogoUpload(logoUpload).catch(() => {
+                    const messageEl = document.getElementById('cover-logo-validation');
+                    if (messageEl) { messageEl.textContent = 'Unable to process selected logo.'; }
+                });
+            });
+        }
+
+        state.coverEditorBound = true;
+    }
+
     // ─── Page builder ─────────────────────────────────────────────────────────
 
     function renderNoSuppliesState() {
@@ -882,26 +1288,37 @@
         clearEmptyState();
 
         const rendered = [];
+        const coverSections = renderCoverSections();
+        rendered.push(coverSections.frontCover);
+        rendered.push(coverSections.secondCover);
+
+        nav.insertAdjacentHTML('beforeend', renderNavEntry('Front Cover 1', 'cover-front-page-1'));
+        nav.insertAdjacentHTML('beforeend', renderNavEntry('Front Cover 2', 'cover-front-page-2'));
+
         const overview = renderOverviewSection(reportData);
         rendered.push(overview);
         nav.insertAdjacentHTML('beforeend', renderNavEntry('Overview', overview.id));
 
         const supplies = reportData.supplies || [];
-        if (!supplies.length) {
-            renderNoSuppliesState();
-            registerCommentBoxes(document);
-            return;
-        }
-
         supplies.forEach((supply) => {
             const sec = renderSupplySection(supply);
             rendered.push(sec);
             nav.insertAdjacentHTML('beforeend', renderNavEntry(supply.label || supply.utility_type_display || 'Supply', sec.id));
         });
 
+        rendered.push(coverSections.backCover);
+
+        nav.insertAdjacentHTML('beforeend', renderNavEntry('Back Cover', 'cover-back-page'));
+
         sections.innerHTML = rendered.map((r) => r.html).join('');
         rendered.forEach((r) => r.init());
         registerCommentBoxes(sections);
+        initializeCoverEditor();
+        updateCoverPreviewFromState();
+    }
+
+    function isCoverSection(section) {
+        return ['cover-front-page-1', 'cover-front-page-2', 'cover-back-page'].includes(section?.id || '');
     }
 
     // ─── Data fetch ───────────────────────────────────────────────────────────
@@ -919,6 +1336,8 @@
         try {
             const reportData = await fetchReportData();
             state.reportData = reportData;
+            const resolvedCoverAssets = await resolveCoverDefaultAssets(reportData);
+            loadCoverState(reportData, resolvedCoverAssets);
             setSubtitle(`${reportData.site.name} \u00b7 ${reportData.reporting_period.end_month}`);
             setMeta(reportData);
             buildPage(reportData);
@@ -1003,7 +1422,7 @@
     }
 
     function collectPptxTextBlocks(section) {
-        const textSelectors = 'h2, h3, .card-subtitle-screen, .metric-label, .metric-value, .comment-reference-warning, .comment-box, th';
+        const textSelectors = 'h2, h3, .card-subtitle-screen, .metric-label, .metric-value, .comment-reference-warning, .comment-box, th, .cover-text-block';
         return Array.from(section.querySelectorAll(textSelectors)).map((el) => {
             const isCommentBox = el.classList.contains('comment-box');
             const isCommentNote = el.classList.contains('comment-reference-warning');
@@ -1178,31 +1597,34 @@
                 const slide = pptx.addSlide();
                 slide.background = { color: 'FFFFFF' };
 
-                let imageX = margin;
-                let imageY = margin + logoAreaH + logoPad;
-                const availableW = slideW - (margin * 2);
-                const availableH = slideH - imageY - margin;
+                const coverSection = isCoverSection(section);
+                const exportMargin = coverSection ? 0 : margin;
+                const exportLogoDataUrl = coverSection ? null : logoDataUrl;
+                const imageX = exportMargin;
+                const imageY = coverSection ? 0 : margin + logoAreaH + logoPad;
+                const availableW = slideW - (exportMargin * 2);
+                const availableH = slideH - imageY - exportMargin;
                 const ratio = Math.min(availableW / canvas.width, availableH / canvas.height);
                 const imageW = canvas.width * ratio;
                 const imageH = canvas.height * ratio;
-                imageX += (availableW - imageW) / 2;
+                const positionedX = imageX + (availableW - imageW) / 2;
 
-                if (logoDataUrl) {
+                if (exportLogoDataUrl) {
                     const logoH = logoAreaH;
                     const logoW = logoH * logoAspect;
-                    slide.addImage({ data: logoDataUrl, x: margin, y: margin, w: logoW, h: logoH });
+                    slide.addImage({ data: exportLogoDataUrl, x: margin, y: margin, w: logoW, h: logoH });
                 }
 
                 slide.addImage({
                     data: canvas.toDataURL('image/jpeg', 0.85),
-                    x: imageX,
+                    x: positionedX,
                     y: imageY,
                     w: imageW,
                     h: imageH,
                 });
 
                 const textScale = imageW / sectionRect.width;
-                textBlocks.forEach((block) => addPptxTextBlock(slide, block, sectionRect, { x: imageX, y: imageY }, textScale));
+                textBlocks.forEach((block) => addPptxTextBlock(slide, block, sectionRect, { x: positionedX, y: imageY }, textScale));
             }
 
             const ctx = getContext();
@@ -1258,6 +1680,7 @@
         try {
             for (let i = 0; i < sections.length; i += 1) {
                 const section = sections[i];
+                const coverSection = isCoverSection(section);
 
                 // Hide empty comment boxes so blank textareas don't waste space,
                 // and swap non-empty ones for full-text blocks (see note above)
@@ -1305,21 +1728,26 @@
                 pdf.setFillColor(255, 255, 255);
                 pdf.rect(0, 0, PW, PH, 'F');
 
+                const exportLogoData = coverSection ? null : logoData;
+                const pageMargin = coverSection ? 0 : MARGIN;
+                const logoSpace = coverSection ? 0 : LOGO_AREA_H;
+                const logoGap = coverSection ? 0 : LOGO_PAD;
+
                 // ── Logo (top-left) ──────────────────────────────────────────
-                if (logoData) {
+                if (exportLogoData) {
                     const logoH = LOGO_AREA_H;
                     const logoW = logoH * logoAspect;
-                    pdf.addImage(logoData, 'PNG', MARGIN, MARGIN, logoW, logoH);
+                    pdf.addImage(exportLogoData, 'PNG', pageMargin, pageMargin, logoW, logoH);
                 }
 
                 // ── Content area: below logo, centred horizontally ───────────
-                const contentTop = MARGIN + LOGO_AREA_H + LOGO_PAD;
-                const availW = PW - MARGIN * 2;
-                const availH = PH - contentTop - MARGIN;
+                const contentTop = pageMargin + logoSpace + logoGap;
+                const availW = PW - pageMargin * 2;
+                const availH = PH - contentTop - pageMargin;
                 const ratio = Math.min(availW / canvas.width, availH / canvas.height);
                 const imgW = canvas.width * ratio;
                 const imgH = canvas.height * ratio;
-                const imgX = MARGIN + (availW - imgW) / 2;
+                const imgX = pageMargin + (availW - imgW) / 2;
                 pdf.addImage(img, 'JPEG', imgX, contentTop, imgW, imgH, undefined, 'MEDIUM');
             }
         } finally {

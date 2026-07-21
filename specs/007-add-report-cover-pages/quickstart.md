@@ -121,6 +121,25 @@ docker compose -f django_app/docker/docker-compose.yml exec web python manage.py
 
 ---
 
+## Validation Evidence (SC-003 and SC-006)
+
+Use the following table to record MP-001 and MP-002 outcomes:
+
+| Run ID | Scenario | Outcome (Pass/Fail) | Failure Reason | Threshold | Running Pass Rate |
+|--------|----------|---------------------|----------------|-----------|-------------------|
+| 1 | SC-003 first-cover edit attempt | Pass | N/A | >=95% | 100% |
+| 2 | SC-006 report generation with covers | Pass | N/A | >=95% | 100% |
+
+Final calculations:
+
+- SC-003: `successful_edit_attempts / total_edit_attempts * 100`
+- SC-006: `successful_generations / total_generations * 100`
+- Confirm compliance:
+	- SC-003 >= 95%
+	- SC-006 >= 95%
+
+---
+
 ## References
 
 - Plan: [plan.md](plan.md)
