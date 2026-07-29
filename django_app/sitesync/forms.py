@@ -1,8 +1,9 @@
 """
-Forms for runtime configuration.
+Forms for runtime configuration and user-management workflows.
 """
 
 from django import forms
+from django.contrib.auth import get_user_model
 
 from .models import AppSettings
 
@@ -93,3 +94,36 @@ class CapacityUploadForm(forms.Form):
         if not filename.endswith('.xlsx'):
             raise forms.ValidationError('Only .xlsx files are supported.')
         return upload
+
+
+class InvitationForm(forms.Form):
+    """Create a pending invitation for a new user."""
+
+    email = forms.EmailField(required=True)
+
+    def clean_email(self):
+        email = self.cleaned_data['email'].strip().lower()
+        if get_user_model().objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError('A user with this email already exists.')
+        return email
+
+
+class AccountActionForm(forms.Form):
+    """Supports simple account-state changes for a selected user."""
+
+    action = forms.ChoiceField(
+        choices=[
+            ('enable', 'Enable account'),
+            ('disable', 'Disable account'),
+            ('reset_password', 'Reset password'),
+            ('delete', 'Delete account'),
+        ],
+        required=True,
+    )
+    new_username = forms.CharField(required=False)
+
+    def clean_new_username(self):
+        value = (self.cleaned_data.get('new_username') or '').strip()
+        if value:
+            return value
+        return value

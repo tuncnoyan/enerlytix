@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>User Administration</title>
+</head>
+<body>
+    <h1>User Administration</h1>
+
+    <h2>Create Invitation</h2>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="create_invitation" value="1">
+        {{ invitation_form.email.label_tag }} {{ invitation_form.email }}
+        <button type="submit">Send invitation</button>
+    </form>
+
+    <h2>Pending Invitations</h2>
+    <ul>
+        {% for invitation in invitations %}
+            <li>{{ invitation.email }} — {{ invitation.status }} — <a href="{% url 'sitesync:accept_invitation' invitation.id %}">Accept</a></li>
+        {% empty %}
+            <li>No invitations found.</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Users</h2>
+    <ul>
+        {% for user in users %}
+            <li>
+                {{ user.username }} ({{ user.email }})
+                <form method="post" style="display:inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="account_action" value="1">
+                    <input type="hidden" name="user_id" value="{{ user.id }}">
+                    <select name="action">
+                        <option value="enable">Enable account</option>
+                        <option value="disable">Disable account</option>
+                        <option value="reset_password">Reset password</option>
+                        <option value="delete">Delete account</option>
+                    </select>
+                    <input type="text" name="new_username" placeholder="Rename user">
+                    <button type="submit">Apply</button>
+                </form>
+            </li>
+        {% empty %}
+            <li>No users found.</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

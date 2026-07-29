@@ -61,10 +61,10 @@
 
 ### Implementation for User Story 2
 
-- [ ] T015 [US2] Add invitation persistence and status handling in django_app/sitesync/models.py
-- [ ] T016 [US2] Implement invitation creation and listing for administrators in django_app/sitesync/views.py and django_app/templates/sitesync/
-- [ ] T017 [US2] Implement invitation acceptance and account activation in django_app/sitesync/views.py
-- [ ] T018 [US2] Enforce 7-day invitation expiry and clear error handling for expired or invalid invitations in django_app/sitesync/views.py
+- [x] T015 [US2] Add invitation persistence and status handling in django_app/sitesync/models.py
+- [x] T016 [US2] Implement invitation creation and listing for administrators in django_app/sitesync/views.py and django_app/templates/sitesync/
+- [x] T017 [US2] Implement invitation acceptance and account activation in django_app/sitesync/views.py
+- [x] T018 [US2] Enforce 7-day invitation expiry and clear error handling for expired or invalid invitations in django_app/sitesync/views.py
 
 ---
 
@@ -81,10 +81,10 @@
 
 ### Implementation for User Story 3
 
-- [ ] T021 [US3] Add administrator-only user listing and account-state display in django_app/sitesync/views.py and django_app/templates/sitesync/
-- [ ] T022 [US3] Implement enable/disable, rename, password reset, and delete actions in django_app/sitesync/views.py
-- [ ] T023 [US3] Implement role-based access checks so administrators can access admin functions and standard users cannot in django_app/sitesync/views.py
-- [ ] T024 [US3] Add user-management forms and validation for account state changes in django_app/sitesync/forms.py
+- [x] T021 [US3] Add administrator-only user listing and account-state display in django_app/sitesync/views.py and django_app/templates/sitesync/
+- [x] T022 [US3] Implement enable/disable, rename, password reset, and delete actions in django_app/sitesync/views.py
+- [x] T023 [US3] Implement role-based access checks so administrators can access admin functions and standard users cannot in django_app/sitesync/views.py
+- [x] T024 [US3] Add user-management forms and validation for account state changes in django_app/sitesync/forms.py
 
 ---
 
@@ -150,3 +150,11 @@
 1. Authentication and profile flows first
 2. Invitation-based onboarding next
 3. Administration and role enforcement last
+
+## Phase 8: Convergence
+
+- [x] T031 Implement a complete email-based password reset flow with request and confirmation handling per FR-002 (partial)
+- [x] T032 Add invitation issuance, listing, and acceptance workflows for administrators and invited users per FR-004, FR-006, FR-008 (partial)
+- [x] T033 Add administrator account-state controls for enable/disable, rename, password reset, and delete actions per FR-009, FR-010, FR-011, FR-012, FR-016 (partial)
+- [x] T034 Enforce explicit role-based access and disabled-user sign-in blocking for administrator and standard-user workflows per FR-013, FR-014, FR-015, US4/AC1-3 (partial)
+- [x] T035 Add end-to-end invitation registration and role-access regression tests plus supporting documentation updates per SC-001, SC-002, T014, T025, T028 (partial)

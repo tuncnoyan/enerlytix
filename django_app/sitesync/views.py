@@ -8,6 +8,8 @@ from collections import defaultdict
 from datetime import datetime, timezone as datetime_timezone
 from decimal import Decimal, ROUND_HALF_UP
 
+from django.contrib.auth import get_user_model
+from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q, Sum
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
@@ -30,8 +32,9 @@ from .models import (
     InvoiceCost,
     MonthlyReport,
     MonthlyReportVersion,
+    Invitation,
 )
-from .forms import CapacityUploadForm, SettingsForm
+from .forms import AccountActionForm, CapacityUploadForm, InvitationForm, SettingsForm
 from .config_service import SettingsConfigService
 from .services import EtainaibleSyncService
 from .services import (
@@ -478,6 +481,7 @@ def _report_payload(site, end_month, supply_external_ids=None):
     }
 
 
+@login_required(login_url='/login/')
 def report_view(request):
     if request.method == 'POST':
         raw_site_id = (request.POST.get('site_id') or '').strip()
@@ -550,6 +554,7 @@ def report_view(request):
     return render(request, 'sitesync/report.html', context)
 
 
+@login_required(login_url='/login/')
 def saved_reports_view(request):
     """Entry point for the saved reports browser."""
     raw_site_id = (request.GET.get('site_id') or '').strip()
@@ -628,6 +633,113 @@ def report_data_api_view(request):
     return Response(_report_payload(site, end_month, supply_external_ids or None))
 
 
+@login_required(login_url='/login/')
+def profile_view(request):
+    return render(request, 'sitesync/profile.html', {
+        'user': request.user,
+    })
+
+
+@login_required(login_url='/login/')
+def user_admin_view(request):
+    if not request.user.is_staff and not request.user.is_superuser:
+        return redirect('sitesync:profile')
+
+    invitation_form = InvitationForm()
+    action_form = AccountActionForm()
+    users = get_user_model().objects.order_by('username')
+    invitations = Invitation.objects.order_by('-created_at')
+
+    if request.method == 'POST':
+        if 'create_invitation' in request.POST:
+            invitation_form = InvitationForm(request.POST)
+            if invitation_form.is_valid():
+                Invitation.objects.create(
+                    email=invitation_form.cleaned_data['email'],
+                    invited_by=request.user,
+                    expires_at=dj_timezone.now() + dj_timezone.timedelta(days=7),
+                )
+                invitation_form = InvitationForm()
+        elif 'account_action' in request.POST:
+            action_form = AccountActionForm(request.POST)
+            if action_form.is_valid():
+                target_id = request.POST.get('user_id')
+                target_user = get_user_model().objects.filter(id=target_id).first()
+                if target_user is not None:
+                    action = action_form.cleaned_data['action']
+                    if action == 'enable':
+                        target_user.is_active = True
+                        target_user.save(update_fields=['is_active'])
+                    elif action == 'disable':
+                        target_user.is_active = False
+                        target_user.save(update_fields=['is_active'])
+                    elif action == 'reset_password':
+                        target_user.set_password('TempPassword123!')
+                        target_user.save(update_fields=['password'])
+                    elif action == 'delete':
+                        target_user.delete()
+                    if action_form.cleaned_data.get('new_username'):
+                        target_user.username = action_form.cleaned_data['new_username']
+                        target_user.save(update_fields=['username'])
+
+    return render(request, 'sitesync/user_admin.html', {
+        'users': users,
+        'invitations': invitations,
+        'invitation_form': invitation_form,
+        'action_form': action_form,
+    })
+
+
+def password_reset_view(request):
+    if request.method == 'POST':
+        email = (request.POST.get('email') or '').strip()
+        if email:
+            user_model = get_user_model()
+            user_model.objects.filter(email=email).exists()
+        return render(request, 'sitesync/password_reset.html', {
+            'page_title': 'Reset password',
+            'submitted': True,
+        })
+
+    return render(request, 'sitesync/password_reset.html', {
+        'page_title': 'Reset password',
+        'submitted': False,
+    })
+
+
+def accept_invitation_view(request, invitation_id):
+    invitation = Invitation.objects.filter(id=invitation_id).first()
+    if invitation is None:
+        return render(request, 'sitesync/invite_accept.html', {'error': 'Invitation not found.'})
+    if not invitation.is_valid():
+        return render(request, 'sitesync/invite_accept.html', {'error': 'This invitation is no longer valid.'})
+
+    if request.method == 'POST':
+        username = (request.POST.get('username') or '').strip()
+        password = (request.POST.get('password') or '').strip()
+        if not username or not password:
+            return render(request, 'sitesync/invite_accept.html', {
+                'invitation': invitation,
+                'error': 'Please provide a username and password.',
+            })
+        user_model = get_user_model()
+        if user_model.objects.filter(username__iexact=username).exists():
+            return render(request, 'sitesync/invite_accept.html', {
+                'invitation': invitation,
+                'error': 'That username is already taken.',
+            })
+        user = user_model.objects.create_user(username=username, email=invitation.email, password=password)
+        invitation.accept()
+        return render(request, 'sitesync/invite_accept.html', {
+            'invitation': invitation,
+            'success': True,
+            'user': user,
+        })
+
+    return render(request, 'sitesync/invite_accept.html', {'invitation': invitation})
+
+
+@login_required(login_url='/login/')
 def site_list_view(request):
     query = request.GET.get('q', '').strip()
     all_sites_qs = Site.objects.annotate(
@@ -710,6 +822,7 @@ def site_list_view(request):
     })
 
 
+@login_required(login_url='/login/')
 def supply_list_view(request):
     """Display supplies for a selected site."""
     site_id = request.GET.get('site_id')
@@ -855,6 +968,7 @@ def supply_list_view(request):
     })
 
 
+@login_required(login_url='/login/')
 def manual_sync_view(request):
     """Trigger a manual sync and return to the site list."""
     if request.method != 'POST':
@@ -890,6 +1004,7 @@ def manual_sync_view(request):
         }, status=500)
 
 
+@login_required(login_url='/login/')
 def settings_panel_view(request):
     """Display and update runtime configuration settings."""
     settings_instance = SettingsConfigService.get_settings()
@@ -1048,6 +1163,7 @@ def consumption_display_api_view(request):
     })
 
 
+@login_required(login_url='/login/')
 def consumption_display_view(request):
     reporting_month = request.GET.get('reporting_month', '')
     supply_id = request.GET.get('supply_id', '')

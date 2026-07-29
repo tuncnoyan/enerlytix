@@ -4,7 +4,9 @@ Data models for the Etainabl site and supply synchronization.
 
 import uuid
 
+from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 
 class Site(models.Model):
@@ -161,6 +163,49 @@ class Benchmark(models.Model):
 
     def __str__(self):
         return f"Benchmark {self.supply_id} {self.canonical_month_key}"
+
+
+class Invitation(models.Model):
+    """Represents a time-limited invitation to join the platform."""
+
+    STATUS_PENDING = 'pending'
+    STATUS_ACCEPTED = 'accepted'
+    STATUS_EXPIRED = 'expired'
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending'),
+        (STATUS_ACCEPTED, 'Accepted'),
+        (STATUS_EXPIRED, 'Expired'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    email = models.EmailField(unique=True)
+    invited_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='sent_invitations',
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    expires_at = models.DateTimeField()
+    accepted_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def is_valid(self):
+        return self.status == self.STATUS_PENDING and self.expires_at > timezone.now()
+
+    def accept(self):
+        if not self.is_valid():
+            return False
+        self.status = self.STATUS_ACCEPTED
+        self.accepted_at = timezone.now()
+        self.save(update_fields=['status', 'accepted_at', 'updated_at'])
+        return True
+
+    def __str__(self):
+        return f"Invitation for {self.email}"
 
 
 class AppSettings(models.Model):
