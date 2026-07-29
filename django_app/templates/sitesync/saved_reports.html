@@ -5,27 +5,15 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Saved Reports | Enerlytix</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="{% static 'sitesync/cxg-base.css' %}" rel="stylesheet">
     <style>
         body {
             margin: 0;
-            font-family: 'Segoe UI', sans-serif;
             background: #f4f7fa;
             color: #1f2937;
-        }
-        .topbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.9rem 1.2rem;
-            background: #ffffff;
-            border-bottom: 1px solid #d6dee6;
-        }
-        .topbar a {
-            color: #334155;
-            text-decoration: none;
-            margin-left: 0.9rem;
-            font-size: 0.9rem;
-            font-weight: 600;
         }
         .page {
             max-width: 1100px;
@@ -76,14 +64,7 @@
     </style>
 </head>
 <body>
-    <div class="topbar">
-        <strong>Enerlytix</strong>
-        <div>
-            <a href="{% url 'sitesync:site_list' %}">Dashboard</a>
-            <a href="{% url 'sitesync:saved_reports' %}">Saved Reports</a>
-            <a href="{% url 'sitesync:settings_panel' %}">Settings</a>
-        </div>
-    </div>
+    {% include 'sitesync/_topbar.html' with active_page='reports' %}
 
     <div class="page">
         <div class="panel">

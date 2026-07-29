@@ -1,0 +1,14 @@
+{% comment %}Standard CXG topbar. Caller sets active_page = 'home'|'reports'|'profile'|'admin'.{% endcomment %}
+<div class="topbar">
+    <span class="brand">Enerlytix</span>
+    <nav class="topbar-links">
+        <a href="{% url 'sitesync:site_list' %}"{% if active_page == 'home' %} class="is-active"{% endif %}>Home</a>
+        <a href="{% url 'sitesync:saved_reports' %}"{% if active_page == 'reports' %} class="is-active"{% endif %}>Saved Reports</a>
+        <a href="{% url 'sitesync:profile' %}"{% if active_page == 'profile' %} class="is-active"{% endif %}>Profile</a>
+        {% if is_admin %}<a href="{% url 'sitesync:admin_panel' %}" class="topbar-admin{% if active_page == 'admin' %} is-active{% endif %}">Admin Panel</a>{% endif %}
+        <form method="post" action="{% url 'logout' %}" class="topbar-logout-form">
+            {% csrf_token %}
+            <button type="submit" class="topbar-logout-btn">Logout</button>
+        </form>
+    </nav>
+</div>

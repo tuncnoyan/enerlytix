@@ -1,0 +1,1048 @@
+[INFO] 2026-07-29 13:19:52,029 apps Sitesync app ready
+[DEBUG] 2026-07-29 13:19:52,030 apps Skipping automatic sync during management command
+Found 110 test(s).
+Creating test database for alias 'default'...
+System check identified no issues (0 silenced).
+...EEE.[INFO] 2026-07-29 13:19:54,878 services Starting full sync of Etainabl data...
+[INFO] 2026-07-29 13:19:54,879 services Starting asset sync...
+[DEBUG] 2026-07-29 13:19:54,880 services API request to https://api.test/assets (attempt 1/10)
+[DEBUG] 2026-07-29 13:19:54,885 services Created site: Site 1 (id=site-1)
+[INFO] 2026-07-29 13:19:54,886 services Reached end of assets (total=1)
+[INFO] 2026-07-29 13:19:54,888 services Asset sync complete: 1 created, 0 updated, 0 skipped, 0 deleted
+[INFO] 2026-07-29 13:19:54,889 services Assets sync complete: 1 created, 0 updated, 0 deleted
+[INFO] 2026-07-29 13:19:54,889 services Starting account sync...
+[DEBUG] 2026-07-29 13:19:54,890 services API request to https://api.test/accounts (attempt 1/10)
+[DEBUG] 2026-07-29 13:19:54,895 services Created supply: Supply 1 (id=acc-1)
+[INFO] 2026-07-29 13:19:54,896 services Reached end of accounts (total=1)
+[INFO] 2026-07-29 13:19:54,899 services Account sync complete: 1 created, 0 updated, 0 skipped, 0 deleted
+[INFO] 2026-07-29 13:19:54,899 services Accounts sync complete: 1 created, 0 updated, 0 deleted
+[INFO] 2026-07-29 13:19:54,900 services Full sync completed successfully: {'sites_created': 1, 'sites_updated': 0, 'sites_deleted': 0, 'supplies_created': 1, 'supplies_updated': 0, 'supplies_deleted': 0}
+[INFO] 2026-07-29 13:19:54,901 services Starting full sync of Etainabl data...
+[INFO] 2026-07-29 13:19:54,902 services Starting asset sync...
+[DEBUG] 2026-07-29 13:19:54,903 services API request to https://api.test/assets (attempt 1/10)
+[DEBUG] 2026-07-29 13:19:54,906 services Updated site: Site 1 (id=site-1)
+[INFO] 2026-07-29 13:19:54,907 services Reached end of assets (total=1)
+[INFO] 2026-07-29 13:19:54,910 services Asset sync complete: 0 created, 1 updated, 0 skipped, 0 deleted
+[INFO] 2026-07-29 13:19:54,911 services Assets sync complete: 0 created, 1 updated, 0 deleted
+[INFO] 2026-07-29 13:19:54,912 services Starting account sync...
+[DEBUG] 2026-07-29 13:19:54,914 services API request to https://api.test/accounts (attempt 1/10)
+[DEBUG] 2026-07-29 13:19:54,921 services Updated supply: Supply 1 (id=acc-1)
+[INFO] 2026-07-29 13:19:54,926 services Reached end of accounts (total=1)
+[INFO] 2026-07-29 13:19:54,928 services Account sync complete: 0 created, 1 updated, 0 skipped, 0 deleted
+[INFO] 2026-07-29 13:19:54,935 services Accounts sync complete: 0 created, 1 updated, 0 deleted
+[INFO] 2026-07-29 13:19:54,941 services Full sync completed successfully: {'sites_created': 0, 'sites_updated': 1, 'sites_deleted': 0, 'supplies_created': 0, 'supplies_updated': 1, 'supplies_deleted': 0}
+.[INFO] 2026-07-29 13:19:54,953 services Starting full sync of Etainabl data...
+[INFO] 2026-07-29 13:19:54,962 services Starting asset sync...
+[DEBUG] 2026-07-29 13:19:54,964 services API request to https://api.test/assets (attempt 1/10)
+[DEBUG] 2026-07-29 13:19:54,967 services Created site: Site 1 (id=site-1)
+[INFO] 2026-07-29 13:19:54,968 services Reached end of assets (total=1)
+[INFO] 2026-07-29 13:19:54,970 services Asset sync complete: 1 created, 0 updated, 0 skipped, 0 deleted
+[INFO] 2026-07-29 13:19:54,970 services Assets sync complete: 1 created, 0 updated, 0 deleted
+[INFO] 2026-07-29 13:19:54,971 services Starting account sync...
+[DEBUG] 2026-07-29 13:19:54,972 services API request to https://api.test/accounts (attempt 1/10)
+[DEBUG] 2026-07-29 13:19:54,979 services Created supply: Supply 1 (id=acc-1)
+[DEBUG] 2026-07-29 13:19:54,990 services Created supply: Supply 2 (id=acc-2)
+[INFO] 2026-07-29 13:19:54,996 services Reached end of accounts (total=2)
+[INFO] 2026-07-29 13:19:55,012 services Account sync complete: 2 created, 0 updated, 0 skipped, 0 deleted
+[INFO] 2026-07-29 13:19:55,016 services Accounts sync complete: 2 created, 0 updated, 0 deleted
+[INFO] 2026-07-29 13:19:55,022 services Full sync completed successfully: {'sites_created': 1, 'sites_updated': 0, 'sites_deleted': 0, 'supplies_created': 2, 'supplies_updated': 0, 'supplies_deleted': 0}
+[INFO] 2026-07-29 13:19:55,027 services Starting full sync of Etainabl data...
+[INFO] 2026-07-29 13:19:55,034 services Starting asset sync...
+[DEBUG] 2026-07-29 13:19:55,036 services API request to https://api.test/assets (attempt 1/10)
+[DEBUG] 2026-07-29 13:19:55,046 services Updated site: Site 1 (id=site-1)
+[INFO] 2026-07-29 13:19:55,048 services Reached end of assets (total=1)
+[INFO] 2026-07-29 13:19:55,054 services Asset sync complete: 0 created, 1 updated, 0 skipped, 0 deleted
+[INFO] 2026-07-29 13:19:55,070 services Assets sync complete: 0 created, 1 updated, 0 deleted
+[INFO] 2026-07-29 13:19:55,075 services Starting account sync...
+[DEBUG] 2026-07-29 13:19:55,075 services API request to https://api.test/accounts (attempt 1/10)
+[DEBUG] 2026-07-29 13:19:55,084 services Updated supply: Supply 1 (id=acc-1)
+[INFO] 2026-07-29 13:19:55,088 services Reached end of accounts (total=1)
+[INFO] 2026-07-29 13:19:55,113 services Removed 1 stale supplies not present in Etainabl
+[INFO] 2026-07-29 13:19:55,115 services Account sync complete: 0 created, 1 updated, 0 skipped, 1 deleted
+[INFO] 2026-07-29 13:19:55,116 services Accounts sync complete: 0 created, 1 updated, 1 deleted
+[INFO] 2026-07-29 13:19:55,116 services Full sync completed successfully: {'sites_created': 0, 'sites_updated': 1, 'sites_deleted': 0, 'supplies_created': 0, 'supplies_updated': 1, 'supplies_deleted': 1}
+.E[INFO] 2026-07-29 13:19:55,152 services Starting asset sync...
+[DEBUG] 2026-07-29 13:19:55,154 services API request to https://api.test/assets (attempt 1/10)
+[WARNING] 2026-07-29 13:19:55,158 services No data in response from https://api.test/assets
+[WARNING] 2026-07-29 13:19:55,160 services Skipping stale site reconciliation due to invalid assets payload shape
+[INFO] 2026-07-29 13:19:55,162 services Asset sync complete: 0 created, 0 updated, 0 skipped, 0 deleted
+.[DEBUG] 2026-07-29 13:19:55,166 services API request to https://api.test/assets (attempt 1/2)
+[WARNING] 2026-07-29 13:19:55,167 services Timeout, retrying in 0s...
+[DEBUG] 2026-07-29 13:19:55,168 services API request to https://api.test/assets (attempt 2/2)
+[ERROR] 2026-07-29 13:19:55,169 services Timeout after 2 retries
+.[INFO] 2026-07-29 13:19:55,181 services Starting full sync of Etainabl data...
+[INFO] 2026-07-29 13:19:55,184 services Starting asset sync...
+[DEBUG] 2026-07-29 13:19:55,186 services API request to https://api.test/assets (attempt 1/10)
+[DEBUG] 2026-07-29 13:19:55,193 services Created site: Site 1 (id=site-1)
+[DEBUG] 2026-07-29 13:19:55,196 services Created site: Site 2 (id=site-2)
+[INFO] 2026-07-29 13:19:55,197 services Reached end of assets (total=2)
+[INFO] 2026-07-29 13:19:55,199 services Asset sync complete: 2 created, 0 updated, 0 skipped, 0 deleted
+[INFO] 2026-07-29 13:19:55,200 services Assets sync complete: 2 created, 0 updated, 0 deleted
+[INFO] 2026-07-29 13:19:55,200 services Starting account sync...
+[DEBUG] 2026-07-29 13:19:55,201 services API request to https://api.test/accounts (attempt 1/10)
+[DEBUG] 2026-07-29 13:19:55,206 services Created supply: Supply 1 (id=acc-1)
+[DEBUG] 2026-07-29 13:19:55,210 services Created supply: Supply 2 (id=acc-2)
+[INFO] 2026-07-29 13:19:55,211 services Reached end of accounts (total=2)
+[INFO] 2026-07-29 13:19:55,213 services Account sync complete: 2 created, 0 updated, 0 skipped, 0 deleted
+[INFO] 2026-07-29 13:19:55,213 services Accounts sync complete: 2 created, 0 updated, 0 deleted
+[INFO] 2026-07-29 13:19:55,214 services Full sync completed successfully: {'sites_created': 2, 'sites_updated': 0, 'sites_deleted': 0, 'supplies_created': 2, 'supplies_updated': 0, 'supplies_deleted': 0}
+...[INFO] 2026-07-29 13:19:55,264 services Starting full sync of Etainabl data...
+[INFO] 2026-07-29 13:19:55,265 services Starting asset sync...
+[DEBUG] 2026-07-29 13:19:55,266 services API request to https://api.test/assets (attempt 1/10)
+[DEBUG] 2026-07-29 13:19:55,271 services Created site: Site 1 (id=site-1)
+[INFO] 2026-07-29 13:19:55,271 services Reached end of assets (total=1)
+[INFO] 2026-07-29 13:19:55,273 services Asset sync complete: 1 created, 0 updated, 0 skipped, 0 deleted
+[INFO] 2026-07-29 13:19:55,275 services Assets sync complete: 1 created, 0 updated, 0 deleted
+[INFO] 2026-07-29 13:19:55,276 services Starting account sync...
+[DEBUG] 2026-07-29 13:19:55,277 services API request to https://api.test/accounts (attempt 1/10)
+[DEBUG] 2026-07-29 13:19:55,281 services Created supply: Supply 1 (id=acc-1)
+[INFO] 2026-07-29 13:19:55,282 services Reached end of accounts (total=1)
+[INFO] 2026-07-29 13:19:55,284 services Account sync complete: 1 created, 0 updated, 0 skipped, 0 deleted
+[INFO] 2026-07-29 13:19:55,285 services Accounts sync complete: 1 created, 0 updated, 0 deleted
+[INFO] 2026-07-29 13:19:55,286 services Full sync completed successfully: {'sites_created': 1, 'sites_updated': 0, 'sites_deleted': 0, 'supplies_created': 1, 'supplies_updated': 0, 'supplies_deleted': 0}
+.........[INFO] 2026-07-29 13:19:55,726 services Invoice fetch for supply supply-1: accountId=supply-1 returned 0 rows
+.....EEE..FFEF...F.EFF...FEFFF.......EEEEE[DEBUG] 2026-07-29 13:19:56,247 services Created site: 17 Pavilion Rd Knightsbridge (id=site-001)
+.EEEEEEE.............EEEEEEEEEEEE[INFO] 2026-07-29 13:19:56,453 services Starting full sync of Etainabl data...
+[INFO] 2026-07-29 13:19:56,454 services Starting asset sync...
+[DEBUG] 2026-07-29 13:19:56,456 services API request to https://api.test/assets (attempt 1/10)
+[DEBUG] 2026-07-29 13:19:56,462 services Created site: Site 0 (id=site-0)
+[DEBUG] 2026-07-29 13:19:56,464 services Created site: Site 1 (id=site-1)
+[DEBUG] 2026-07-29 13:19:56,466 services Created site: Site 2 (id=site-2)
+[DEBUG] 2026-07-29 13:19:56,470 services Created site: Site 3 (id=site-3)
+[DEBUG] 2026-07-29 13:19:56,473 services Created site: Site 4 (id=site-4)
+[DEBUG] 2026-07-29 13:19:56,478 services Created site: Site 5 (id=site-5)
+[DEBUG] 2026-07-29 13:19:56,482 services Created site: Site 6 (id=site-6)
+[DEBUG] 2026-07-29 13:19:56,485 services Created site: Site 7 (id=site-7)
+[DEBUG] 2026-07-29 13:19:56,488 services Created site: Site 8 (id=site-8)
+[DEBUG] 2026-07-29 13:19:56,493 services Created site: Site 9 (id=site-9)
+[DEBUG] 2026-07-29 13:19:56,496 services Created site: Site 10 (id=site-10)
+[DEBUG] 2026-07-29 13:19:56,499 services Created site: Site 11 (id=site-11)
+[DEBUG] 2026-07-29 13:19:56,502 services Created site: Site 12 (id=site-12)
+[DEBUG] 2026-07-29 13:19:56,507 services Created site: Site 13 (id=site-13)
+[DEBUG] 2026-07-29 13:19:56,511 services Created site: Site 14 (id=site-14)
+[DEBUG] 2026-07-29 13:19:56,516 services Created site: Site 15 (id=site-15)
+[DEBUG] 2026-07-29 13:19:56,518 services Created site: Site 16 (id=site-16)
+[DEBUG] 2026-07-29 13:19:56,524 services Created site: Site 17 (id=site-17)
+[DEBUG] 2026-07-29 13:19:56,527 services Created site: Site 18 (id=site-18)
+[DEBUG] 2026-07-29 13:19:56,530 services Created site: Site 19 (id=site-19)
+[DEBUG] 2026-07-29 13:19:56,534 services Created site: Site 20 (id=site-20)
+[DEBUG] 2026-07-29 13:19:56,537 services Created site: Site 21 (id=site-21)
+[DEBUG] 2026-07-29 13:19:56,540 services Created site: Site 22 (id=site-22)
+[DEBUG] 2026-07-29 13:19:56,544 services Created site: Site 23 (id=site-23)
+[DEBUG] 2026-07-29 13:19:56,548 services Created site: Site 24 (id=site-24)
+[DEBUG] 2026-07-29 13:19:56,551 services Created site: Site 25 (id=site-25)
+[DEBUG] 2026-07-29 13:19:56,554 services Created site: Site 26 (id=site-26)
+[DEBUG] 2026-07-29 13:19:56,560 services Created site: Site 27 (id=site-27)
+[DEBUG] 2026-07-29 13:19:56,564 services Created site: Site 28 (id=site-28)
+[DEBUG] 2026-07-29 13:19:56,567 services Created site: Site 29 (id=site-29)
+[DEBUG] 2026-07-29 13:19:56,571 services Created site: Site 30 (id=site-30)
+[DEBUG] 2026-07-29 13:19:56,573 services Created site: Site 31 (id=site-31)
+[DEBUG] 2026-07-29 13:19:56,576 services Created site: Site 32 (id=site-32)
+[DEBUG] 2026-07-29 13:19:56,579 services Created site: Site 33 (id=site-33)
+[DEBUG] 2026-07-29 13:19:56,582 services Created site: Site 34 (id=site-34)
+[DEBUG] 2026-07-29 13:19:56,587 services Created site: Site 35 (id=site-35)
+[DEBUG] 2026-07-29 13:19:56,590 services Created site: Site 36 (id=site-36)
+[DEBUG] 2026-07-29 13:19:56,594 services Created site: Site 37 (id=site-37)
+[DEBUG] 2026-07-29 13:19:56,597 services Created site: Site 38 (id=site-38)
+[DEBUG] 2026-07-29 13:19:56,600 services Created site: Site 39 (id=site-39)
+[DEBUG] 2026-07-29 13:19:56,603 services Created site: Site 40 (id=site-40)
+[DEBUG] 2026-07-29 13:19:56,606 services Created site: Site 41 (id=site-41)
+[DEBUG] 2026-07-29 13:19:56,610 services Created site: Site 42 (id=site-42)
+[DEBUG] 2026-07-29 13:19:56,613 services Created site: Site 43 (id=site-43)
+[DEBUG] 2026-07-29 13:19:56,616 services Created site: Site 44 (id=site-44)
+[DEBUG] 2026-07-29 13:19:56,619 services Created site: Site 45 (id=site-45)
+[DEBUG] 2026-07-29 13:19:56,622 services Created site: Site 46 (id=site-46)
+[DEBUG] 2026-07-29 13:19:56,627 services Created site: Site 47 (id=site-47)
+[DEBUG] 2026-07-29 13:19:56,631 services Created site: Site 48 (id=site-48)
+[DEBUG] 2026-07-29 13:19:56,634 services Created site: Site 49 (id=site-49)
+[DEBUG] 2026-07-29 13:19:56,635 services API request to https://api.test/assets (attempt 1/10)
+[DEBUG] 2026-07-29 13:19:56,638 services Created site: Site 50 (id=site-50)
+[DEBUG] 2026-07-29 13:19:56,641 services Created site: Site 51 (id=site-51)
+[DEBUG] 2026-07-29 13:19:56,643 services Created site: Site 52 (id=site-52)
+[DEBUG] 2026-07-29 13:19:56,646 services Created site: Site 53 (id=site-53)
+[DEBUG] 2026-07-29 13:19:56,650 services Created site: Site 54 (id=site-54)
+[DEBUG] 2026-07-29 13:19:56,652 services Created site: Site 55 (id=site-55)
+[DEBUG] 2026-07-29 13:19:56,656 services Created site: Site 56 (id=site-56)
+[DEBUG] 2026-07-29 13:19:56,659 services Created site: Site 57 (id=site-57)
+[DEBUG] 2026-07-29 13:19:56,662 services Created site: Site 58 (id=site-58)
+[DEBUG] 2026-07-29 13:19:56,664 services Created site: Site 59 (id=site-59)
+[INFO] 2026-07-29 13:19:56,665 services Reached end of assets (total=60)
+[INFO] 2026-07-29 13:19:56,668 services Asset sync complete: 60 created, 0 updated, 0 skipped, 0 deleted
+[INFO] 2026-07-29 13:19:56,670 services Assets sync complete: 60 created, 0 updated, 0 deleted
+[INFO] 2026-07-29 13:19:56,671 services Starting account sync...
+[DEBUG] 2026-07-29 13:19:56,672 services API request to https://api.test/accounts (attempt 1/10)
+[DEBUG] 2026-07-29 13:19:56,679 services Created supply: Account 0 (id=acc-0)
+[DEBUG] 2026-07-29 13:19:56,683 services Created supply: Account 1 (id=acc-1)
+[DEBUG] 2026-07-29 13:19:56,686 services Created supply: Account 2 (id=acc-2)
+[DEBUG] 2026-07-29 13:19:56,691 services Created supply: Account 3 (id=acc-3)
+[DEBUG] 2026-07-29 13:19:56,695 services Created supply: Account 4 (id=acc-4)
+[DEBUG] 2026-07-29 13:19:56,699 services Created supply: Account 5 (id=acc-5)
+[DEBUG] 2026-07-29 13:19:56,703 services Created supply: Account 6 (id=acc-6)
+[DEBUG] 2026-07-29 13:19:56,707 services Created supply: Account 7 (id=acc-7)
+[DEBUG] 2026-07-29 13:19:56,713 services Created supply: Account 8 (id=acc-8)
+[DEBUG] 2026-07-29 13:19:56,717 services Created supply: Account 9 (id=acc-9)
+[DEBUG] 2026-07-29 13:19:56,721 services Created supply: Account 10 (id=acc-10)
+[DEBUG] 2026-07-29 13:19:56,725 services Created supply: Account 11 (id=acc-11)
+[DEBUG] 2026-07-29 13:19:56,730 services Created supply: Account 12 (id=acc-12)
+[DEBUG] 2026-07-29 13:19:56,733 services Created supply: Account 13 (id=acc-13)
+[DEBUG] 2026-07-29 13:19:56,737 services Created supply: Account 14 (id=acc-14)
+[DEBUG] 2026-07-29 13:19:56,742 services Created supply: Account 15 (id=acc-15)
+[DEBUG] 2026-07-29 13:19:56,745 services Created supply: Account 16 (id=acc-16)
+[DEBUG] 2026-07-29 13:19:56,749 services Created supply: Account 17 (id=acc-17)
+[DEBUG] 2026-07-29 13:19:56,755 services Created supply: Account 18 (id=acc-18)
+[DEBUG] 2026-07-29 13:19:56,761 services Created supply: Account 19 (id=acc-19)
+[DEBUG] 2026-07-29 13:19:56,766 services Created supply: Account 20 (id=acc-20)
+[DEBUG] 2026-07-29 13:19:56,770 services Created supply: Account 21 (id=acc-21)
+[DEBUG] 2026-07-29 13:19:56,774 services Created supply: Account 22 (id=acc-22)
+[DEBUG] 2026-07-29 13:19:56,777 services Created supply: Account 23 (id=acc-23)
+[DEBUG] 2026-07-29 13:19:56,781 services Created supply: Account 24 (id=acc-24)
+[DEBUG] 2026-07-29 13:19:56,784 services Created supply: Account 25 (id=acc-25)
+[DEBUG] 2026-07-29 13:19:56,787 services Created supply: Account 26 (id=acc-26)
+[DEBUG] 2026-07-29 13:19:56,794 services Created supply: Account 27 (id=acc-27)
+[DEBUG] 2026-07-29 13:19:56,798 services Created supply: Account 28 (id=acc-28)
+[DEBUG] 2026-07-29 13:19:56,802 services Created supply: Account 29 (id=acc-29)
+[DEBUG] 2026-07-29 13:19:56,806 services Created supply: Account 30 (id=acc-30)
+[DEBUG] 2026-07-29 13:19:56,810 services Created supply: Account 31 (id=acc-31)
+[DEBUG] 2026-07-29 13:19:56,815 services Created supply: Account 32 (id=acc-32)
+[DEBUG] 2026-07-29 13:19:56,820 services Created supply: Account 33 (id=acc-33)
+[DEBUG] 2026-07-29 13:19:56,823 services Created supply: Account 34 (id=acc-34)
+[DEBUG] 2026-07-29 13:19:56,827 services Created supply: Account 35 (id=acc-35)
+[DEBUG] 2026-07-29 13:19:56,831 services Created supply: Account 36 (id=acc-36)
+[DEBUG] 2026-07-29 13:19:56,836 services Created supply: Account 37 (id=acc-37)
+[DEBUG] 2026-07-29 13:19:56,841 services Created supply: Account 38 (id=acc-38)
+[DEBUG] 2026-07-29 13:19:56,846 services Created supply: Account 39 (id=acc-39)
+[DEBUG] 2026-07-29 13:19:56,849 services Created supply: Account 40 (id=acc-40)
+[DEBUG] 2026-07-29 13:19:56,855 services Created supply: Account 41 (id=acc-41)
+[DEBUG] 2026-07-29 13:19:56,864 services Created supply: Account 42 (id=acc-42)
+[DEBUG] 2026-07-29 13:19:56,868 services Created supply: Account 43 (id=acc-43)
+[DEBUG] 2026-07-29 13:19:56,874 services Created supply: Account 44 (id=acc-44)
+[DEBUG] 2026-07-29 13:19:56,878 services Created supply: Account 45 (id=acc-45)
+[DEBUG] 2026-07-29 13:19:56,881 services Created supply: Account 46 (id=acc-46)
+[DEBUG] 2026-07-29 13:19:56,885 services Created supply: Account 47 (id=acc-47)
+[DEBUG] 2026-07-29 13:19:56,889 services Created supply: Account 48 (id=acc-48)
+[DEBUG] 2026-07-29 13:19:56,895 services Created supply: Account 49 (id=acc-49)
+[DEBUG] 2026-07-29 13:19:56,897 services API request to https://api.test/accounts (attempt 1/10)
+[DEBUG] 2026-07-29 13:19:56,900 services Created supply: Account 50 (id=acc-50)
+[DEBUG] 2026-07-29 13:19:56,906 services Created supply: Account 51 (id=acc-51)
+[DEBUG] 2026-07-29 13:19:56,911 services Created supply: Account 52 (id=acc-52)
+[DEBUG] 2026-07-29 13:19:56,914 services Created supply: Account 53 (id=acc-53)
+[DEBUG] 2026-07-29 13:19:56,916 services Created supply: Account 54 (id=acc-54)
+[DEBUG] 2026-07-29 13:19:56,921 services Created supply: Account 55 (id=acc-55)
+[DEBUG] 2026-07-29 13:19:56,926 services Created supply: Account 56 (id=acc-56)
+[DEBUG] 2026-07-29 13:19:56,928 services Created supply: Account 57 (id=acc-57)
+[DEBUG] 2026-07-29 13:19:56,931 services Created supply: Account 58 (id=acc-58)
+[DEBUG] 2026-07-29 13:19:56,934 services Created supply: Account 59 (id=acc-59)
+[DEBUG] 2026-07-29 13:19:56,938 services Created supply: Account 60 (id=acc-60)
+[DEBUG] 2026-07-29 13:19:56,942 services Created supply: Account 61 (id=acc-61)
+[DEBUG] 2026-07-29 13:19:56,946 services Created supply: Account 62 (id=acc-62)
+[DEBUG] 2026-07-29 13:19:56,948 services Created supply: Account 63 (id=acc-63)
+[DEBUG] 2026-07-29 13:19:56,951 services Created supply: Account 64 (id=acc-64)
+[DEBUG] 2026-07-29 13:19:56,954 services Created supply: Account 65 (id=acc-65)
+[DEBUG] 2026-07-29 13:19:56,958 services Created supply: Account 66 (id=acc-66)
+[DEBUG] 2026-07-29 13:19:56,962 services Created supply: Account 67 (id=acc-67)
+[DEBUG] 2026-07-29 13:19:56,964 services Created supply: Account 68 (id=acc-68)
+[DEBUG] 2026-07-29 13:19:56,967 services Created supply: Account 69 (id=acc-69)
+[DEBUG] 2026-07-29 13:19:56,970 services Created supply: Account 70 (id=acc-70)
+[DEBUG] 2026-07-29 13:19:56,974 services Created supply: Account 71 (id=acc-71)
+[DEBUG] 2026-07-29 13:19:56,977 services Created supply: Account 72 (id=acc-72)
+[DEBUG] 2026-07-29 13:19:56,980 services Created supply: Account 73 (id=acc-73)
+[DEBUG] 2026-07-29 13:19:56,983 services Created supply: Account 74 (id=acc-74)
+[INFO] 2026-07-29 13:19:56,984 services Reached end of accounts (total=75)
+[INFO] 2026-07-29 13:19:56,986 services Account sync complete: 75 created, 0 updated, 0 skipped, 0 deleted
+[INFO] 2026-07-29 13:19:56,987 services Accounts sync complete: 75 created, 0 updated, 0 deleted
+[INFO] 2026-07-29 13:19:56,988 services Full sync completed successfully: {'sites_created': 60, 'sites_updated': 0, 'sites_deleted': 0, 'supplies_created': 75, 'supplies_updated': 0, 'supplies_deleted': 0}
+.[INFO] 2026-07-29 13:19:56,999 services Starting full sync of Etainabl data...
+[INFO] 2026-07-29 13:19:57,000 services Starting asset sync...
+[DEBUG] 2026-07-29 13:19:57,001 services API request to https://api.test/assets (attempt 1/10)
+[DEBUG] 2026-07-29 13:19:57,006 services Created site: Variant Site (id=site-abc)
+[INFO] 2026-07-29 13:19:57,007 services Reached end of assets (total=1)
+[INFO] 2026-07-29 13:19:57,009 services Asset sync complete: 1 created, 0 updated, 0 skipped, 0 deleted
+[INFO] 2026-07-29 13:19:57,010 services Assets sync complete: 1 created, 0 updated, 0 deleted
+[INFO] 2026-07-29 13:19:57,011 services Starting account sync...
+[DEBUG] 2026-07-29 13:19:57,012 services API request to https://api.test/accounts (attempt 1/10)
+[DEBUG] 2026-07-29 13:19:57,016 services Created supply: Variant Supply (id=acc-abc)
+[INFO] 2026-07-29 13:19:57,017 services Reached end of accounts (total=1)
+[INFO] 2026-07-29 13:19:57,018 services Account sync complete: 1 created, 0 updated, 0 skipped, 0 deleted
+[INFO] 2026-07-29 13:19:57,019 services Accounts sync complete: 1 created, 0 updated, 0 deleted
+[INFO] 2026-07-29 13:19:57,020 services Full sync completed successfully: {'sites_created': 1, 'sites_updated': 0, 'sites_deleted': 0, 'supplies_created': 1, 'supplies_updated': 0, 'supplies_deleted': 0}
+.[INFO] 2026-07-29 13:19:57,033 services Starting full sync of Etainabl data...
+[INFO] 2026-07-29 13:19:57,033 services Starting asset sync...
+[DEBUG] 2026-07-29 13:19:57,034 services API request to https://api.test/assets (attempt 1/10)
+[DEBUG] 2026-07-29 13:19:57,039 services Created site: Site 0 (id=site-0)
+[DEBUG] 2026-07-29 13:19:57,042 services Created site: Site 1 (id=site-1)
+[DEBUG] 2026-07-29 13:19:57,045 services Created site: Site 2 (id=site-2)
+[DEBUG] 2026-07-29 13:19:57,048 services Created site: Site 3 (id=site-3)
+[DEBUG] 2026-07-29 13:19:57,050 services Created site: Site 4 (id=site-4)
+[DEBUG] 2026-07-29 13:19:57,052 services Created site: Site 5 (id=site-5)
+[DEBUG] 2026-07-29 13:19:57,055 services Created site: Site 6 (id=site-6)
+[DEBUG] 2026-07-29 13:19:57,059 services Created site: Site 7 (id=site-7)
+[DEBUG] 2026-07-29 13:19:57,062 services Created site: Site 8 (id=site-8)
+[DEBUG] 2026-07-29 13:19:57,064 services Created site: Site 9 (id=site-9)
+[DEBUG] 2026-07-29 13:19:57,068 services Created site: Site 10 (id=site-10)
+[DEBUG] 2026-07-29 13:19:57,072 services Created site: Site 11 (id=site-11)
+[DEBUG] 2026-07-29 13:19:57,075 services Created site: Site 12 (id=site-12)
+[DEBUG] 2026-07-29 13:19:57,077 services Created site: Site 13 (id=site-13)
+[DEBUG] 2026-07-29 13:19:57,080 services Created site: Site 14 (id=site-14)
+[DEBUG] 2026-07-29 13:19:57,084 services Created site: Site 15 (id=site-15)
+[DEBUG] 2026-07-29 13:19:57,087 services Created site: Site 16 (id=site-16)
+[DEBUG] 2026-07-29 13:19:57,090 services Created site: Site 17 (id=site-17)
+[DEBUG] 2026-07-29 13:19:57,094 services Created site: Site 18 (id=site-18)
+[DEBUG] 2026-07-29 13:19:57,098 services Created site: Site 19 (id=site-19)
+[DEBUG] 2026-07-29 13:19:57,101 services Created site: Site 20 (id=site-20)
+[DEBUG] 2026-07-29 13:19:57,104 services Created site: Site 21 (id=site-21)
+[DEBUG] 2026-07-29 13:19:57,109 services Created site: Site 22 (id=site-22)
+[DEBUG] 2026-07-29 13:19:57,113 services Created site: Site 23 (id=site-23)
+[DEBUG] 2026-07-29 13:19:57,115 services Created site: Site 24 (id=site-24)
+[DEBUG] 2026-07-29 13:19:57,118 services Created site: Site 25 (id=site-25)
+[DEBUG] 2026-07-29 13:19:57,122 services Created site: Site 26 (id=site-26)
+[DEBUG] 2026-07-29 13:19:57,126 services Created site: Site 27 (id=site-27)
+[DEBUG] 2026-07-29 13:19:57,129 services Created site: Site 28 (id=site-28)
+[DEBUG] 2026-07-29 13:19:57,132 services Created site: Site 29 (id=site-29)
+[DEBUG] 2026-07-29 13:19:57,137 services Created site: Site 30 (id=site-30)
+[DEBUG] 2026-07-29 13:19:57,143 services Created site: Site 31 (id=site-31)
+[DEBUG] 2026-07-29 13:19:57,146 services Created site: Site 32 (id=site-32)
+[DEBUG] 2026-07-29 13:19:57,150 services Created site: Site 33 (id=site-33)
+[DEBUG] 2026-07-29 13:19:57,156 services Created site: Site 34 (id=site-34)
+[DEBUG] 2026-07-29 13:19:57,160 services Created site: Site 35 (id=site-35)
+[DEBUG] 2026-07-29 13:19:57,167 services Created site: Site 36 (id=site-36)
+[DEBUG] 2026-07-29 13:19:57,170 services Created site: Site 37 (id=site-37)
+[DEBUG] 2026-07-29 13:19:57,172 services Created site: Site 38 (id=site-38)
+[DEBUG] 2026-07-29 13:19:57,176 services Created site: Site 39 (id=site-39)
+[DEBUG] 2026-07-29 13:19:57,179 services Created site: Site 40 (id=site-40)
+[DEBUG] 2026-07-29 13:19:57,182 services Created site: Site 41 (id=site-41)
+[DEBUG] 2026-07-29 13:19:57,187 services Created site: Site 42 (id=site-42)
+[DEBUG] 2026-07-29 13:19:57,190 services Created site: Site 43 (id=site-43)
+[DEBUG] 2026-07-29 13:19:57,193 services Created site: Site 44 (id=site-44)
+[DEBUG] 2026-07-29 13:19:57,196 services Created site: Site 45 (id=site-45)
+[DEBUG] 2026-07-29 13:19:57,200 services Created site: Site 46 (id=site-46)
+[DEBUG] 2026-07-29 13:19:57,202 services Created site: Site 47 (id=site-47)
+[DEBUG] 2026-07-29 13:19:57,205 services Created site: Site 48 (id=site-48)
+[DEBUG] 2026-07-29 13:19:57,209 services Created site: Site 49 (id=site-49)
+[DEBUG] 2026-07-29 13:19:57,214 services Created site: Site 50 (id=site-50)
+[DEBUG] 2026-07-29 13:19:57,219 services Created site: Site 51 (id=site-51)
+[DEBUG] 2026-07-29 13:19:57,222 services Created site: Site 52 (id=site-52)
+[DEBUG] 2026-07-29 13:19:57,225 services Created site: Site 53 (id=site-53)
+[DEBUG] 2026-07-29 13:19:57,228 services Created site: Site 54 (id=site-54)
+[DEBUG] 2026-07-29 13:19:57,231 services Created site: Site 55 (id=site-55)
+[DEBUG] 2026-07-29 13:19:57,236 services Created site: Site 56 (id=site-56)
+[DEBUG] 2026-07-29 13:19:57,238 services Created site: Site 57 (id=site-57)
+[DEBUG] 2026-07-29 13:19:57,242 services Created site: Site 58 (id=site-58)
+[DEBUG] 2026-07-29 13:19:57,245 services Created site: Site 59 (id=site-59)
+[DEBUG] 2026-07-29 13:19:57,248 services Created site: Site 60 (id=site-60)
+[DEBUG] 2026-07-29 13:19:57,251 services Created site: Site 61 (id=site-61)
+[DEBUG] 2026-07-29 13:19:57,255 services Created site: Site 62 (id=site-62)
+[DEBUG] 2026-07-29 13:19:57,258 services Created site: Site 63 (id=site-63)
+[DEBUG] 2026-07-29 13:19:57,263 services Created site: Site 64 (id=site-64)
+[DEBUG] 2026-07-29 13:19:57,266 services Created site: Site 65 (id=site-65)
+[DEBUG] 2026-07-29 13:19:57,269 services Created site: Site 66 (id=site-66)
+[DEBUG] 2026-07-29 13:19:57,272 services Created site: Site 67 (id=site-67)
+[DEBUG] 2026-07-29 13:19:57,275 services Created site: Site 68 (id=site-68)
+[DEBUG] 2026-07-29 13:19:57,278 services Created site: Site 69 (id=site-69)
+[DEBUG] 2026-07-29 13:19:57,281 services Created site: Site 70 (id=site-70)
+[DEBUG] 2026-07-29 13:19:57,284 services Created site: Site 71 (id=site-71)
+[DEBUG] 2026-07-29 13:19:57,286 services Created site: Site 72 (id=site-72)
+[DEBUG] 2026-07-29 13:19:57,289 services Created site: Site 73 (id=site-73)
+[DEBUG] 2026-07-29 13:19:57,293 services Created site: Site 74 (id=site-74)
+[DEBUG] 2026-07-29 13:19:57,296 services Created site: Site 75 (id=site-75)
+[DEBUG] 2026-07-29 13:19:57,298 services Created site: Site 76 (id=site-76)
+[DEBUG] 2026-07-29 13:19:57,301 services Created site: Site 77 (id=site-77)
+[DEBUG] 2026-07-29 13:19:57,304 services Created site: Site 78 (id=site-78)
+[DEBUG] 2026-07-29 13:19:57,306 services Created site: Site 79 (id=site-79)
+[DEBUG] 2026-07-29 13:19:57,310 services Created site: Site 80 (id=site-80)
+[DEBUG] 2026-07-29 13:19:57,314 services Created site: Site 81 (id=site-81)
+[DEBUG] 2026-07-29 13:19:57,317 services Created site: Site 82 (id=site-82)
+[DEBUG] 2026-07-29 13:19:57,320 services Created site: Site 83 (id=site-83)
+[DEBUG] 2026-07-29 13:19:57,323 services Created site: Site 84 (id=site-84)
+[DEBUG] 2026-07-29 13:19:57,326 services Created site: Site 85 (id=site-85)
+[DEBUG] 2026-07-29 13:19:57,329 services Created site: Site 86 (id=site-86)
+[DEBUG] 2026-07-29 13:19:57,333 services Created site: Site 87 (id=site-87)
+[DEBUG] 2026-07-29 13:19:57,338 services Created site: Site 88 (id=site-88)
+[DEBUG] 2026-07-29 13:19:57,341 services Created site: Site 89 (id=site-89)
+[DEBUG] 2026-07-29 13:19:57,344 services Created site: Site 90 (id=site-90)
+[DEBUG] 2026-07-29 13:19:57,347 services Created site: Site 91 (id=site-91)
+[DEBUG] 2026-07-29 13:19:57,349 services Created site: Site 92 (id=site-92)
+[DEBUG] 2026-07-29 13:19:57,353 services Created site: Site 93 (id=site-93)
+[DEBUG] 2026-07-29 13:19:57,359 services Created site: Site 94 (id=site-94)
+[DEBUG] 2026-07-29 13:19:57,361 services Created site: Site 95 (id=site-95)
+[DEBUG] 2026-07-29 13:19:57,365 services Created site: Site 96 (id=site-96)
+[DEBUG] 2026-07-29 13:19:57,368 services Created site: Site 97 (id=site-97)
+[DEBUG] 2026-07-29 13:19:57,371 services Created site: Site 98 (id=site-98)
+[DEBUG] 2026-07-29 13:19:57,376 services Created site: Site 99 (id=site-99)
+[INFO] 2026-07-29 13:19:57,377 services Reached end of assets (total=100)
+[INFO] 2026-07-29 13:19:57,380 services Asset sync complete: 100 created, 0 updated, 0 skipped, 0 deleted
+[INFO] 2026-07-29 13:19:57,381 services Assets sync complete: 100 created, 0 updated, 0 deleted
+[INFO] 2026-07-29 13:19:57,381 services Starting account sync...
+[DEBUG] 2026-07-29 13:19:57,382 services API request to https://api.test/accounts (attempt 1/10)
+[DEBUG] 2026-07-29 13:19:57,389 services Created supply: Supply 0 (id=acc-0)
+[DEBUG] 2026-07-29 13:19:57,394 services Created supply: Supply 1 (id=acc-1)
+[DEBUG] 2026-07-29 13:19:57,401 services Created supply: Supply 2 (id=acc-2)
+[DEBUG] 2026-07-29 13:19:57,409 services Created supply: Supply 3 (id=acc-3)
+[DEBUG] 2026-07-29 13:19:57,413 services Created supply: Supply 4 (id=acc-4)
+[DEBUG] 2026-07-29 13:19:57,417 services Created supply: Supply 5 (id=acc-5)
+[DEBUG] 2026-07-29 13:19:57,420 services Created supply: Supply 6 (id=acc-6)
+[DEBUG] 2026-07-29 13:19:57,424 services Created supply: Supply 7 (id=acc-7)
+[DEBUG] 2026-07-29 13:19:57,428 services Created supply: Supply 8 (id=acc-8)
+[DEBUG] 2026-07-29 13:19:57,431 services Created supply: Supply 9 (id=acc-9)
+[DEBUG] 2026-07-29 13:19:57,434 services Created supply: Supply 10 (id=acc-10)
+[DEBUG] 2026-07-29 13:19:57,437 services Created supply: Supply 11 (id=acc-11)
+[DEBUG] 2026-07-29 13:19:57,442 services Created supply: Supply 12 (id=acc-12)
+[DEBUG] 2026-07-29 13:19:57,445 services Created supply: Supply 13 (id=acc-13)
+[DEBUG] 2026-07-29 13:19:57,448 services Created supply: Supply 14 (id=acc-14)
+[DEBUG] 2026-07-29 13:19:57,451 services Created supply: Supply 15 (id=acc-15)
+[DEBUG] 2026-07-29 13:19:57,454 services Created supply: Supply 16 (id=acc-16)
+[DEBUG] 2026-07-29 13:19:57,459 services Created supply: Supply 17 (id=acc-17)
+[DEBUG] 2026-07-29 13:19:57,461 services Created supply: Supply 18 (id=acc-18)
+[DEBUG] 2026-07-29 13:19:57,464 services Created supply: Supply 19 (id=acc-19)
+[DEBUG] 2026-07-29 13:19:57,467 services Created supply: Supply 20 (id=acc-20)
+[DEBUG] 2026-07-29 13:19:57,470 services Created supply: Supply 21 (id=acc-21)
+[DEBUG] 2026-07-29 13:19:57,473 services Created supply: Supply 22 (id=acc-22)
+[DEBUG] 2026-07-29 13:19:57,476 services Created supply: Supply 23 (id=acc-23)
+[DEBUG] 2026-07-29 13:19:57,479 services Created supply: Supply 24 (id=acc-24)
+[DEBUG] 2026-07-29 13:19:57,481 services Created supply: Supply 25 (id=acc-25)
+[DEBUG] 2026-07-29 13:19:57,485 services Created supply: Supply 26 (id=acc-26)
+[DEBUG] 2026-07-29 13:19:57,488 services Created supply: Supply 27 (id=acc-27)
+[DEBUG] 2026-07-29 13:19:57,494 services Created supply: Supply 28 (id=acc-28)
+[DEBUG] 2026-07-29 13:19:57,500 services Created supply: Supply 29 (id=acc-29)
+[DEBUG] 2026-07-29 13:19:57,503 services Created supply: Supply 30 (id=acc-30)
+[DEBUG] 2026-07-29 13:19:57,506 services Created supply: Supply 31 (id=acc-31)
+[DEBUG] 2026-07-29 13:19:57,510 services Created supply: Supply 32 (id=acc-32)
+[DEBUG] 2026-07-29 13:19:57,513 services Created supply: Supply 33 (id=acc-33)
+[DEBUG] 2026-07-29 13:19:57,515 services Created supply: Supply 34 (id=acc-34)
+[DEBUG] 2026-07-29 13:19:57,517 services Created supply: Supply 35 (id=acc-35)
+[DEBUG] 2026-07-29 13:19:57,521 services Created supply: Supply 36 (id=acc-36)
+[DEBUG] 2026-07-29 13:19:57,524 services Created supply: Supply 37 (id=acc-37)
+[DEBUG] 2026-07-29 13:19:57,527 services Created supply: Supply 38 (id=acc-38)
+[DEBUG] 2026-07-29 13:19:57,530 services Created supply: Supply 39 (id=acc-39)
+[DEBUG] 2026-07-29 13:19:57,532 services Created supply: Supply 40 (id=acc-40)
+[DEBUG] 2026-07-29 13:19:57,536 services Created supply: Supply 41 (id=acc-41)
+[DEBUG] 2026-07-29 13:19:57,541 services Created supply: Supply 42 (id=acc-42)
+[DEBUG] 2026-07-29 13:19:57,544 services Created supply: Supply 43 (id=acc-43)
+[DEBUG] 2026-07-29 13:19:57,547 services Created supply: Supply 44 (id=acc-44)
+[DEBUG] 2026-07-29 13:19:57,550 services Created supply: Supply 45 (id=acc-45)
+[DEBUG] 2026-07-29 13:19:57,554 services Created supply: Supply 46 (id=acc-46)
+[DEBUG] 2026-07-29 13:19:57,558 services Created supply: Supply 47 (id=acc-47)
+[DEBUG] 2026-07-29 13:19:57,562 services Created supply: Supply 48 (id=acc-48)
+[DEBUG] 2026-07-29 13:19:57,565 services Created supply: Supply 49 (id=acc-49)
+[DEBUG] 2026-07-29 13:19:57,568 services Created supply: Supply 50 (id=acc-50)
+[DEBUG] 2026-07-29 13:19:57,572 services Created supply: Supply 51 (id=acc-51)
+[DEBUG] 2026-07-29 13:19:57,578 services Created supply: Supply 52 (id=acc-52)
+[DEBUG] 2026-07-29 13:19:57,581 services Created supply: Supply 53 (id=acc-53)
+[DEBUG] 2026-07-29 13:19:57,584 services Created supply: Supply 54 (id=acc-54)
+[DEBUG] 2026-07-29 13:19:57,587 services Created supply: Supply 55 (id=acc-55)
+[DEBUG] 2026-07-29 13:19:57,590 services Created supply: Supply 56 (id=acc-56)
+[DEBUG] 2026-07-29 13:19:57,594 services Created supply: Supply 57 (id=acc-57)
+[DEBUG] 2026-07-29 13:19:57,597 services Created supply: Supply 58 (id=acc-58)
+[DEBUG] 2026-07-29 13:19:57,600 services Created supply: Supply 59 (id=acc-59)
+[DEBUG] 2026-07-29 13:19:57,603 services Created supply: Supply 60 (id=acc-60)
+[DEBUG] 2026-07-29 13:19:57,606 services Created supply: Supply 61 (id=acc-61)
+[DEBUG] 2026-07-29 13:19:57,610 services Created supply: Supply 62 (id=acc-62)
+[DEBUG] 2026-07-29 13:19:57,613 services Created supply: Supply 63 (id=acc-63)
+[DEBUG] 2026-07-29 13:19:57,616 services Created supply: Supply 64 (id=acc-64)
+[DEBUG] 2026-07-29 13:19:57,620 services Created supply: Supply 65 (id=acc-65)
+[DEBUG] 2026-07-29 13:19:57,624 services Created supply: Supply 66 (id=acc-66)
+[DEBUG] 2026-07-29 13:19:57,627 services Created supply: Supply 67 (id=acc-67)
+[DEBUG] 2026-07-29 13:19:57,630 services Created supply: Supply 68 (id=acc-68)
+[DEBUG] 2026-07-29 13:19:57,634 services Created supply: Supply 69 (id=acc-69)
+[DEBUG] 2026-07-29 13:19:57,638 services Created supply: Supply 70 (id=acc-70)
+[DEBUG] 2026-07-29 13:19:57,642 services Created supply: Supply 71 (id=acc-71)
+[DEBUG] 2026-07-29 13:19:57,646 services Created supply: Supply 72 (id=acc-72)
+[DEBUG] 2026-07-29 13:19:57,649 services Created supply: Supply 73 (id=acc-73)
+[DEBUG] 2026-07-29 13:19:57,652 services Created supply: Supply 74 (id=acc-74)
+[DEBUG] 2026-07-29 13:19:57,657 services Created supply: Supply 75 (id=acc-75)
+[DEBUG] 2026-07-29 13:19:57,660 services Created supply: Supply 76 (id=acc-76)
+[DEBUG] 2026-07-29 13:19:57,663 services Created supply: Supply 77 (id=acc-77)
+[DEBUG] 2026-07-29 13:19:57,666 services Created supply: Supply 78 (id=acc-78)
+[DEBUG] 2026-07-29 13:19:57,668 services Created supply: Supply 79 (id=acc-79)
+[DEBUG] 2026-07-29 13:19:57,672 services Created supply: Supply 80 (id=acc-80)
+[DEBUG] 2026-07-29 13:19:57,676 services Created supply: Supply 81 (id=acc-81)
+[DEBUG] 2026-07-29 13:19:57,679 services Created supply: Supply 82 (id=acc-82)
+[DEBUG] 2026-07-29 13:19:57,682 services Created supply: Supply 83 (id=acc-83)
+[DEBUG] 2026-07-29 13:19:57,685 services Created supply: Supply 84 (id=acc-84)
+[DEBUG] 2026-07-29 13:19:57,690 services Created supply: Supply 85 (id=acc-85)
+[DEBUG] 2026-07-29 13:19:57,693 services Created supply: Supply 86 (id=acc-86)
+[DEBUG] 2026-07-29 13:19:57,696 services Created supply: Supply 87 (id=acc-87)
+[DEBUG] 2026-07-29 13:19:57,699 services Created supply: Supply 88 (id=acc-88)
+[DEBUG] 2026-07-29 13:19:57,702 services Created supply: Supply 89 (id=acc-89)
+[DEBUG] 2026-07-29 13:19:57,705 services Created supply: Supply 90 (id=acc-90)
+[DEBUG] 2026-07-29 13:19:57,710 services Created supply: Supply 91 (id=acc-91)
+[DEBUG] 2026-07-29 13:19:57,713 services Created supply: Supply 92 (id=acc-92)
+[DEBUG] 2026-07-29 13:19:57,715 services Created supply: Supply 93 (id=acc-93)
+[DEBUG] 2026-07-29 13:19:57,718 services Created supply: Supply 94 (id=acc-94)
+[DEBUG] 2026-07-29 13:19:57,721 services Created supply: Supply 95 (id=acc-95)
+[DEBUG] 2026-07-29 13:19:57,725 services Created supply: Supply 96 (id=acc-96)
+[DEBUG] 2026-07-29 13:19:57,729 services Created supply: Supply 97 (id=acc-97)
+[DEBUG] 2026-07-29 13:19:57,732 services Created supply: Supply 98 (id=acc-98)
+[DEBUG] 2026-07-29 13:19:57,734 services Created supply: Supply 99 (id=acc-99)
+[INFO] 2026-07-29 13:19:57,735 services Reached end of accounts (total=100)
+[INFO] 2026-07-29 13:19:57,737 services Account sync complete: 100 created, 0 updated, 0 skipped, 0 deleted
+[INFO] 2026-07-29 13:19:57,738 services Accounts sync complete: 100 created, 0 updated, 0 deleted
+[INFO] 2026-07-29 13:19:57,738 services Full sync completed successfully: {'sites_created': 100, 'sites_updated': 0, 'sites_deleted': 0, 'supplies_created': 100, 'supplies_updated': 0, 'supplies_deleted': 0}
+.....EEEE
+======================================================================
+ERROR: test_capacity_upload_overwrites_name_and_capacity_for_existing_code (app.sitesync.tests.test_capacity_upload.CapacityUploadTests.test_capacity_upload_overwrites_name_and_capacity_for_existing_code)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_capacity_upload.py", line 129, in test_capacity_upload_overwrites_name_and_capacity_for_existing_code
+    response = settings_panel_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_capacity_upload_partial_import_skips_invalid_rows (app.sitesync.tests.test_capacity_upload.CapacityUploadTests.test_capacity_upload_partial_import_skips_invalid_rows)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_capacity_upload.py", line 60, in test_capacity_upload_partial_import_skips_invalid_rows
+    response = settings_panel_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_capacity_upload_rejects_blank_capacity_values (app.sitesync.tests.test_capacity_upload.CapacityUploadTests.test_capacity_upload_rejects_blank_capacity_values)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_capacity_upload.py", line 92, in test_capacity_upload_rejects_blank_capacity_values
+    response = settings_panel_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_site_list_view_handles_no_sites (app.sitesync.tests.test_edge_cases.EdgeCaseTests.test_site_list_view_handles_no_sites)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_edge_cases.py", line 22, in test_site_list_view_handles_no_sites
+    response = site_list_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_site_list_renders_under_three_seconds (app.sitesync.tests.test_load_time.SiteListLoadTimeTest.test_site_list_renders_under_three_seconds)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_load_time.py", line 26, in test_site_list_renders_under_three_seconds
+    response = site_list_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_manual_sync_redirects_on_success (app.sitesync.tests.test_manual_sync.ManualSyncViewTest.test_manual_sync_redirects_on_success)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/unittest/mock.py", line 1396, in patched
+    return func(*newargs, **newkeywargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/sitesync/tests/test_manual_sync.py", line 30, in test_manual_sync_redirects_on_success
+    response = manual_sync_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_manual_sync_returns_json_error_on_failure (app.sitesync.tests.test_manual_sync.ManualSyncViewTest.test_manual_sync_returns_json_error_on_failure)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/unittest/mock.py", line 1396, in patched
+    return func(*newargs, **newkeywargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/sitesync/tests/test_manual_sync.py", line 42, in test_manual_sync_returns_json_error_on_failure
+    response = manual_sync_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_opening_new_month_previews_previous_final_comments_before_save (app.sitesync.tests.test_report_comment_carry_forward.ReportCommentCarryForwardTest.test_opening_new_month_previews_previous_final_comments_before_save)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_report_comment_carry_forward.py", line 81, in test_opening_new_month_previews_previous_final_comments_before_save
+    response = report_view(request)
+               ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_get_report_supports_reporting_month_alias_for_end_month (app.sitesync.tests.test_report_drafts.ReportDraftWorkflowTest.test_get_report_supports_reporting_month_alias_for_end_month)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_report_drafts.py", line 86, in test_get_report_supports_reporting_month_alias_for_end_month
+    response = report_view(request)
+               ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_confirmed_final_edit_creates_replacement_final_version (app.sitesync.tests.test_report_finalisation.ReportFinalisationWorkflowTest.test_confirmed_final_edit_creates_replacement_final_version)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_report_finalisation.py", line 70, in test_confirmed_final_edit_creates_replacement_final_version
+    report = MonthlyReport.objects.get(site=self.site, reporting_month='2026-05')
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/db/models/query.py", line 647, in get
+    raise self.model.DoesNotExist(
+sitesync.models.MonthlyReport.DoesNotExist: MonthlyReport matching query does not exist.
+
+======================================================================
+ERROR: test_settings_page_persists_valid_post (app.sitesync.tests.test_settings_view.SettingsViewIntegrationTest.test_settings_page_persists_valid_post)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_settings_view.py", line 70, in test_settings_page_persists_valid_post
+    response = settings_panel_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_settings_page_rejects_invalid_post (app.sitesync.tests.test_settings_view.SettingsViewIntegrationTest.test_settings_page_rejects_invalid_post)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_settings_view.py", line 94, in test_settings_page_rejects_invalid_post
+    response = settings_panel_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_settings_page_renders_current_values (app.sitesync.tests.test_settings_view.SettingsViewIntegrationTest.test_settings_page_renders_current_values)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_settings_view.py", line 45, in test_settings_page_renders_current_values
+    response = settings_panel_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_settings_page_shows_capacity_upload_validation_messages (app.sitesync.tests.test_settings_view.SettingsViewIntegrationTest.test_settings_page_shows_capacity_upload_validation_messages)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_settings_view.py", line 120, in test_settings_page_shows_capacity_upload_validation_messages
+    response = settings_panel_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_settings_page_shows_latest_upload_filename_summary (app.sitesync.tests.test_settings_view.SettingsViewIntegrationTest.test_settings_page_shows_latest_upload_filename_summary)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_settings_view.py", line 144, in test_settings_page_shows_latest_upload_filename_summary
+    response = settings_panel_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_empty_search_result (app.sitesync.tests.test_site_search.SiteSearchIntegrationTest.test_empty_search_result)
+Verify that non-matching search shows empty state message.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_site_search.py", line 85, in test_empty_search_result
+    response = site_list_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_search_filters_by_description (app.sitesync.tests.test_site_search.SiteSearchIntegrationTest.test_search_filters_by_description)
+Verify search by description filters the list correctly.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_site_search.py", line 68, in test_search_filters_by_description
+    response = site_list_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_search_filters_by_external_id (app.sitesync.tests.test_site_search.SiteSearchIntegrationTest.test_search_filters_by_external_id)
+Verify search by external ID filters the list correctly.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_site_search.py", line 59, in test_search_filters_by_external_id
+    response = site_list_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_search_filters_by_site_name (app.sitesync.tests.test_site_search.SiteSearchIntegrationTest.test_search_filters_by_site_name)
+Verify search by site name filters the list correctly.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_site_search.py", line 50, in test_search_filters_by_site_name
+    response = site_list_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_search_filters_by_supply_name (app.sitesync.tests.test_site_search.SiteSearchIntegrationTest.test_search_filters_by_supply_name)
+Verify search by supply name filters the list correctly.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_site_search.py", line 77, in test_search_filters_by_supply_name
+    response = site_list_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_site_list_displays_all_sites (app.sitesync.tests.test_site_search.SiteSearchIntegrationTest.test_site_list_displays_all_sites)
+Verify the site list page renders all available sites.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_site_search.py", line 41, in test_site_list_displays_all_sites
+    response = site_list_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_supplies_display_with_site (app.sitesync.tests.test_site_search.SiteSearchIntegrationTest.test_supplies_display_with_site)
+Verify that the site list page renders correctly and can load supplies via the supply_list_view.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_site_search.py", line 94, in test_supplies_display_with_site
+    response = site_list_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_supply_list_combines_supplies_from_multiple_selected_sites (app.sitesync.tests.test_supply_list_view.SupplyListViewIntegrationTest.test_supply_list_combines_supplies_from_multiple_selected_sites)
+Verify site_ids includes supplies across all selected sites.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_supply_list_view.py", line 191, in test_supply_list_combines_supplies_from_multiple_selected_sites
+    response = supply_list_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_supply_list_displays_all_supplies_for_site (app.sitesync.tests.test_supply_list_view.SupplyListViewIntegrationTest.test_supply_list_displays_all_supplies_for_site)
+Verify all supplies for a site are displayed.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_supply_list_view.py", line 69, in test_supply_list_displays_all_supplies_for_site
+    response = supply_list_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_supply_list_displays_device_ids (app.sitesync.tests.test_supply_list_view.SupplyListViewIntegrationTest.test_supply_list_displays_device_ids)
+Verify device IDs are displayed.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_supply_list_view.py", line 100, in test_supply_list_displays_device_ids
+    response = supply_list_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_supply_list_displays_utility_types (app.sitesync.tests.test_supply_list_view.SupplyListViewIntegrationTest.test_supply_list_displays_utility_types)
+Verify utility types are displayed for each supply.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_supply_list_view.py", line 90, in test_supply_list_displays_utility_types
+    response = supply_list_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_supply_list_empty_for_site_without_supplies (app.sitesync.tests.test_supply_list_view.SupplyListViewIntegrationTest.test_supply_list_empty_for_site_without_supplies)
+Verify empty state when site has no supplies.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_supply_list_view.py", line 115, in test_supply_list_empty_for_site_without_supplies
+    response = supply_list_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_supply_list_filters_by_meter_type_sub_and_updates_counts (app.sitesync.tests.test_supply_list_view.SupplyListViewIntegrationTest.test_supply_list_filters_by_meter_type_sub_and_updates_counts)
+Verify submeter filter applies and reports filtered fiscal/sub counts.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_supply_list_view.py", line 179, in test_supply_list_filters_by_meter_type_sub_and_updates_counts
+    response = supply_list_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_supply_list_filters_by_site_correctly (app.sitesync.tests.test_supply_list_view.SupplyListViewIntegrationTest.test_supply_list_filters_by_site_correctly)
+Verify supplies are filtered by site ID.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_supply_list_view.py", line 79, in test_supply_list_filters_by_site_correctly
+    response = supply_list_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_supply_list_filters_by_utility_type (app.sitesync.tests.test_supply_list_view.SupplyListViewIntegrationTest.test_supply_list_filters_by_utility_type)
+Verify utility type filter only shows matching supplies.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_supply_list_view.py", line 157, in test_supply_list_filters_by_utility_type
+    response = supply_list_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_supply_list_groups_submeters_under_fiscal_meter (app.sitesync.tests.test_supply_list_view.SupplyListViewIntegrationTest.test_supply_list_groups_submeters_under_fiscal_meter)
+Verify fiscal meters are shown with nested submeters.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_supply_list_view.py", line 147, in test_supply_list_groups_submeters_under_fiscal_meter
+    response = supply_list_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_supply_list_missing_site_id_parameter (app.sitesync.tests.test_supply_list_view.SupplyListViewIntegrationTest.test_supply_list_missing_site_id_parameter)
+Verify view handles missing site_id parameter gracefully.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_supply_list_view.py", line 123, in test_supply_list_missing_site_id_parameter
+    response = supply_list_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_supply_list_view_returns_200 (app.sitesync.tests.test_supply_list_view.SupplyListViewIntegrationTest.test_supply_list_view_returns_200)
+Verify supply list view returns successful response.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_supply_list_view.py", line 62, in test_supply_list_view_returns_200
+    response = supply_list_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_supply_list_with_invalid_site_id (app.sitesync.tests.test_supply_list_view.SupplyListViewIntegrationTest.test_supply_list_with_invalid_site_id)
+Verify view handles invalid site ID gracefully.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_supply_list_view.py", line 130, in test_supply_list_with_invalid_site_id
+    response = supply_list_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_site_list_view_filters_by_query (app.sitesync.tests.test_views.SiteListViewTest.test_site_list_view_filters_by_query)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_views.py", line 33, in test_site_list_view_filters_by_query
+    response = site_list_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_site_list_view_renders_selection_controls (app.sitesync.tests.test_views.SiteListViewTest.test_site_list_view_renders_selection_controls)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_views.py", line 60, in test_site_list_view_renders_selection_controls
+    response = site_list_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_site_list_view_renders_sites (app.sitesync.tests.test_views.SiteListViewTest.test_site_list_view_renders_sites)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_views.py", line 21, in test_site_list_view_renders_sites
+    response = site_list_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+ERROR: test_site_list_view_renders_statistics (app.sitesync.tests.test_views.SiteListViewTest.test_site_list_view_renders_statistics)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_views.py", line 49, in test_site_list_view_renders_statistics
+    response = site_list_view(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 22, in _wrapper_view
+    if test_func(request.user):
+                 ^^^^^^^^^^^^
+AttributeError: 'WSGIRequest' object has no attribute 'user'
+
+======================================================================
+FAIL: test_new_month_draft_copies_previous_final_comments (app.sitesync.tests.test_report_comment_carry_forward.ReportCommentCarryForwardTest.test_new_month_draft_copies_previous_final_comments)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_report_comment_carry_forward.py", line 47, in test_new_month_draft_copies_previous_final_comments
+    self.assertEqual(response.status_code, 200)
+AssertionError: 302 != 200
+
+======================================================================
+FAIL: test_new_month_draft_has_no_copied_comments_without_previous_final (app.sitesync.tests.test_report_comment_carry_forward.ReportCommentCarryForwardTest.test_new_month_draft_has_no_copied_comments_without_previous_final)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_report_comment_carry_forward.py", line 70, in test_new_month_draft_has_no_copied_comments_without_previous_final
+    self.assertEqual(response.status_code, 200)
+AssertionError: 302 != 200
+
+======================================================================
+FAIL: test_saving_edited_reference_comment_is_not_retagged (app.sitesync.tests.test_report_comment_carry_forward.ReportCommentCarryForwardTest.test_saving_edited_reference_comment_is_not_retagged)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_report_comment_carry_forward.py", line 104, in test_saving_edited_reference_comment_is_not_retagged
+    self.assertEqual(response.status_code, 200)
+AssertionError: 302 != 200
+
+======================================================================
+FAIL: test_report_view_context_exposes_cover_defaults (app.sitesync.tests.test_report_cover_pages.ReportCoverPagesTest.test_report_view_context_exposes_cover_defaults)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_report_cover_pages.py", line 95, in test_report_view_context_exposes_cover_defaults
+    self.assertEqual(response.status_code, 200)
+AssertionError: 302 != 200
+
+======================================================================
+FAIL: test_post_report_creates_draft_report_for_site_month (app.sitesync.tests.test_report_drafts.ReportDraftWorkflowTest.test_post_report_creates_draft_report_for_site_month)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_report_drafts.py", line 44, in test_post_report_creates_draft_report_for_site_month
+    self.assertEqual(response.status_code, 200)
+AssertionError: 302 != 200
+
+======================================================================
+FAIL: test_post_report_reuses_existing_site_month_identity (app.sitesync.tests.test_report_drafts.ReportDraftWorkflowTest.test_post_report_reuses_existing_site_month_identity)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_report_drafts.py", line 61, in test_post_report_reuses_existing_site_month_identity
+    self.assertEqual(first.status_code, 200)
+AssertionError: 302 != 200
+
+======================================================================
+FAIL: test_can_save_report_as_final (app.sitesync.tests.test_report_finalisation.ReportFinalisationWorkflowTest.test_can_save_report_as_final)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_report_finalisation.py", line 30, in test_can_save_report_as_final
+    self.assertEqual(response.status_code, 200)
+AssertionError: 302 != 200
+
+======================================================================
+FAIL: test_editing_existing_final_requires_warning_confirmation (app.sitesync.tests.test_report_finalisation.ReportFinalisationWorkflowTest.test_editing_existing_final_requires_warning_confirmation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_report_finalisation.py", line 57, in test_editing_existing_final_requires_warning_confirmation
+    self.assertEqual(warning.status_code, 409)
+AssertionError: 302 != 409
+
+======================================================================
+FAIL: test_saved_reports_json_includes_open_url (app.sitesync.tests.test_saved_reports_view.SavedReportsViewTest.test_saved_reports_json_includes_open_url)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_saved_reports_view.py", line 48, in test_saved_reports_json_includes_open_url
+    self.assertEqual(response.status_code, 200)
+AssertionError: 302 != 200
+
+======================================================================
+FAIL: test_saved_reports_page_renders_rows (app.sitesync.tests.test_saved_reports_view.SavedReportsViewTest.test_saved_reports_page_renders_rows)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/app/sitesync/tests/test_saved_reports_view.py", line 36, in test_saved_reports_page_renders_rows
+    self.assertEqual(response.status_code, 200)
+AssertionError: 302 != 200
+
+----------------------------------------------------------------------
+Ran 110 tests in 4.009s
+
+FAILED (failures=10, errors=38)
+Destroying test database for alias 'default'...

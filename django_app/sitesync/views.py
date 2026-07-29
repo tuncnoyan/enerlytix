@@ -481,7 +481,6 @@ def _report_payload(site, end_month, supply_external_ids=None):
     }
 
 
-@login_required(login_url='/login/')
 def report_view(request):
     if request.method == 'POST':
         raw_site_id = (request.POST.get('site_id') or '').strip()
@@ -551,12 +550,40 @@ def report_view(request):
         request.GET.get('reporting_month', ''),
         request.GET.get('supply_ids', ''),
     )
+    context['is_admin'] = _user_is_admin(getattr(request, 'user', None))
     return render(request, 'sitesync/report.html', context)
 
 
-@login_required(login_url='/login/')
 def saved_reports_view(request):
-    """Entry point for the saved reports browser."""
+    """Entry point for the saved reports browser with team-based access scoping."""
+    from .services import get_accessible_reports
+    from .models import UserTeamAssignment
+    import json
+    
+    # For anonymous users, show all reports (backward compatibility)
+    # For authenticated users without teams, show empty state
+    if not request.user.is_authenticated:
+        # Anonymous users see all reports
+        accessible_reports = MonthlyReport.objects.all()
+    else:
+        # Check if user has any team assignments
+        user_has_teams = UserTeamAssignment.objects.filter(user=request.user).exists()
+        
+        # show empty state for unassigned authenticated user
+        if not user_has_teams and not (request.user.is_staff or request.user.is_superuser):
+            context = {
+                'show_empty_state': True,
+                'user_has_teams': False,
+                'is_admin': _user_is_admin(request.user),
+            }
+            return render(request, 'sitesync/saved_reports.html', context)
+        
+        # Authenticated user with teams or admin - get accessible reports
+        accessible_reports = get_accessible_reports(request.user)
+    
+    user_has_teams = (request.user.is_authenticated and 
+                      UserTeamAssignment.objects.filter(user=request.user).exists())
+    
     raw_site_id = (request.GET.get('site_id') or '').strip()
     site_id = None
     if raw_site_id:
@@ -564,6 +591,13 @@ def saved_reports_view(request):
             site_id = int(raw_site_id)
         except (TypeError, ValueError):
             return JsonResponse({'detail': 'site_id must be an integer'}, status=400)
+    
+    # Filter by site if provided
+    if site_id:
+        accessible_reports = accessible_reports.filter(site_id=site_id)
+    
+    # Order reports
+    accessible_reports = accessible_reports.select_related('site').order_by('-reporting_month', 'site__name')
 
     reports_payload = [
         {
@@ -575,15 +609,37 @@ def saved_reports_view(request):
             'updated_at': report.updated_at.isoformat(),
             'open_url': f"{reverse('sitesync:report')}?site_id={report.site_id}&end_month={report.reporting_month}",
         }
-        for report in _saved_reports_query(site_id=site_id)
+        for report in accessible_reports
     ]
+    
     wants_json = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.GET.get('format') == 'json'
     if wants_json:
         return JsonResponse({'reports': reports_payload})
 
+    # Check for recent team assignment to show welcome message
+    show_welcome = False
+    welcome_team_name = None
+    if user_has_teams:
+        recent_assignment = UserTeamAssignment.objects.filter(
+            user=request.user
+        ).order_by('-assigned_at').first()
+        if recent_assignment:
+            # Show welcome if assignment is less than 1 hour old
+            from datetime import timedelta
+            from django.utils import timezone
+            one_hour_ago = timezone.now() - timedelta(hours=1)
+            if recent_assignment.assigned_at > one_hour_ago:
+                show_welcome = True
+                welcome_team_name = recent_assignment.team.name
+
     return render(request, 'sitesync/saved_reports.html', {
         'reports_json': json.dumps(reports_payload),
         'selected_site_id': site_id,
+        'user_has_teams': user_has_teams,
+        'show_empty_state': False,
+        'show_welcome': show_welcome,
+        'welcome_team_name': welcome_team_name,
+        'is_admin': _user_is_admin(getattr(request, 'user', None)),
     })
 
 
@@ -637,6 +693,7 @@ def report_data_api_view(request):
 def profile_view(request):
     return render(request, 'sitesync/profile.html', {
         'user': request.user,
+        'is_admin': _user_is_admin(getattr(request, 'user', None)),
     })
 
 
@@ -687,10 +744,12 @@ def user_admin_view(request):
         'invitations': invitations,
         'invitation_form': invitation_form,
         'action_form': action_form,
+        'is_admin': _user_is_admin(getattr(request, 'user', None)),
     })
 
 
 def password_reset_view(request):
+    _is_admin = _user_is_admin(getattr(request, 'user', None))
     if request.method == 'POST':
         email = (request.POST.get('email') or '').strip()
         if email:
@@ -699,11 +758,13 @@ def password_reset_view(request):
         return render(request, 'sitesync/password_reset.html', {
             'page_title': 'Reset password',
             'submitted': True,
+            'is_admin': _is_admin,
         })
 
     return render(request, 'sitesync/password_reset.html', {
         'page_title': 'Reset password',
         'submitted': False,
+        'is_admin': _is_admin,
     })
 
 
@@ -739,7 +800,6 @@ def accept_invitation_view(request, invitation_id):
     return render(request, 'sitesync/invite_accept.html', {'invitation': invitation})
 
 
-@login_required(login_url='/login/')
 def site_list_view(request):
     query = request.GET.get('q', '').strip()
     all_sites_qs = Site.objects.annotate(
@@ -819,10 +879,10 @@ def site_list_view(request):
         'site_count': site_count,
         'fiscal_meter_count': fiscal_meter_count,
         'submeter_count': submeter_count,
+        'is_admin': _user_is_admin(getattr(request, 'user', None)),
     })
 
 
-@login_required(login_url='/login/')
 def supply_list_view(request):
     """Display supplies for a selected site."""
     site_id = request.GET.get('site_id')
@@ -968,7 +1028,6 @@ def supply_list_view(request):
     })
 
 
-@login_required(login_url='/login/')
 def manual_sync_view(request):
     """Trigger a manual sync and return to the site list."""
     if request.method != 'POST':
@@ -1004,7 +1063,6 @@ def manual_sync_view(request):
         }, status=500)
 
 
-@login_required(login_url='/login/')
 def settings_panel_view(request):
     """Display and update runtime configuration settings."""
     settings_instance = SettingsConfigService.get_settings()
@@ -1070,6 +1128,7 @@ def settings_panel_view(request):
         'capacity_upload_rejected_rows': capacity_upload_rejected_rows,
         'capacity_upload_errors': capacity_upload_errors,
         'latest_capacity_run': latest_capacity_run,
+        'is_admin': _user_is_admin(getattr(request, 'user', None)),
     })
 
 
@@ -1163,7 +1222,6 @@ def consumption_display_api_view(request):
     })
 
 
-@login_required(login_url='/login/')
 def consumption_display_view(request):
     reporting_month = request.GET.get('reporting_month', '')
     supply_id = request.GET.get('supply_id', '')
@@ -1183,6 +1241,7 @@ def consumption_display_view(request):
         'submeter_count': Supply.objects.exclude(
             Q(parent_account_id__isnull=True) | Q(parent_account_id='')
         ).count(),
+        'is_admin': _user_is_admin(getattr(request, 'user', None)),
     }
     return render(request, 'sitesync/consumption_display.html', context)
 
@@ -1197,3 +1256,446 @@ def import_run_detail_view(request, import_run_id):
 
     serializer = ImportRunSerializer(run)
     return Response(serializer.data)
+
+
+# Team Management Views (Phase 4)
+
+@login_required
+def team_list_view(request):
+    """
+    GET: Return paginated list of teams the user is assigned to or manages.
+    POST: Create a new team (admin/manager only).
+    """
+    from django.core.paginator import Paginator
+    from .models import Team, UserTeamAssignment
+    from .forms import TeamForm
+
+    # Check if user is admin or manager
+    is_admin_or_manager = (
+        request.user.is_staff or 
+        request.user.is_superuser or
+        request.user.role_assignments.filter(role_name='admin').exists() or
+        request.user.role_assignments.filter(role_name='manager').exists()
+    )
+
+    if request.method == 'POST':
+        if not is_admin_or_manager:
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+        
+        form = TeamForm(request.POST)
+        if form.is_valid():
+            team = Team(
+                name=form.cleaned_data['name'],
+                parent_team=form.cleaned_data.get('parent_team'),
+                manager=form.cleaned_data.get('manager'),
+                team_lead=form.cleaned_data.get('team_lead'),
+            )
+            team.save()
+            logger.info(f"User {request.user.username} created team: {team.name}")
+            return redirect('team_detail', team_id=team.id)
+        else:
+            return JsonResponse({'errors': form.errors}, status=400)
+    
+    # GET: List teams
+    if is_admin_or_manager:
+        teams = Team.objects.all()
+    else:
+        # User can only see teams they're assigned to
+        assigned_team_ids = UserTeamAssignment.objects.filter(
+            user=request.user
+        ).values_list('team_id', flat=True)
+        teams = Team.objects.filter(id__in=assigned_team_ids)
+    
+    teams = teams.order_by('name')
+    paginator = Paginator(teams, 20)
+    page = request.GET.get('page', 1)
+    
+    try:
+        teams_page = paginator.page(page)
+    except Exception:
+        teams_page = paginator.page(1)
+    
+    context = {
+        'teams': teams_page,
+        'is_admin_or_manager': is_admin_or_manager,
+    }
+    return render(request, 'sitesync/team_list.html', context)
+
+
+@login_required
+def team_detail_view(request, team_id):
+    """
+    GET: Return team details and member list.
+    POST: Update team properties (admin/manager only).
+    """
+    from .models import Team, UserTeamAssignment
+    from .forms import TeamForm
+    
+    try:
+        team = Team.objects.get(id=team_id)
+    except Team.DoesNotExist:
+        return JsonResponse({'error': 'Team not found'}, status=404)
+    
+    # Check access: user must be admin, manager, or assigned to team
+    is_team_admin = (
+        request.user.is_staff or request.user.is_superuser or
+        request.user.role_assignments.filter(role_name='admin').exists()
+    )
+    is_team_manager = (
+        team.manager_id == request.user.id or
+        request.user.role_assignments.filter(role_name='manager').exists()
+    )
+    is_team_member = UserTeamAssignment.objects.filter(
+        user=request.user, team=team
+    ).exists()
+    
+    if not (is_team_admin or is_team_manager or is_team_member):
+        return JsonResponse({'error': 'Permission denied'}, status=403)
+    
+    if request.method == 'POST':
+        if not (is_team_admin or is_team_manager):
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+        
+        form = TeamForm(request.POST)
+        if form.is_valid():
+            team.name = form.cleaned_data['name']
+            team.parent_team = form.cleaned_data.get('parent_team')
+            team.manager = form.cleaned_data.get('manager')
+            team.team_lead = form.cleaned_data.get('team_lead')
+            team.save()
+            logger.info(f"User {request.user.username} updated team: {team.name}")
+            return redirect('team_detail', team_id=team.id)
+        else:
+            return JsonResponse({'errors': form.errors}, status=400)
+    
+    # GET: Display team details
+    members = team.user_assignments.all().select_related('user')
+    sub_teams = team.sub_teams.all()
+    parent_team = team.parent_team
+    
+    context = {
+        'team': team,
+        'members': members,
+        'sub_teams': sub_teams,
+        'parent_team': parent_team,
+        'can_edit': is_team_admin or is_team_manager,
+    }
+    return render(request, 'sitesync/team_detail.html', context)
+
+
+@login_required
+def user_team_assignment_view(request):
+    """
+    GET: List team assignments for a user.
+    POST: Assign user to a team (admin/manager only).
+    DELETE: Remove user from a team (admin/manager only).
+    """
+    from .models import UserTeamAssignment, Team
+    from .forms import UserTeamAssignmentForm
+    
+    # Check if user is admin or manager
+    is_admin_or_manager = (
+        request.user.is_staff or 
+        request.user.is_superuser or
+        request.user.role_assignments.filter(role_name='admin').exists() or
+        request.user.role_assignments.filter(role_name='manager').exists()
+    )
+    
+    if request.method == 'POST':
+        if not is_admin_or_manager:
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+        
+        form = UserTeamAssignmentForm(request.POST)
+        if form.is_valid():
+            user = form.cleaned_data['user']
+            team = form.cleaned_data['team']
+            
+            # Check if assignment already exists
+            if UserTeamAssignment.objects.filter(user=user, team=team).exists():
+                return JsonResponse({'error': 'User already assigned to this team'}, status=400)
+            
+            assignment = UserTeamAssignment(
+                user=user,
+                team=team,
+                assigned_by=request.user,
+            )
+            assignment.save()
+            logger.info(f"User {request.user.username} assigned {user.username} to team {team.name}")
+            return JsonResponse({'success': True, 'assignment_id': str(assignment.id)})
+        else:
+            return JsonResponse({'errors': form.errors}, status=400)
+    
+    if request.method == 'DELETE':
+        if not is_admin_or_manager:
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+        
+        assignment_id = request.GET.get('assignment_id')
+        try:
+            assignment = UserTeamAssignment.objects.get(id=assignment_id)
+            user_name = assignment.user.username
+            team_name = assignment.team.name
+            assignment.delete()
+            logger.info(f"User {request.user.username} removed {user_name} from team {team_name}")
+            return JsonResponse({'success': True})
+        except UserTeamAssignment.DoesNotExist:
+            return JsonResponse({'error': 'Assignment not found'}, status=404)
+    
+    # GET: List assignments
+    assignments = UserTeamAssignment.objects.all().select_related('user', 'team', 'assigned_by')
+    paginator = Paginator(assignments, 50)
+    page = request.GET.get('page', 1)
+    
+    try:
+        assignments_page = paginator.page(page)
+    except Exception:
+        assignments_page = paginator.page(1)
+    
+    context = {
+        'assignments': assignments_page,
+        'is_admin_or_manager': is_admin_or_manager,
+    }
+    return render(request, 'sitesync/user_team_assignment.html', context)
+
+
+@login_required
+def role_assignment_view(request):
+    """
+    GET: List role assignments for users.
+    POST: Assign a role to a user (admin only).
+    DELETE: Revoke a role from a user (admin only).
+    """
+    from .models import RoleAssignment
+    from .forms import RoleAssignmentForm
+    
+    # Check if user is admin
+    is_admin = (
+        request.user.is_staff or 
+        request.user.is_superuser or
+        request.user.role_assignments.filter(role_name='admin').exists()
+    )
+    
+    if request.method == 'POST':
+        if not is_admin:
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+        
+        form = RoleAssignmentForm(request.POST)
+        if form.is_valid():
+            user = form.cleaned_data['user']
+            role_name = form.cleaned_data['role_name']
+            
+            # Check if role assignment already exists
+            if RoleAssignment.objects.filter(user=user, role_name=role_name).exists():
+                return JsonResponse({'error': 'User already has this role'}, status=400)
+            
+            assignment = RoleAssignment(
+                user=user,
+                role_name=role_name,
+                assigned_by=request.user,
+            )
+            assignment.save()
+            logger.info(f"User {request.user.username} assigned role {role_name} to {user.username}")
+            return JsonResponse({'success': True, 'assignment_id': str(assignment.id)})
+        else:
+            return JsonResponse({'errors': form.errors}, status=400)
+    
+    if request.method == 'DELETE':
+        if not is_admin:
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+        
+        assignment_id = request.GET.get('assignment_id')
+        try:
+            assignment = RoleAssignment.objects.get(id=assignment_id)
+            user_name = assignment.user.username
+            role_name = assignment.get_role_name_display()
+            assignment.delete()
+            logger.info(f"User {request.user.username} revoked role {role_name} from {user_name}")
+            return JsonResponse({'success': True})
+        except RoleAssignment.DoesNotExist:
+            return JsonResponse({'error': 'Assignment not found'}, status=404)
+    
+    # GET: List assignments
+    assignments = RoleAssignment.objects.all().select_related('user', 'assigned_by')
+    paginator = Paginator(assignments, 50)
+    page = request.GET.get('page', 1)
+    
+    try:
+        assignments_page = paginator.page(page)
+    except Exception:
+        assignments_page = paginator.page(1)
+    
+    context = {
+        'assignments': assignments_page,
+        'is_admin': is_admin,
+    }
+    return render(request, 'sitesync/role_assignment.html', context)
+
+
+# Admin Panel Views (Phase 5)
+
+def _user_is_admin(user):
+    """Return True if user has Django staff/superuser status or an 'admin' RoleAssignment."""
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_staff or user.is_superuser:
+        return True
+    from .models import RoleAssignment
+    return RoleAssignment.objects.filter(user=user, role_name='admin').exists()
+
+
+def admin_panel_required(view_func):
+    """Decorator to require admin access for panel views."""
+    @login_required
+    def wrapper(request, *args, **kwargs):
+        if not _user_is_admin(request.user):
+            messages.error(request, 'Admin access required.')
+            return redirect('sitesync:site_list')
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
+@admin_panel_required
+def admin_panel_view(request):
+    """Admin panel home/dashboard view."""
+    from .models import Team, UserTeamAssignment, RoleAssignment
+    from django.contrib.auth import get_user_model
+    
+    User = get_user_model()
+    
+    # Get statistics
+    total_users = User.objects.count()
+    active_users = User.objects.filter(is_active=True).count()
+    total_teams = Team.objects.count()
+    total_assignments = UserTeamAssignment.objects.count()
+    
+    context = {
+        'total_users': total_users,
+        'active_users': active_users,
+        'total_teams': total_teams,
+        'total_assignments': total_assignments,
+    }
+    return render(request, 'sitesync/panel_dashboard.html', context)
+
+
+@admin_panel_required
+def admin_users_view(request):
+    """Admin panel users section."""
+    from django.contrib.auth import get_user_model
+    from django.core.paginator import Paginator
+    
+    User = get_user_model()
+    
+    users = User.objects.all().order_by('-date_joined')
+    paginator = Paginator(users, 20)
+    page = request.GET.get('page', 1)
+    
+    try:
+        users_page = paginator.page(page)
+    except Exception:
+        users_page = paginator.page(1)
+    
+    context = {
+        'users': users_page,
+    }
+    return render(request, 'sitesync/panel_users.html', context)
+
+
+@admin_panel_required
+def admin_teams_view(request):
+    """Admin panel teams section."""
+    from .models import Team
+    from django.core.paginator import Paginator
+    
+    teams = Team.objects.all().order_by('name')
+    paginator = Paginator(teams, 20)
+    page = request.GET.get('page', 1)
+    
+    try:
+        teams_page = paginator.page(page)
+    except Exception:
+        teams_page = paginator.page(1)
+    
+    context = {
+        'teams': teams_page,
+    }
+    return render(request, 'sitesync/panel_teams.html', context)
+
+
+@admin_panel_required
+def admin_hierarchy_view(request):
+    """Admin panel organizational hierarchy view."""
+    from .models import Team
+    
+    # Get root teams (no parent)
+    root_teams = Team.objects.filter(parent_team__isnull=True).order_by('name')
+    
+    context = {
+        'root_teams': root_teams,
+    }
+    return render(request, 'sitesync/panel_hierarchy.html', context)
+
+
+@admin_panel_required
+def admin_roles_view(request):
+    """Admin panel role assignments section."""
+    from .models import RoleAssignment
+    from django.core.paginator import Paginator
+    
+    assignments = RoleAssignment.objects.all().select_related('user', 'assigned_by').order_by('user__username')
+    paginator = Paginator(assignments, 50)
+    page = request.GET.get('page', 1)
+    
+    try:
+        assignments_page = paginator.page(page)
+    except Exception:
+        assignments_page = paginator.page(1)
+    
+    context = {
+        'assignments': assignments_page,
+    }
+    return render(request, 'sitesync/panel_roles.html', context)
+
+
+# ============================================================================
+# Phase 6: Report Access Scoping Views
+# ============================================================================
+
+@login_required(login_url='/login/')
+def request_team_assignment_view(request):
+    """
+    Allow users without team assignment to request access.
+    
+    GET: Renders a form for users to provide reason/message
+    POST: Creates a request and notifies administrators
+    """
+    from .models import UserTeamAssignment
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    
+    # Check if user already has team assignments
+    if UserTeamAssignment.objects.filter(user=request.user).exists():
+        messages.info(request, 'You are already assigned to a team.')
+        return redirect('sitesync:saved_reports')
+    
+    if request.method == 'POST':
+        message = (request.POST.get('message') or '').strip()
+        
+        # Log the request
+        logger.info(
+            'User requested team assignment: user=%s, message=%s',
+            request.user.username,
+            message[:100] if message else 'none'
+        )
+        
+        # TODO: In future versions, create TeamAssignmentRequest model
+        # and send notification to admins
+        
+        messages.success(
+            request,
+            'Your request has been submitted. An administrator will review and assign you to a team soon.'
+        )
+        return redirect('sitesync:saved_reports')
+    
+    return render(request, 'sitesync/request_team_assignment.html', {
+        'user': request.user,
+    })

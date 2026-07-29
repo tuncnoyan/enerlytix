@@ -1,0 +1,68 @@
+{% extends "sitesync/panel_base.html" %}
+
+{% block title %}Organization Hierarchy - Admin Panel{% endblock %}
+{% block nav_hierarchy %}is-active{% endblock %}
+{% block breadcrumb_label %}Hierarchy{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h1>Organization Hierarchy</h1>
+        <p class="text-muted">View and manage the organizational team structure</p>
+    </div>
+</div>
+
+{% if root_teams %}
+<div class="row">
+    {% for root_team in root_teams %}
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-diagram-3-fill"></i> {{ root_team.name }}</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <p><strong>Manager:</strong> {{ root_team.manager.get_full_name|default:"Not assigned" }}</p>
+                    <p><strong>Team Lead:</strong> {{ root_team.team_lead.get_full_name|default:"Not assigned" }}</p>
+                    <p><strong>Members:</strong> <span class="badge bg-info">{{ root_team.user_assignments.count }}</span></p>
+                </div>
+
+                {% if root_team.sub_teams.all %}
+                <h6>Sub-teams:</h6>
+                <ul class="list-unstyled">
+                    {% for sub_team in root_team.sub_teams.all %}
+                    <li class="ms-3 mb-2">
+                        <i class="bi bi-diagram-2"></i> 
+                        <a href="{% url 'sitesync:team_detail' sub_team.id %}">{{ sub_team.name }}</a>
+                        <span class="badge bg-secondary ms-2">{{ sub_team.user_assignments.count }} members</span>
+
+                        {% if sub_team.sub_teams.all %}
+                        <ul class="list-unstyled">
+                            {% for sub_sub_team in sub_team.sub_teams.all %}
+                            <li class="ms-3 mb-2">
+                                <i class="bi bi-arrow-right"></i>
+                                <a href="{% url 'sitesync:team_detail' sub_sub_team.id %}">{{ sub_sub_team.name }}</a>
+                                <span class="badge bg-secondary ms-2">{{ sub_sub_team.user_assignments.count }} members</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+
+                <div class="mt-3">
+                    <a href="{% url 'sitesync:team_detail' root_team.id %}" class="btn btn-sm btn-outline-primary">View Details</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info">
+    <strong>No teams found.</strong> <a href="{% url 'sitesync:team_list' %}">Create a team</a> to start building your organizational hierarchy.
+</div>
+{% endif %}
+{% endblock %}

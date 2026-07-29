@@ -1,0 +1,26 @@
+{% load static %}
+
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="bi bi-check-circle-fill"></i>
+    <strong>Welcome to Your Team!</strong>
+    
+    <p style="margin-top: 10px; margin-bottom: 0;">
+        You've been successfully assigned to <strong>{{ team_name }}</strong>. 
+        You now have access to all reports from your team and any sub-teams you're part of.
+    </p>
+    
+    <p style="margin-top: 10px; margin-bottom: 0;">
+        {% if is_manager %}
+            As a manager, you can see reports from your team and all sub-teams. 
+            Use the team filter to navigate the hierarchy.
+        {% elif is_team_lead %}
+            As a team lead, you can manage reports for your team. 
+            View the hierarchy to see all accessible teams.
+        {% else %}
+            Your team contains all the sites and reports you need. 
+            Use the site filter to find what you're looking for.
+        {% endif %}
+    </p>
+    
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>

@@ -1,0 +1,62 @@
+{% load static %}
+
+<div class="empty-state-container">
+    <div class="empty-state-icon">
+        <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
+    </div>
+    
+    <h2>No Reports Available</h2>
+    
+    <p class="empty-state-message">
+        You haven't been assigned to a team yet, so you don't have access to any reports.
+    </p>
+    
+    <div class="empty-state-actions">
+        <a href="{% url 'sitesync:request_team_assignment' %}" class="btn btn-primary">
+            <i class="bi bi-hand-thumbs-up"></i> Request Team Assignment
+        </a>
+        
+        <p class="empty-state-help-text">
+            Contact your administrator if you believe this is incorrect.<br>
+            <strong>Email: </strong> <a href="mailto:support@enerlytix.com">support@enerlytix.com</a>
+        </p>
+    </div>
+</div>
+
+<style>
+.empty-state-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+    min-height: 400px;
+}
+
+.empty-state-icon {
+    margin-bottom: 20px;
+}
+
+.empty-state-container h2 {
+    margin: 20px 0 10px 0;
+    color: #333;
+}
+
+.empty-state-message {
+    color: #666;
+    font-size: 1.1rem;
+    margin: 10px 0 30px 0;
+    max-width: 500px;
+}
+
+.empty-state-actions {
+    margin-top: 20px;
+}
+
+.empty-state-help-text {
+    margin-top: 30px;
+    font-size: 0.95rem;
+    color: #777;
+}
+</style>

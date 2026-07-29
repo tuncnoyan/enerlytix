@@ -1,0 +1,111 @@
+/* =================================================================
+   cxg-base.css — shared topbar + CXG tokens for all Enerlytix pages
+   Font: Manrope (loaded per-template via Google Fonts <link>)
+   ================================================================= */
+
+:root {
+    --cxg-bg-10:       #F2F2F3;
+    --cxg-bg-25:       #DEE0E3;
+    --cxg-primary-430: #7C878E;
+    --cxg-primary-432: #333F48;
+    --cxg-green:       #7AB800;
+    --cxg-dark-green:  #00693C;
+    --cxg-border:      #C6D0D7;
+    --cxg-white:       #FFFFFF;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+    font-family: 'Manrope', 'Segoe UI', sans-serif;
+    margin: 0; padding: 0;
+    background: var(--cxg-bg-10);
+    color: var(--cxg-primary-432);
+}
+
+/* ── Topbar ───────────────────────────────────────────────────── */
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.85rem 1.4rem;
+    background: var(--cxg-white);
+    border-bottom: 1px solid var(--cxg-border);
+    box-shadow: 0 1px 0 rgba(51,63,72,0.06);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.brand {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--cxg-primary-432);
+    letter-spacing: 0.02em;
+    text-decoration: none;
+}
+
+.topbar-links {
+    display: flex;
+    align-items: center;
+    gap: 1.1rem;
+}
+
+.topbar-links a {
+    color: var(--cxg-primary-430);
+    text-decoration: none;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.3rem 0.15rem;
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+    white-space: nowrap;
+}
+
+.topbar-links a:hover { color: var(--cxg-dark-green); }
+
+.topbar-links a.is-active {
+    color: var(--cxg-primary-432);
+    border-bottom-color: var(--cxg-primary-430);
+}
+
+/* Admin Panel indicator dot */
+.topbar-links .topbar-admin {
+    color: var(--cxg-primary-430);
+    position: relative;
+}
+.topbar-links .topbar-admin::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--cxg-green);
+    margin-right: 5px;
+    vertical-align: middle;
+    position: relative;
+    top: -1px;
+}
+
+.topbar-logout-form { margin: 0; }
+
+.topbar-logout-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--cxg-primary-430);
+    font-size: 0.78rem;
+    font-weight: 600;
+    font-family: inherit;
+    padding: 0.3rem 0.15rem;
+    transition: color 0.2s;
+}
+.topbar-logout-btn:hover { color: var(--cxg-dark-green); }
+
+/* ── Content wrapper ─────────────────────────────────────────── */
+.content-wrap {
+    width: min(1400px, 100%);
+    margin: 0 auto;
+    padding: 1.4rem 1rem;
+}

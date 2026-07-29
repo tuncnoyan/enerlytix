@@ -1,0 +1,92 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Admin Panel{% endblock %} — Enerlytix</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Bootstrap grid + utilities only; colours overridden by panel.css -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="{% static 'sitesync/panel.css' %}" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Top Bar -->
+    <header class="panel-topbar">
+        <span class="panel-brand">Enerlytix</span>
+        <nav class="panel-topnav">
+            <a href="{% url 'sitesync:site_list' %}">Home</a>
+            <a href="{% url 'sitesync:saved_reports' %}">Saved Reports</a>
+            <a href="{% url 'sitesync:profile' %}">Profile</a>
+            <a href="{% url 'sitesync:admin_panel' %}" class="panel-topnav-active">Admin Panel</a>
+            <form method="post" action="{% url 'logout' %}" class="panel-logout-form">
+                {% csrf_token %}
+                <button type="submit" class="panel-logout-btn">Logout</button>
+            </form>
+        </nav>
+    </header>
+
+    <div class="panel-shell">
+
+        <!-- Sidebar -->
+        <aside class="panel-sidebar">
+            <div class="sidebar-heading">Admin Panel</div>
+            <nav class="sidebar-nav">
+                <a href="{% url 'sitesync:admin_panel' %}" class="sidebar-link {% block nav_dashboard %}{% endblock %}">
+                    <i class="bi bi-house-fill"></i> Dashboard
+                </a>
+                <a href="{% url 'sitesync:admin_users' %}" class="sidebar-link {% block nav_users %}{% endblock %}">
+                    <i class="bi bi-people-fill"></i> Users
+                </a>
+                <a href="{% url 'sitesync:admin_teams' %}" class="sidebar-link {% block nav_teams %}{% endblock %}">
+                    <i class="bi bi-diagram-3"></i> Teams
+                </a>
+                <a href="{% url 'sitesync:admin_hierarchy' %}" class="sidebar-link {% block nav_hierarchy %}{% endblock %}">
+                    <i class="bi bi-diagram-2"></i> Hierarchy
+                </a>
+                <a href="{% url 'sitesync:admin_roles' %}" class="sidebar-link {% block nav_roles %}{% endblock %}">
+                    <i class="bi bi-shield-lock"></i> Roles
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="panel-content">
+
+            <!-- Breadcrumb -->
+            {% block breadcrumbs %}
+            <nav class="panel-breadcrumb">
+                <a href="{% url 'sitesync:admin_panel' %}">Admin Panel</a>
+                <span class="breadcrumb-sep">/</span>
+                <span>{% block breadcrumb_label %}Dashboard{% endblock %}</span>
+            </nav>
+            {% endblock %}
+
+            <!-- Messages -->
+            {% if messages %}
+            <div class="panel-messages">
+                {% for message in messages %}
+                <div class="panel-alert panel-alert-{{ message.tags }}">
+                    <i class="bi bi-info-circle"></i> {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Page Content -->
+            {% block content %}{% endblock %}
+
+        </main>
+    </div>
+
+    <footer class="panel-footer">
+        &copy; 2026 Enerlytix. All rights reserved.
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

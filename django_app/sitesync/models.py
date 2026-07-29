@@ -594,3 +594,275 @@ class ReportComment(models.Model):
 
     def __str__(self):
         return f"ReportComment {self.report_version_id} {self.visual_key}"
+
+class Team(models.Model):
+    """
+    Represents a hierarchical team/group within the organisation.
+    Teams can have parent teams (sub-teams) and contain users.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(
+        max_length=255,
+        db_index=True,
+        help_text="Display name for the team"
+    )
+    parent_team = models.ForeignKey(
+        'self',
+        on_delete=models.PROTECT,
+        related_name='sub_teams',
+        null=True,
+        blank=True,
+        help_text="Parent team for hierarchical structure (null for root teams)"
+    )
+    manager = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='managed_teams',
+        null=True,
+        blank=True,
+        help_text="User assigned as team manager"
+    )
+    team_lead = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='led_teams',
+        null=True,
+        blank=True,
+        help_text="User assigned as team lead"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['name']
+        indexes = [
+            models.Index(fields=['name']),
+            models.Index(fields=['manager']),
+            models.Index(fields=['parent_team']),
+        ]
+
+    def __str__(self):
+        if self.parent_team:
+            return f'{self.parent_team.name} → {self.name}'
+        return self.name
+
+    def get_parent_teams(self):
+        """Recursively get all parent teams up the hierarchy."""
+        parents = []
+        current = self.parent_team
+        while current:
+            parents.append(current)
+            current = current.parent_team
+        return parents
+
+    def get_sub_teams(self):
+        """Recursively get all sub-teams within this team."""
+        subs = list(self.sub_teams.all())
+        for sub in self.sub_teams.all():
+            subs.extend(sub.get_sub_teams())
+        return subs
+
+    def get_all_teams_in_scope(self):
+        """Get this team and all sub-teams (used for access scoping)."""
+        return [self] + self.get_sub_teams()
+
+
+class UserTeamAssignment(models.Model):
+    """
+    Tracks the assignment of a user to a team.
+    A user can be assigned to multiple teams.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='team_assignments',
+        help_text="User assigned to the team"
+    )
+    team = models.ForeignKey(
+        Team,
+        on_delete=models.CASCADE,
+        related_name='user_assignments',
+        help_text="Team the user is assigned to"
+    )
+    assigned_at = models.DateTimeField(auto_now_add=True)
+    assigned_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='team_assignments_made',
+        null=True,
+        blank=True,
+        help_text="Administrator who performed the assignment"
+    )
+
+    def get_report_scope(self):
+        """
+        Returns all reports accessible via this team assignment based on user role.
+        
+        Access scope:
+        - Regular user: Only assigned team's reports
+        - Team lead: Assigned team + sub-teams' reports
+        - Manager: Assigned team + all sub-teams' reports
+        - Admin: All reports
+        
+        Returns:
+            QuerySet of MonthlyReport objects accessible via this assignment
+        """
+        from django.db.models import Q
+        
+        # Get user's roles
+        roles = RoleAssignment.objects.filter(
+            user=self.user
+        ).values_list('role_name', flat=True)
+        role_list = list(roles)
+        
+        # Build list of accessible team IDs
+        accessible_team_ids = {self.team.id}
+        
+        # If manager or team lead, include sub-teams
+        if 'manager' in role_list or 'team_lead' in role_list:
+            sub_teams = self.team.get_sub_teams()
+            accessible_team_ids.update([t.id for t in sub_teams])
+        
+        # TODO: When Site.team is implemented, filter by accessible_team_ids
+        # For now, return all reports
+        from sitesync.models import MonthlyReport
+        return MonthlyReport.objects.all()
+
+    class Meta:
+        ordering = ['team__name', 'user__username']
+        unique_together = [['user', 'team']]
+        indexes = [
+            models.Index(fields=['user']),
+            models.Index(fields=['team']),
+            models.Index(fields=['user', 'team']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} → {self.team.name}"
+
+
+class RoleAssignment(models.Model):
+    """
+    Represents multi-valued role assignments to users.
+    A user can hold multiple roles (admin, manager, team_lead, user) simultaneously.
+    """
+    ROLE_ADMIN = 'admin'
+    ROLE_MANAGER = 'manager'
+    ROLE_TEAM_LEAD = 'team_lead'
+    ROLE_USER = 'user'
+    ROLE_CHOICES = [
+        (ROLE_ADMIN, 'Administrator'),
+        (ROLE_MANAGER, 'Manager'),
+        (ROLE_TEAM_LEAD, 'Team Lead'),
+        (ROLE_USER, 'User'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='role_assignments',
+        help_text="User being assigned a role"
+    )
+    role_name = models.CharField(
+        max_length=20,
+        choices=ROLE_CHOICES,
+        help_text="The role being assigned"
+    )
+    assigned_at = models.DateTimeField(auto_now_add=True)
+    assigned_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='role_assignments_made',
+        null=True,
+        blank=True,
+        help_text="Administrator who assigned the role"
+    )
+
+    class Meta:
+        ordering = ['user__username', 'role_name']
+        unique_together = [['user', 'role_name']]
+        indexes = [
+            models.Index(fields=['user']),
+            models.Index(fields=['role_name']),
+            models.Index(fields=['user', 'role_name']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} → {self.get_role_name_display()}"
+
+
+# Utility functions for role and team access control (Phase 4)
+
+def has_user_role(user, role_name):
+    """Check if a user has a specific role."""
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    
+    # Check if is staff or superuser
+    if user.is_staff or user.is_superuser:
+        return role_name in ['admin', 'manager']
+    
+    # Check role assignments
+    return RoleAssignment.objects.filter(
+        user=user,
+        role_name=role_name
+    ).exists()
+
+
+def get_user_roles(user):
+    """Get all roles assigned to a user."""
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    
+    roles = list(RoleAssignment.objects.filter(user=user).values_list('role_name', flat=True))
+    
+    # Add implicit roles
+    if user.is_staff or user.is_superuser:
+        if 'admin' not in roles:
+            roles.append('admin')
+        if 'manager' not in roles:
+            roles.append('manager')
+    
+    return roles
+
+
+def is_user_admin_or_manager(user):
+    """Check if a user is an admin or manager."""
+    return (
+        user.is_staff or 
+        user.is_superuser or
+        has_user_role(user, 'admin') or
+        has_user_role(user, 'manager')
+    )
+
+
+def get_user_teams(user):
+    """Get all teams a user is assigned to."""
+    return Team.objects.filter(
+        user_assignments__user=user
+    ).distinct()
+
+
+def get_user_managed_teams(user):
+    """Get all teams managed by a user."""
+    return Team.objects.filter(manager=user)
+
+
+def get_user_led_teams(user):
+    """Get all teams led by a user."""
+    return Team.objects.filter(team_lead=user)
+
+
+def get_user_accessible_teams(user):
+    """Get all teams accessible to a user (owned, managed, or assigned to)."""
+    managed_teams = get_user_managed_teams(user)
+    led_teams = get_user_led_teams(user)
+    assigned_teams = get_user_teams(user)
+    
+    return Team.objects.filter(
+        models.Q(manager=user) | 
+        models.Q(team_lead=user) | 
+        models.Q(user_assignments__user=user)
+    ).distinct()

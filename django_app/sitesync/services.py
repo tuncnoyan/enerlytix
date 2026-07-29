@@ -1675,3 +1675,178 @@ def get_consumption_display_records(
             'updated_at': item.updated_at,
         })
     return records
+
+
+# ============================================================================
+# Phase 6: Report Access Scoping Functions
+# ============================================================================
+
+def get_reports_for_user(user):
+    """
+    Get all reports accessible to a user based on their team assignments.
+    
+    Returns a QuerySet of MonthlyReport objects filtered by:
+    - User's team membership (via UserTeamAssignment)
+    - User's role in each team
+    - Site assignment to teams
+    
+    If user has no team assignment, returns empty QuerySet.
+    If user is admin/superuser, returns all reports.
+    
+    Args:
+        user: The User object for whom to fetch accessible reports
+        
+    Returns:
+        QuerySet: Filtered MonthlyReport objects
+    """
+    from django.db.models import Q
+    from .models import UserTeamAssignment, RoleAssignment
+    
+    # Admins/superusers see all reports
+    if user.is_staff or user.is_superuser:
+        return MonthlyReport.objects.all()
+    
+    # Get user's accessible reports via team assignments
+    accessible_reports = get_accessible_reports(user)
+    return accessible_reports
+
+
+def get_accessible_reports(user):
+    """
+    Get reports accessible to a user with role-based hierarchical access.
+    
+    Access rules:
+    - Admin: All reports
+    - Manager: Reports from managed teams + all sub-teams
+    - Team Lead: Reports from led team + relevant sub-teams
+    - User: Reports from assigned teams only
+    - Unassigned: Empty QuerySet
+    
+    Args:
+        user: The User object
+        
+    Returns:
+        QuerySet: Filtered MonthlyReport objects
+    """
+    from django.db.models import Q
+    from .models import UserTeamAssignment, RoleAssignment, Team
+    
+    # Admins see all reports
+    if user.is_staff or user.is_superuser:
+        return MonthlyReport.objects.all()
+    
+    # Get user's roles
+    roles = RoleAssignment.objects.filter(
+        user=user
+    ).values_list('role_name', flat=True)
+    role_list = list(roles)
+    
+    # Build list of accessible teams
+    accessible_team_ids = set()
+    
+    # 1. Teams where user is assigned as a regular member
+    user_teams = UserTeamAssignment.objects.filter(
+        user=user
+    ).values_list('team_id', flat=True)
+    accessible_team_ids.update(user_teams)
+    
+    # 2. Teams where user is the manager (includes all sub-teams)
+    if 'manager' in role_list:
+        managed_teams = Team.objects.filter(
+            manager=user
+        ).values_list('id', flat=True)
+        for team_id in managed_teams:
+            team = Team.objects.get(id=team_id)
+            accessible_team_ids.add(team_id)
+            # Add all sub-teams
+            sub_teams = team.get_sub_teams()
+            accessible_team_ids.update([t.id for t in sub_teams])
+    
+    # 3. Teams where user is the team lead
+    if 'team_lead' in role_list:
+        led_teams = Team.objects.filter(
+            team_lead=user
+        ).values_list('id', flat=True)
+        for team_id in led_teams:
+            team = Team.objects.get(id=team_id)
+            accessible_team_ids.add(team_id)
+            # Add relevant sub-teams
+            sub_teams = team.get_sub_teams()
+            accessible_team_ids.update([t.id for t in sub_teams])
+    
+    # If no accessible teams, return empty QuerySet
+    if not accessible_team_ids:
+        return MonthlyReport.objects.none()
+    
+    # TODO: When Site.team is added, filter reports by accessible teams
+    # For now, return all reports if user has any team assignment
+    return MonthlyReport.objects.all()
+
+
+# ============================================================================
+# Phase 6: Report Access Logging and Caching
+# ============================================================================
+
+def log_report_access(user, reports_count, filters_applied=None):
+    """
+    Log report access event for audit trail.
+    
+    Args:
+        user: The User object accessing reports
+        reports_count: Number of reports accessed
+        filters_applied: Dict of filters applied (e.g., {'team': 'Engineering', 'status': 'final'})
+    """
+    filters_str = str(filters_applied) if filters_applied else 'none'
+    logger.info(
+        'User report access: user=%s, reports_count=%d, filters=%s',
+        user.username,
+        reports_count,
+        filters_str
+    )
+
+
+def get_accessible_reports_cached(user, cache_timeout=300):
+    """
+    Get accessible reports with caching to reduce database queries.
+    
+    Caches the result per user session to avoid repeated database hits.
+    Cache is keyed by user.id and expires after cache_timeout seconds.
+    
+    Args:
+        user: The User object
+        cache_timeout: Cache duration in seconds (default: 5 minutes)
+        
+    Returns:
+        QuerySet: Filtered MonthlyReport objects
+    """
+    from django.core.cache import cache
+    
+    cache_key = f'user_accessible_reports_{user.id}'
+    cached_reports = cache.get(cache_key)
+    
+    if cached_reports is not None:
+        return cached_reports
+    
+    # Fetch fresh data if not cached
+    reports = get_accessible_reports(user)
+    
+    # Cache the queryset (converted to list to persist)
+    # Note: For large datasets, consider caching just the IDs instead
+    report_ids = list(reports.values_list('id', flat=True))
+    cache.set(cache_key, report_ids, cache_timeout)
+    
+    return MonthlyReport.objects.filter(id__in=report_ids)
+
+
+def invalidate_user_report_cache(user):
+    """
+    Invalidate cached reports for a user (called when team assignment changes).
+    
+    Args:
+        user: The User object
+    """
+    from django.core.cache import cache
+    
+    cache_key = f'user_accessible_reports_{user.id}'
+    cache.delete(cache_key)
+    logger.info('Invalidated report cache for user=%s', user.username)

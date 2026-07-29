@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="{% static 'sitesync/cxg-base.css' %}" rel="stylesheet">
     <style>
         :root {
             --cxg-bg-10: #F2F2F3;
@@ -537,14 +538,7 @@
     </style>
 </head>
 <body>
-    <div class="topbar">
-        <div class="brand">Enerlytix</div>
-        <div class="topbar-links">
-            <a href="{% url 'sitesync:site_list' %}">Dashboard</a>
-            <a href="{% url 'sitesync:saved_reports' %}">Saved Reports</a>
-            <a href="{% url 'sitesync:settings_panel' %}">Settings</a>
-        </div>
-    </div>
+    {% include 'sitesync/_topbar.html' with active_page='reports' %}
 
     <div class="page">
         <div class="hero">

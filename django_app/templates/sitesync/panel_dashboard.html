@@ -1,0 +1,105 @@
+{% extends "sitesync/panel_base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+{% block nav_dashboard %}is-active{% endblock %}
+{% block breadcrumb_label %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h1>Admin Dashboard</h1>
+        <p class="text-muted">Manage users, teams, roles, and organizational structure</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Total Users -->
+    <div class="col-md-6 col-lg-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="text-muted mb-1">Total Users</p>
+                        <h2 class="mb-0">{{ total_users }}</h2>
+                    </div>
+                    <i class="bi bi-people-fill text-primary" style="font-size: 2rem;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Users -->
+    <div class="col-md-6 col-lg-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="text-muted mb-1">Active Users</p>
+                        <h2 class="mb-0">{{ active_users }}</h2>
+                    </div>
+                    <i class="bi bi-person-check-fill text-success" style="font-size: 2rem;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Teams -->
+    <div class="col-md-6 col-lg-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="text-muted mb-1">Total Teams</p>
+                        <h2 class="mb-0">{{ total_teams }}</h2>
+                    </div>
+                    <i class="bi bi-diagram-3-fill text-info" style="font-size: 2rem;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Assignments -->
+    <div class="col-md-6 col-lg-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="text-muted mb-1">Team Assignments</p>
+                        <h2 class="mb-0">{{ total_assignments }}</h2>
+                    </div>
+                    <i class="bi bi-link-45deg text-warning" style="font-size: 2rem;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-12">
+        <h3 class="mb-4">Quick Actions</h3>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-3">
+        <a href="{% url 'sitesync:admin_users' %}" class="btn btn-outline-primary btn-lg w-100">
+            <i class="bi bi-person-plus"></i> Manage Users
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="{% url 'sitesync:admin_teams' %}" class="btn btn-outline-info btn-lg w-100">
+            <i class="bi bi-diagram-3"></i> Manage Teams
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="{% url 'sitesync:admin_hierarchy' %}" class="btn btn-outline-secondary btn-lg w-100">
+            <i class="bi bi-diagram-2"></i> View Hierarchy
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="{% url 'sitesync:admin_roles' %}" class="btn btn-outline-danger btn-lg w-100">
+            <i class="bi bi-shield-lock"></i> Manage Roles
+        </a>
+    </div>
+</div>
+{% endblock %}

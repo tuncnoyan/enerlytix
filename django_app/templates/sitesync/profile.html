@@ -1,13 +1,127 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Profile</title>
+    <title>Profile — Enerlytix</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="{% static 'sitesync/cxg-base.css' %}" rel="stylesheet">
+    <style>
+        /* Card */
+        .card {
+            background: var(--cxg-white); border: 1px solid var(--cxg-border);
+            border-radius: 0.45rem; box-shadow: 0 1px 2px rgba(51,63,72,0.08);
+            overflow: hidden;
+        }
+        .card-header {
+            padding: 1rem 1.2rem; border-bottom: 1px solid var(--cxg-border);
+            display: flex; align-items: center; gap: 0.75rem;
+        }
+        .avatar {
+            width: 2.6rem; height: 2.6rem; border-radius: 50%;
+            background: var(--cxg-primary-432); color: var(--cxg-white);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem; font-weight: 800; flex-shrink: 0;
+        }
+        .card-header-text h1 { font-size: 1.2rem; font-weight: 800; margin: 0; }
+        .card-header-text p { font-size: 0.8rem; color: var(--cxg-primary-430); margin: 0.15rem 0 0; font-weight: 500; }
+        .card-body { padding: 1.2rem; }
+        /* Field rows */
+        .field-row {
+            display: grid; grid-template-columns: 9rem 1fr;
+            gap: 0.5rem; padding: 0.7rem 0;
+            border-bottom: 1px solid var(--cxg-bg-25);
+            align-items: baseline;
+        }
+        .field-row:last-child { border-bottom: none; }
+        .field-label { font-size: 0.74rem; font-weight: 700; color: var(--cxg-primary-430); text-transform: uppercase; letter-spacing: 0.07em; }
+        .field-value { font-size: 0.88rem; font-weight: 600; color: var(--cxg-primary-432); }
+        /* Role badges */
+        .role-badge {
+            display: inline-block; font-size: 0.72rem; font-weight: 700;
+            padding: 0.2rem 0.5rem; border-radius: 0.2rem;
+            background: var(--cxg-bg-25); color: var(--cxg-primary-432); margin: 0.1rem;
+        }
+        .role-badge.admin { background: #CDFFE9; color: var(--cxg-dark-green); }
+        .role-badge.manager { background: #E4FFAD; color: #5C8A00; }
+        /* Actions */
+        .card-actions {
+            padding: 0.9rem 1.2rem; border-top: 1px solid var(--cxg-border);
+            display: flex; gap: 0.6rem; flex-wrap: wrap; background: var(--cxg-bg-10);
+        }
+        .btn-outline {
+            background: transparent; border: 1px solid var(--cxg-border);
+            border-radius: 0.35rem; padding: 0.45rem 0.85rem; font-size: 0.82rem;
+            font-weight: 600; font-family: inherit; cursor: pointer; color: var(--cxg-primary-432);
+            text-decoration: none; display: inline-block; transition: all 0.18s;
+        }
+        .btn-outline:hover { border-color: var(--cxg-primary-432); background: var(--cxg-bg-25); }
+        .btn-signout {
+            background: transparent; border: 1px solid #C6D0D7;
+            border-radius: 0.35rem; padding: 0.45rem 0.85rem; font-size: 0.82rem;
+            font-weight: 600; font-family: inherit; cursor: pointer; color: #7C878E;
+            transition: all 0.18s;
+        }
+        .btn-signout:hover { border-color: #B70000; color: #B70000; }
+    </style>
 </head>
 <body>
-    <h1>Profile</h1>
-    <p>Username: {{ user.username }}</p>
-    <p>Email: {{ user.email }}</p>
-    <p><a href="{% url 'logout' %}">Sign out</a></p>
+
+    {% include 'sitesync/_topbar.html' with active_page='profile' %}
+
+    <div class="content-wrap">
+        <div class="card">
+            <div class="card-header">
+                <div class="avatar">{{ user.username|slice:":1"|upper }}</div>
+                <div class="card-header-text">
+                    <h1>{{ user.get_full_name|default:user.username }}</h1>
+                    <p>{{ user.email }}</p>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="field-row">
+                    <span class="field-label">Username</span>
+                    <span class="field-value">{{ user.username }}</span>
+                </div>
+                <div class="field-row">
+                    <span class="field-label">Email</span>
+                    <span class="field-value">{{ user.email }}</span>
+                </div>
+                {% if user.first_name or user.last_name %}
+                <div class="field-row">
+                    <span class="field-label">Name</span>
+                    <span class="field-value">{{ user.get_full_name }}</span>
+                </div>
+                {% endif %}
+                <div class="field-row">
+                    <span class="field-label">Member since</span>
+                    <span class="field-value">{{ user.date_joined|date:"j N Y" }}</span>
+                </div>
+                <div class="field-row">
+                    <span class="field-label">Last login</span>
+                    <span class="field-value">{{ user.last_login|date:"j N Y, H:i"|default:"—" }}</span>
+                </div>
+                <div class="field-row">
+                    <span class="field-label">Access</span>
+                    <span class="field-value">
+                        {% if user.is_superuser %}<span class="role-badge admin">Superuser</span>{% endif %}
+                        {% if user.is_staff and not user.is_superuser %}<span class="role-badge admin">Admin</span>{% endif %}
+                        {% for ra in user.roleassignment_set.all %}<span class="role-badge {% if ra.role_name == 'admin' or ra.role_name == 'manager' %}manager{% endif %}">{{ ra.role_name|capfirst }}</span>{% endfor %}
+                        {% if not user.is_superuser and not user.is_staff and not user.roleassignment_set.exists %}<span class="role-badge">User</span>{% endif %}
+                    </span>
+                </div>
+            </div>
+            <div class="card-actions">
+                <a href="{% url 'sitesync:password_reset' %}" class="btn-outline">Change password</a>
+                <form method="post" action="{% url 'logout' %}" style="margin:0;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-signout">Sign out</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>

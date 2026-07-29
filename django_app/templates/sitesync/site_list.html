@@ -6,8 +6,7 @@
     <title>Site & Supply Dashboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">    <link href="{% static 'sitesync/cxg-base.css' %}" rel="stylesheet">    <style>
         :root {
             --cxg-bg-10: #F2F2F3;
             --cxg-bg-25: #DEE0E3;
@@ -19,71 +18,10 @@
             --cxg-white: #FFFFFF;
         }
 
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Manrope', 'Segoe UI', sans-serif;
-            margin: 0;
-            padding: 0;
-            background: var(--cxg-bg-10);
-            color: var(--cxg-primary-432);
-        }
-
         .page-shell {
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-        }
-
-        .topbar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-            padding: 0.85rem 1.4rem;
-            background: var(--cxg-white);
-            border-bottom: 1px solid var(--cxg-border);
-            box-shadow: 0 1px 0 rgba(51, 63, 72, 0.06);
-        }
-
-        .brand {
-            font-size: 1.2rem;
-            font-weight: 800;
-            color: var(--cxg-primary-432);
-            letter-spacing: 0.02em;
-        }
-
-        .topbar-links {
-            display: flex;
-            align-items: center;
-            gap: 1.1rem;
-        }
-
-        .topbar-links a {
-            color: var(--cxg-primary-430);
-            text-decoration: none;
-            font-size: 0.78rem;
-            font-weight: 600;
-            padding: 0.3rem 0.15rem;
-            border-bottom: 2px solid transparent;
-            transition: color 0.2s ease, border-color 0.2s ease;
-        }
-
-        .topbar-links a:hover {
-            color: var(--cxg-highlight-349);
-        }
-
-        .topbar-links a.is-active {
-            color: var(--cxg-primary-432);
-            border-bottom-color: var(--cxg-primary-430);
-        }
-
-        .content-wrap {
-            width: min(1400px, 100%);
-            margin: 0 auto;
-            padding: 1rem;
         }
 
         .header {
@@ -551,14 +489,7 @@
 </head>
 <body>
     <div class="page-shell">
-        <div class="topbar">
-            <div class="brand">Enerlytix</div>
-            <div class="topbar-links">
-                <a href="{% url 'sitesync:site_list' %}" class="is-active">Dashboard</a>
-                <a href="{% url 'sitesync:saved_reports' %}">Saved Reports</a>
-                <a href="{% url 'sitesync:settings_panel' %}">Settings</a>
-            </div>
-        </div>
+        {% include 'sitesync/_topbar.html' with active_page='home' %}
 
         <div class="content-wrap">
             <div class="header">

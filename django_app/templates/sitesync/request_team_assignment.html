@@ -1,0 +1,49 @@
+{% extends "sitesync/base.html" %}
+
+{% block title %}Request Team Assignment{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="bi bi-hand-thumbs-up"></i> Request Team Assignment</h4>
+                </div>
+                <div class="card-body">
+                    <p>You currently don't have access to any team. Please provide a brief message explaining which team or project you need access to, and an administrator will review your request.</p>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="message" class="form-label">Message (Optional)</label>
+                            <textarea 
+                                class="form-control" 
+                                id="message" 
+                                name="message" 
+                                rows="5" 
+                                placeholder="e.g., I need access to the Sales division reports for Q1 analysis..."
+                            ></textarea>
+                            <small class="form-text text-muted">Please be as specific as possible to help us assign you to the right team.</small>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-send"></i> Submit Request
+                            </button>
+                            <a href="{% url 'sitesync:saved_reports' %}" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+                <div class="card-footer text-muted">
+                    <small>
+                        <strong>Having trouble?</strong> Contact support at 
+                        <a href="mailto:support@enerlytix.com">support@enerlytix.com</a>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

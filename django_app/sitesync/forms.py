@@ -127,3 +127,97 @@ class AccountActionForm(forms.Form):
         if value:
             return value
         return value
+
+
+class TeamForm(forms.Form):
+    """Form for creating and editing teams."""
+
+    from .models import Team, RoleAssignment
+
+    name = forms.CharField(
+        max_length=255,
+        required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Team name',
+        }),
+        help_text='Display name for the team'
+    )
+    parent_team = forms.ModelChoiceField(
+        queryset=Team.objects.all(),
+        required=False,
+        empty_label='Root team (no parent)',
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        help_text='Parent team for hierarchical structure'
+    )
+    manager = forms.ModelChoiceField(
+        queryset=get_user_model().objects.filter(is_active=True),
+        required=False,
+        empty_label='No manager assigned',
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        help_text='User to assign as team manager'
+    )
+    team_lead = forms.ModelChoiceField(
+        queryset=get_user_model().objects.filter(is_active=True),
+        required=False,
+        empty_label='No team lead assigned',
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        help_text='User to assign as team lead'
+    )
+
+    def clean(self):
+        """Validate team hierarchy (prevent circular references)."""
+        cleaned_data = super().clean()
+        name = cleaned_data.get('name')
+        parent_team = cleaned_data.get('parent_team')
+
+        if parent_team and name:
+            # Check if parent_team is a descendant of this team (would create circular ref)
+            # This requires self reference to be stored first, so we validate on save instead
+            pass
+
+        return cleaned_data
+
+
+class UserTeamAssignmentForm(forms.Form):
+    """Form for assigning a user to a team."""
+
+    user = forms.ModelChoiceField(
+        queryset=get_user_model().objects.filter(is_active=True),
+        required=True,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        help_text='User to assign to the team'
+    )
+    team = forms.ModelChoiceField(
+        queryset=None,  # Will be set dynamically
+        required=True,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        help_text='Team to assign the user to'
+    )
+
+    def __init__(self, *args, **kwargs):
+        from .models import Team
+        super().__init__(*args, **kwargs)
+        self.fields['team'].queryset = Team.objects.all()
+
+
+class RoleAssignmentForm(forms.Form):
+    """Form for assigning roles to users."""
+
+    user = forms.ModelChoiceField(
+        queryset=get_user_model().objects.filter(is_active=True),
+        required=True,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        help_text='User to assign the role to'
+    )
+    role_name = forms.ChoiceField(
+        choices=[
+            ('admin', 'Administrator'),
+            ('manager', 'Manager'),
+            ('team_lead', 'Team Lead'),
+            ('user', 'User'),
+        ],
+        required=True,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        help_text='Role to assign to the user'
+    )

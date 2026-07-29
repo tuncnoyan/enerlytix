@@ -1,0 +1,177 @@
+{% extends "sitesync/base.html" %}
+{% load static %}
+
+{% block title %}Role Assignments{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Role Assignments</h1>
+            <p class="text-muted">Manage user roles and permissions</p>
+        </div>
+        {% if is_admin %}
+        <div class="col-md-4 text-end">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#roleModal">
+                <i class="bi bi-plus-lg"></i> Assign Role
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if assignments %}
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Role</th>
+                    <th>Assigned By</th>
+                    <th>Assigned On</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for assignment in assignments %}
+                <tr>
+                    <td>
+                        <strong>{{ assignment.user.get_full_name }}</strong><br>
+                        <small class="text-muted">{{ assignment.user.email }}</small>
+                    </td>
+                    <td>
+                        <span class="badge bg-info">{{ assignment.get_role_name_display }}</span>
+                    </td>
+                    <td>{{ assignment.assigned_by.get_full_name|default:"System" }}</td>
+                    <td>{{ assignment.assigned_at|date:"Y-m-d H:i" }}</td>
+                    <td>
+                        {% if is_admin %}
+                        <button class="btn btn-sm btn-danger" onclick="revokeRole('{{ assignment.id }}')">
+                            <i class="bi bi-trash"></i> Revoke
+                        </button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if assignments.has_other_pages %}
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+            {% if assignments.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1">First</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ assignments.previous_page_number }}">Previous</a>
+            </li>
+            {% endif %}
+
+            <li class="page-item active">
+                <span class="page-link">Page {{ assignments.number }} of {{ assignments.paginator.num_pages }}</span>
+            </li>
+
+            {% if assignments.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ assignments.next_page_number }}">Next</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ assignments.paginator.num_pages }}">Last</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+    {% else %}
+    <div class="alert alert-info">
+        <strong>No role assignments found.</strong> Assign roles to users to get started.
+    </div>
+    {% endif %}
+</div>
+
+<!-- Role Assignment Modal -->
+{% if is_admin %}
+<div class="modal fade" id="roleModal" tabindex="-1" aria-labelledby="roleLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="roleLabel">Assign Role</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="roleForm">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="roleUserSelect" class="form-label">User</label>
+                        <select class="form-select" id="roleUserSelect" name="user" required>
+                            <option value="">Choose a user...</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="roleNameSelect" class="form-label">Role</label>
+                        <select class="form-select" id="roleNameSelect" name="role_name" required>
+                            <option value="">Choose a role...</option>
+                            <option value="admin">Administrator</option>
+                            <option value="manager">Manager</option>
+                            <option value="team_lead">Team Lead</option>
+                            <option value="user">User</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Assign Role</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function revokeRole(assignmentId) {
+    if (confirm('Are you sure you want to revoke this role?')) {
+        fetch('{% url "sitesync:role_assignment" %}?assignment_id=' + assignmentId, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Unknown error'));
+            }
+        });
+    }
+}
+
+document.getElementById('roleForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const data = new URLSearchParams(formData);
+    
+    fetch('{% url "sitesync:role_assignment" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        },
+        body: data
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

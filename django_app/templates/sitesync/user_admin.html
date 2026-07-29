@@ -1,51 +1,419 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>User Administration</title>
-</head>
-<body>
-    <h1>User Administration</h1>
+{% extends "sitesync/panel_base.html" %}
+{% load static %}
 
-    <h2>Create Invitation</h2>
+{% block title %}User Administration — Admin Panel{% endblock %}
+{% block nav_users %}is-active{% endblock %}
+{% block breadcrumb_label %}Users{% endblock %}
+
+{% block content %}
+<link href="{% static 'sitesync/cxg-base.css' %}" rel="stylesheet">
+<style>
+    .ua-card {
+        background: var(--cxg-white); border: 1px solid var(--cxg-border);
+        border-radius: 0.45rem; padding: 1.2rem;
+        box-shadow: 0 1px 2px rgba(51,63,72,0.08); margin-bottom: 1rem;
+    }
+    .ua-card-title {
+        font-size: 0.82rem; font-weight: 700; color: var(--cxg-primary-432);
+        margin: 0 0 1rem; padding-bottom: 0.6rem; border-bottom: 1px solid var(--cxg-bg-25);
+        text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .invite-row { display: flex; gap: 0.6rem; align-items: flex-end; flex-wrap: wrap; }
+    .invite-row label { font-size: 0.8rem; font-weight: 700; display: block; margin-bottom: 0.3rem; }
+    .invite-row input[type="email"] {
+        border: 1px solid var(--cxg-border); border-radius: 0.35rem;
+        padding: 0.5rem 0.75rem; font-size: 0.86rem; font-family: inherit;
+        color: var(--cxg-primary-432); background: var(--cxg-white);
+        width: min(100%, 22rem); transition: border-color 0.18s, box-shadow 0.18s;
+    }
+    .invite-row input[type="email"]:focus {
+        border-color: var(--cxg-dark-green); box-shadow: 0 0 0 3px rgba(0,105,60,0.12); outline: none;
+    }
+    .inv-list { list-style: none; margin: 0; padding: 0; }
+    .inv-list li {
+        display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+        padding: 0.6rem 0; border-bottom: 1px solid var(--cxg-bg-25); font-size: 0.86rem;
+    }
+    .inv-list li:last-child { border-bottom: none; }
+    .inv-email { font-weight: 600; }
+    .inv-badge {
+        font-size: 0.72rem; font-weight: 700; padding: 0.22rem 0.5rem;
+        border-radius: 0.2rem; background: var(--cxg-bg-25); color: var(--cxg-primary-430);
+    }
+    .inv-badge.pending { background: #F1FFD6; color: #5C8A00; }
+    .empty-msg { color: var(--cxg-primary-430); font-size: 0.84rem; font-style: italic; padding: 0.4rem 0; }
+    .user-table { width: 100%; border-collapse: collapse; }
+    .user-table th {
+        background: var(--cxg-bg-10); color: var(--cxg-primary-430);
+        font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em;
+        padding: 0.6rem 0.85rem; text-align: left; border-bottom: 2px solid var(--cxg-border);
+    }
+    .user-table td { padding: 0.7rem 0.85rem; border-bottom: 1px solid var(--cxg-bg-25); font-size: 0.86rem; vertical-align: middle; }
+    .user-table tr:last-child td { border-bottom: none; }
+    .user-table tr:hover td { background: var(--cxg-bg-10); }
+    .user-name { font-weight: 700; }
+    .user-email { color: var(--cxg-primary-430); font-size: 0.8rem; }
+    .action-row { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
+    .action-row select {
+        border: 1px solid var(--cxg-border); border-radius: 0.3rem;
+        padding: 0.35rem 0.55rem; font-size: 0.8rem; font-family: inherit;
+        color: var(--cxg-primary-432); background: var(--cxg-white); cursor: pointer;
+    }
+    .action-row input[type="text"] {
+        border: 1px solid var(--cxg-border); border-radius: 0.3rem;
+        padding: 0.35rem 0.55rem; font-size: 0.8rem; font-family: inherit;
+        color: var(--cxg-primary-432); background: var(--cxg-white); width: 9rem;
+    }
+    .action-row input[type="text"]::placeholder { color: #A0AABB; }
+    .status-active { color: var(--cxg-dark-green); font-size: 0.72rem; font-weight: 700; }
+    .status-inactive { color: var(--cxg-primary-430); font-size: 0.72rem; font-weight: 700; }
+    .page-heading { font-size: 1.4rem; font-weight: 800; margin: 0 0 0.25rem; }
+    .page-sub { color: var(--cxg-primary-430); font-size: 0.84rem; margin: 0 0 1.2rem; font-weight: 500; }
+</style>
+
+<h1 class="page-heading">User Administration</h1>
+<p class="page-sub">Manage invitations, user accounts, and access.</p>
+
+<!-- Create Invitation -->
+<div class="ua-card">
+    <p class="ua-card-title">Create Invitation</p>
     <form method="post">
         {% csrf_token %}
         <input type="hidden" name="create_invitation" value="1">
-        {{ invitation_form.email.label_tag }} {{ invitation_form.email }}
-        <button type="submit">Send invitation</button>
+        <div class="invite-row">
+            <div>
+                <label for="invite-email">Email address</label>
+                <input type="email" id="invite-email" name="email" placeholder="user@example.com" required>
+            </div>
+            <button type="submit" class="btn btn-success">Send invitation</button>
+        </div>
     </form>
+</div>
 
-    <h2>Pending Invitations</h2>
-    <ul>
+<!-- Pending Invitations -->
+<div class="ua-card">
+    <p class="ua-card-title">Pending Invitations</p>
+    <ul class="inv-list">
         {% for invitation in invitations %}
-            <li>{{ invitation.email }} — {{ invitation.status }} — <a href="{% url 'sitesync:accept_invitation' invitation.id %}">Accept</a></li>
-        {% empty %}
-            <li>No invitations found.</li>
-        {% endfor %}
-    </ul>
-
-    <h2>Users</h2>
-    <ul>
-        {% for user in users %}
             <li>
-                {{ user.username }} ({{ user.email }})
-                <form method="post" style="display:inline;">
-                    {% csrf_token %}
-                    <input type="hidden" name="account_action" value="1">
-                    <input type="hidden" name="user_id" value="{{ user.id }}">
-                    <select name="action">
-                        <option value="enable">Enable account</option>
-                        <option value="disable">Disable account</option>
-                        <option value="reset_password">Reset password</option>
-                        <option value="delete">Delete account</option>
-                    </select>
-                    <input type="text" name="new_username" placeholder="Rename user">
-                    <button type="submit">Apply</button>
-                </form>
+                <div>
+                    <span class="inv-email">{{ invitation.email }}</span>
+                    <span class="inv-badge pending">{{ invitation.status }}</span>
+                </div>
+                <a href="{% url 'sitesync:accept_invitation' invitation.id %}" class="btn btn-outline-secondary btn-sm">Accept link</a>
             </li>
         {% empty %}
-            <li>No users found.</li>
+            <li><span class="empty-msg">No pending invitations.</span></li>
         {% endfor %}
     </ul>
+</div>
+
+<!-- Users -->
+<div class="ua-card">
+    <p class="ua-card-title">Users</p>
+    <div style="overflow-x: auto;">
+        <table class="user-table">
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>
+                        <div class="user-name">{{ user.username }}</div>
+                        <div class="user-email">{{ user.email }}</div>
+                    </td>
+                    <td>
+                        {% if user.is_active %}
+                            <span class="status-active">&#x2713; Active</span>
+                        {% else %}
+                            <span class="status-inactive">Disabled</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <form method="post" class="action-row">
+                            {% csrf_token %}
+                            <input type="hidden" name="account_action" value="1">
+                            <input type="hidden" name="user_id" value="{{ user.id }}">
+                            <select name="action">
+                                <option value="enable">Enable</option>
+                                <option value="disable">Disable</option>
+                                <option value="reset_password">Reset password</option>
+                                <option value="delete">Delete</option>
+                            </select>
+                            <input type="text" name="new_username" placeholder="New username">
+                            <button type="submit" class="btn btn-outline-secondary btn-sm">Apply</button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="3" class="empty-msg">No users found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --cxg-bg-10:       #F2F2F3;
+            --cxg-bg-25:       #DEE0E3;
+            --cxg-primary-430: #7C878E;
+            --cxg-primary-432: #333F48;
+            --cxg-green:       #7AB800;
+            --cxg-dark-green:  #00693C;
+            --cxg-border:      #C6D0D7;
+            --cxg-white:       #FFFFFF;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Manrope', 'Segoe UI', sans-serif;
+            margin: 0; padding: 0;
+            background: var(--cxg-bg-10);
+            color: var(--cxg-primary-432);
+        }
+        /* Top Bar */
+        .topbar {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 1rem; padding: 0.85rem 1.4rem;
+            background: var(--cxg-white); border-bottom: 1px solid var(--cxg-border);
+            box-shadow: 0 1px 0 rgba(51,63,72,0.06);
+        }
+        .brand { font-size: 1.2rem; font-weight: 800; color: var(--cxg-primary-432); letter-spacing: 0.02em; }
+        .topbar-links { display: flex; align-items: center; gap: 1.1rem; }
+        .topbar-links a {
+            color: var(--cxg-primary-430); text-decoration: none;
+            font-size: 0.78rem; font-weight: 600;
+            padding: 0.3rem 0.15rem; border-bottom: 2px solid transparent;
+            transition: color 0.2s, border-color 0.2s;
+        }
+        .topbar-links a:hover { color: var(--cxg-dark-green); }
+        .topbar-links a.is-active { color: var(--cxg-primary-432); border-bottom-color: var(--cxg-primary-430); }
+        .logout-form { margin: 0; }
+        .logout-btn {
+            background: none; border: none; cursor: pointer;
+            color: var(--cxg-primary-430); font-size: 0.78rem; font-weight: 600;
+            font-family: inherit; padding: 0.3rem 0.15rem; transition: color 0.2s;
+        }
+        .logout-btn:hover { color: var(--cxg-dark-green); }
+        /* Layout */
+        .content-wrap { width: min(1100px, 100%); margin: 0 auto; padding: 1.4rem 1rem; }
+        /* Page header */
+        .page-header {
+            background: var(--cxg-white); border: 1px solid var(--cxg-border);
+            border-radius: 0.45rem; padding: 1rem 1.2rem;
+            box-shadow: 0 1px 2px rgba(51,63,72,0.08); margin-bottom: 1.2rem;
+            display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;
+        }
+        .page-title { font-size: 1.4rem; font-weight: 800; margin: 0; }
+        .page-subtitle { color: var(--cxg-primary-430); font-size: 0.84rem; margin: 0.2rem 0 0; font-weight: 500; }
+        /* Cards */
+        .card {
+            background: var(--cxg-white); border: 1px solid var(--cxg-border);
+            border-radius: 0.45rem; padding: 1.2rem;
+            box-shadow: 0 1px 2px rgba(51,63,72,0.08); margin-bottom: 1rem;
+        }
+        .card-title {
+            font-size: 0.88rem; font-weight: 700; color: var(--cxg-primary-432);
+            margin: 0 0 1rem; padding-bottom: 0.6rem; border-bottom: 1px solid var(--cxg-bg-25);
+            text-transform: uppercase; letter-spacing: 0.06em;
+        }
+        /* Invite form */
+        .invite-row { display: flex; gap: 0.6rem; align-items: flex-end; flex-wrap: wrap; }
+        .invite-row label { font-size: 0.8rem; font-weight: 700; display: block; margin-bottom: 0.3rem; }
+        .invite-row input[type="email"] {
+            border: 1px solid var(--cxg-border); border-radius: 0.35rem;
+            padding: 0.5rem 0.75rem; font-size: 0.86rem; font-family: inherit;
+            color: var(--cxg-primary-432); background: var(--cxg-white);
+            width: min(100%, 22rem); transition: border-color 0.18s, box-shadow 0.18s;
+        }
+        .invite-row input[type="email"]:focus {
+            border-color: var(--cxg-dark-green); box-shadow: 0 0 0 3px rgba(0,105,60,0.12); outline: none;
+        }
+        /* Buttons */
+        .btn-primary {
+            background: var(--cxg-dark-green); color: var(--cxg-white);
+            border: none; border-radius: 0.35rem;
+            padding: 0.52rem 1rem; font-size: 0.84rem; font-weight: 600;
+            font-family: inherit; cursor: pointer; transition: background 0.18s;
+        }
+        .btn-primary:hover { background: #005435; }
+        .btn-ghost {
+            background: transparent; color: var(--cxg-primary-430);
+            border: 1px solid var(--cxg-border); border-radius: 0.35rem;
+            padding: 0.38rem 0.7rem; font-size: 0.8rem; font-weight: 600;
+            font-family: inherit; cursor: pointer; transition: all 0.18s;
+        }
+        .btn-ghost:hover { border-color: var(--cxg-primary-432); color: var(--cxg-primary-432); }
+        .btn-danger {
+            background: transparent; color: #B70000; border: 1px solid #B70000;
+            border-radius: 0.35rem; padding: 0.38rem 0.7rem; font-size: 0.8rem;
+            font-weight: 600; font-family: inherit; cursor: pointer; transition: all 0.18s;
+        }
+        .btn-danger:hover { background: #B70000; color: var(--cxg-white); }
+        /* Invitation list */
+        .inv-list { list-style: none; margin: 0; padding: 0; }
+        .inv-list li {
+            display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+            padding: 0.6rem 0; border-bottom: 1px solid var(--cxg-bg-25); font-size: 0.86rem;
+        }
+        .inv-list li:last-child { border-bottom: none; }
+        .inv-email { font-weight: 600; }
+        .inv-meta { color: var(--cxg-primary-430); font-size: 0.78rem; }
+        .inv-badge {
+            font-size: 0.72rem; font-weight: 700; padding: 0.22rem 0.5rem;
+            border-radius: 0.2rem; background: var(--cxg-bg-25); color: var(--cxg-primary-430);
+        }
+        .inv-badge.pending { background: #F1FFD6; color: #5C8A00; }
+        .empty-msg { color: var(--cxg-primary-430); font-size: 0.84rem; font-style: italic; padding: 0.4rem 0; }
+        /* User table */
+        .user-table { width: 100%; border-collapse: collapse; }
+        .user-table th {
+            background: var(--cxg-bg-10); color: var(--cxg-primary-430);
+            font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em;
+            padding: 0.6rem 0.85rem; text-align: left; border-bottom: 2px solid var(--cxg-border);
+        }
+        .user-table td { padding: 0.7rem 0.85rem; border-bottom: 1px solid var(--cxg-bg-25); font-size: 0.86rem; vertical-align: middle; }
+        .user-table tr:last-child td { border-bottom: none; }
+        .user-table tr:hover td { background: var(--cxg-bg-10); }
+        .user-name { font-weight: 700; }
+        .user-email { color: var(--cxg-primary-430); font-size: 0.8rem; }
+        /* Inline action form */
+        .action-row { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
+        .action-row select {
+            border: 1px solid var(--cxg-border); border-radius: 0.3rem;
+            padding: 0.35rem 0.55rem; font-size: 0.8rem; font-family: inherit;
+            color: var(--cxg-primary-432); background: var(--cxg-white); cursor: pointer;
+        }
+        .action-row input[type="text"] {
+            border: 1px solid var(--cxg-border); border-radius: 0.3rem;
+            padding: 0.35rem 0.55rem; font-size: 0.8rem; font-family: inherit;
+            color: var(--cxg-primary-432); background: var(--cxg-white); width: 9rem;
+        }
+        .action-row input[type="text"]::placeholder { color: #A0AABB; }
+        /* Status badge */
+        .status-active { color: var(--cxg-dark-green); font-size: 0.72rem; font-weight: 700; }
+        .status-inactive { color: var(--cxg-primary-430); font-size: 0.72rem; font-weight: 700; }
+    </style>
+</head>
+<body>
+
+    <div class="topbar">
+        <span class="brand">Enerlytix</span>
+        <nav class="topbar-links">
+            <a href="{% url 'sitesync:site_list' %}">Dashboard</a>
+            <a href="{% url 'sitesync:saved_reports' %}">Saved Reports</a>
+            <a href="{% url 'sitesync:settings_panel' %}">Settings</a>
+            {% if is_admin %}<a href="{% url 'sitesync:admin_panel' %}">&#x25CF; Admin Panel</a>{% endif %}
+            <a href="{% url 'sitesync:user_admin' %}" class="is-active">Users</a>
+            <a href="{% url 'sitesync:profile' %}">Profile</a>
+            <form method="post" action="{% url 'logout' %}" class="logout-form">
+                {% csrf_token %}
+                <button type="submit" class="logout-btn">Logout</button>
+            </form>
+        </nav>
+    </div>
+
+    <div class="content-wrap">
+
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">User Administration</h1>
+                <p class="page-subtitle">Manage invitations, user accounts, and access.</p>
+            </div>
+        </div>
+
+        <!-- Create Invitation -->
+        <div class="card">
+            <p class="card-title">Create Invitation</p>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="create_invitation" value="1">
+                <div class="invite-row">
+                    <div>
+                        <label for="invite-email">Email address</label>
+                        <input type="email" id="invite-email" name="email" placeholder="user@example.com" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Send invitation</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Pending Invitations -->
+        <div class="card">
+            <p class="card-title">Pending Invitations</p>
+            <ul class="inv-list">
+                {% for invitation in invitations %}
+                    <li>
+                        <div>
+                            <span class="inv-email">{{ invitation.email }}</span>
+                            <span class="inv-badge pending">{{ invitation.status }}</span>
+                        </div>
+                        <a href="{% url 'sitesync:accept_invitation' invitation.id %}" class="btn-ghost">Accept link</a>
+                    </li>
+                {% empty %}
+                    <li><span class="empty-msg">No pending invitations.</span></li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <!-- Users -->
+        <div class="card">
+            <p class="card-title">Users</p>
+            <div style="overflow-x: auto;">
+                <table class="user-table">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>
+                                <div class="user-name">{{ user.username }}</div>
+                                <div class="user-email">{{ user.email }}</div>
+                            </td>
+                            <td>
+                                {% if user.is_active %}
+                                    <span class="status-active">&#x2713; Active</span>
+                                {% else %}
+                                    <span class="status-inactive">Disabled</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <form method="post" class="action-row">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="account_action" value="1">
+                                    <input type="hidden" name="user_id" value="{{ user.id }}">
+                                    <select name="action">
+                                        <option value="enable">Enable</option>
+                                        <option value="disable">Disable</option>
+                                        <option value="reset_password">Reset password</option>
+                                        <option value="delete">Delete</option>
+                                    </select>
+                                    <input type="text" name="new_username" placeholder="New username">
+                                    <button type="submit" class="btn-ghost">Apply</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="3" class="empty-msg">No users found.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
 </body>
 </html>
