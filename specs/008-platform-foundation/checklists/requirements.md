@@ -32,3 +32,12 @@
 ## Notes
 
 - The specification is ready for planning and clarification review.
+- The updated spec includes the organisational hierarchy, team management permissions, report access scope, and the admin-panel experience requested by the user.
+- **Clarification Session (2026-07-29)**: 5 critical ambiguities resolved:
+  - Team hierarchy: Hierarchical with sub-teams
+  - Role assignment: Overlapping roles allowed
+  - Report access: Hierarchical access with inheritance
+  - Admin panel: Consolidated panel with all functions
+  - Report visibility: Team-gated access after assignment
+- All clarifications have been integrated into the spec and requirements are now unambiguous.
+

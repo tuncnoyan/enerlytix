@@ -10,10 +10,18 @@
 
 ## Clarifications
 
-### Session 2026-07-29
+### Session 2026-07-29 (Initial)
 
 - Q: For the initial release, which authentication approach should the platform use for sign-in and password recovery? → A: Email/password with password reset.
 - Q: For the initial release, how long should an invitation remain valid before it expires? → A: 7 days.
+
+### Session 2026-07-29 (Organisational Structure Clarifications)
+
+- Q: How should the team hierarchy be structured (flat, hierarchical with sub-teams, or matrix)? → A: Hierarchical — Teams can contain sub-teams; a user's access includes their team and all parent teams.
+- Q: Can users hold multiple roles simultaneously (e.g., both manager and team lead)? → A: Yes, overlapping roles are allowed — A user can be admin, manager, team lead, and/or user all at once.
+- Q: How should report access be scoped in a hierarchical team structure? → A: Hierarchical access with inheritance — Users access reports from their role level downward through the hierarchy.
+- Q: What functions should be included in the admin panel, and how should they be organized? → A: Consolidated panel — All admin functions (users, teams, roles, hierarchy view) should be in one "panel" page with modular sections.
+- Q: When should users gain access to reports — immediately upon sign-in or only after team assignment? → A: Team-gated — Users see reports only after team assignment; new users see a prompt or empty state until assigned.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -66,19 +74,37 @@ As an administrator, I can manage user accounts and role assignments so the plat
 
 ---
 
-### User Story 4 - Use role-based access correctly (Priority: P2)
+### User Story 4 - Manage the organisational structure and reporting hierarchy (Priority: P1)
 
-As a user with different roles, I can access only the functions appropriate to my role so the system remains secure and predictable for both administrators and regular users.
+As a manager, team lead, or administrator, I can create teams, assign users, and adjust reporting relationships so the organisation structure is clear and permissions match the business hierarchy.
 
-**Why this priority**: Role-based access is essential for governance, but it can be introduced after the main user and administration flows are working.
+**Why this priority**: Organisational structure and reporting boundaries are essential for approval workflows and for ensuring the right people can see the right reports.
 
-**Independent Test**: Sign in as an administrator and as a standard user and verify that each gets the appropriate actions and restrictions.
+**Independent Test**: Create a team, assign users and a team lead, change a manager, and verify that the organisation structure and reporting access reflect those changes.
 
 **Acceptance Scenarios**:
 
-1. **Given** a user has the administrator role, **When** they access the application, **Then** they can manage users and invitations.
-2. **Given** a user has the standard user role, **When** they access the application, **Then** they can sign in, view their profile, and use the standard product features without administrative controls.
-3. **Given** a disabled or inactive user, **When** they try to sign in, **Then** they are blocked from using the platform until the account is enabled again.
+1. **Given** an administrator or manager creates a team, **When** the team is saved, **Then** it becomes part of the organisation structure with an assigned manager and team lead where applicable.
+2. **Given** users are assigned to a team, **When** the assignment is updated, **Then** their access and reporting scope reflect their team membership.
+3. **Given** a manager or team lead changes, **When** the update is applied, **Then** the new reporting relationship is used for subsequent access and approvals.
+4. **Given** a team is transferred or reorganised, **When** the change is made, **Then** the affected users and reporting permissions move with the new structure.
+
+---
+
+### User Story 5 - Use the admin panel and role-based navigation (Priority: P1)
+
+As an administrator, I can open the admin panel from the home-page links menu and use a familiar, branded interface to manage users, teams, and access rights.
+
+**Why this priority**: The admin panel is the primary control surface for operational administration and should be easy to find and visually consistent with the rest of the product.
+
+**Independent Test**: Sign in as an administrator, confirm the admin panel link appears in the top-right links menu, open the panel page, and verify that it matches the home page’s overall layout and colour scheme.
+
+**Acceptance Scenarios**:
+
+1. **Given** an administrator is signed in, **When** they view the home page, **Then** the top-right links menu includes a visible link to the admin panel.
+2. **Given** a non-administrator user is signed in, **When** they view the home page, **Then** they do not see the admin panel link in the top-right links menu.
+3. **Given** an administrator opens the panel page, **When** the page loads, **Then** it presents a layout and colour scheme consistent with the home page experience.
+4. **Given** a user with a standard role accesses the panel page, **When** they attempt to open it, **Then** access is denied and they are returned to the appropriate permitted experience.
 
 ---
 
@@ -88,6 +114,7 @@ As a user with different roles, I can access only the functions appropriate to m
 - What happens if an invitation has expired before it is accepted? The invitation cannot be used and the user must request a new invite.
 - What happens if an administrator performs a sensitive account action for the wrong account? The action must apply only to the intended user record and be visible through the account management workflow.
 - What happens if a password reset request is initiated for a user who does not exist or is inactive? The system must handle the request securely without revealing sensitive account details.
+- What happens if an organisation changes are made while users are assigned to multiple teams or reporting roles? The system must preserve the new hierarchy consistently and prevent ambiguous access.
 
 ## Requirements *(mandatory)*
 
@@ -105,18 +132,27 @@ As a user with different roles, I can access only the functions appropriate to m
 - **FR-010**: The system MUST allow administrators to rename user accounts.
 - **FR-011**: The system MUST allow administrators to reset user passwords.
 - **FR-012**: The system MUST allow administrators to delete user accounts.
-- **FR-013**: The system MUST support at least two basic roles: administrator and standard user.
+- **FR-013**: The system MUST support at least four basic roles for organisational structure: admin, manager, team lead, and user.
 - **FR-014**: The system MUST ensure administrator users can access user administration functions while standard users cannot.
 - **FR-015**: The system MUST prevent disabled or inactive users from signing in to the platform.
 - **FR-016**: The system MUST ensure account changes performed by administrators are applied consistently to the relevant user account.
-- **FR-017**: The system MUST handle account recovery and invitation flows securely and without exposing private account information to unauthorized users.
+- **FR-017**: The system MUST support hierarchical team creation and management, including the ability to create sub-teams under parent teams.
+- **FR-018**: The system MUST allow administrators or managers to assign users to teams, change team managers, transfer team leads, and move teams within the hierarchy.
+- **FR-019**: The system MUST provide hierarchical role-based report access so users can access their own reports, team leads can access team reports and sub-team reports within their scope, managers can access all reports from their managed teams and sub-teams, and administrators can access all reports.
+- **FR-020**: The system MUST enforce team-gated report access where users see reports only for teams they are assigned to or manage; new users see an empty state until assigned to a team.
+- **FR-021**: The system MUST provide a consolidated admin panel (named \"panel\") with sections for user management, team management, organisational hierarchy view, and role assignments, all with layout and colour scheme consistent with the home page.
+- **FR-022**: The system MUST expose the admin panel link in the home-page top-right links menu for administrators only.
+- **FR-023**: The system MUST handle account recovery and invitation flows securely and without exposing private account information to unauthorized users.
 
 ### Key Entities *(include if feature involves data)*
 
-- **User Account**: The person-specific account that provides access to the platform, including identity, status, role, and profile information.
+- **User Account**: The person-specific account that provides access to the platform, including identity, status, roles (admin, manager, team lead, user), and profile information. A user can hold multiple roles simultaneously.
 - **Invitation**: A time-limited permission that enables a new person to create or activate a platform account.
-- **Role Assignment**: The designation that determines whether a user has administrative capabilities or standard access.
+- **Team**: A hierarchical group within the organisation that can contain sub-teams, has a manager, and may have a team lead. Users are assigned to teams for reporting and access scope.
+- **Role Assignment**: Multi-valued designation that determines whether a user has administrative, managerial, team-lead, and/or standard access. A single user can hold multiple roles.
+- **Organisation Structure**: The hierarchical reporting tree connecting teams, sub-teams, managers, team leads, and users. Parent team managers can access all reports from child teams.
 - **Account Status**: The current active or disabled state of a user account that affects sign-in permissions.
+- **Report Scope**: Determined by team membership and role; a user can access reports from their assigned team and all sub-teams within their scope based on their role level.
 
 ## Success Criteria *(mandatory)*
 
@@ -127,6 +163,10 @@ As a user with different roles, I can access only the functions appropriate to m
 - **SC-003**: 95% or more of password reset requests are completed successfully without support intervention.
 - **SC-004**: 100% of administrator account-management actions are reflected in the affected user account state.
 - **SC-005**: 95% or more of administrators can complete core user administration tasks without confusion or blocking issues.
+- **SC-006**: 100% of hierarchical team changes (including sub-team creation, team assignment, and manager transfer) are reflected in reporting access and organisational structure.
+- **SC-007**: 100% of team-gated report access rules are enforced; users see only reports for teams they are assigned to or manage.
+- **SC-008**: 100% of administrators see the admin panel link in the home-page links menu; non-administrators do not.
+- **SC-009**: 100% of administrators can access the consolidated admin panel and manage users, teams, and organisational hierarchy from a single branded page.
 
 ## Assumptions
 
@@ -135,3 +175,8 @@ As a user with different roles, I can access only the functions appropriate to m
 - User profile data in this phase is limited to basic account information and does not require full profile customization.
 - Invitation expiry and access controls are required for secure multi-user operation from the start of rollout.
 - The platform will continue to use existing business workflows after authentication and access control are in place.
+- Teams have a hierarchical structure where sub-teams inherit parent team properties and managers can oversee multiple levels.
+- Users can hold multiple roles simultaneously (e.g., a user can be both a manager and a team lead at different levels).
+- Report access is determined by team membership and role level; users see reports only for their assigned team and sub-teams within their access scope.
+- The admin panel is the primary interface for all administrative functions and consolidates user, team, and hierarchy management.
+- New users begin with no team assignment and see an empty state or prompt until an administrator assigns them to a team.
