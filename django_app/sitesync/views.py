@@ -482,6 +482,7 @@ def _report_payload(site, end_month, supply_external_ids=None):
     }
 
 
+@login_required(login_url='/login/')
 def report_view(request):
     if request.method == 'POST':
         raw_site_id = (request.POST.get('site_id') or '').strip()
@@ -555,35 +556,28 @@ def report_view(request):
     return render(request, 'sitesync/report.html', context)
 
 
+@login_required(login_url='/login/')
 def saved_reports_view(request):
     """Entry point for the saved reports browser with team-based access scoping."""
     from .services import get_accessible_reports
     from .models import UserTeamAssignment
     import json
     
-    # For anonymous users, show all reports (backward compatibility)
-    # For authenticated users without teams, show empty state
-    if not request.user.is_authenticated:
-        # Anonymous users see all reports
-        accessible_reports = MonthlyReport.objects.all()
-    else:
-        # Check if user has any team assignments
-        user_has_teams = UserTeamAssignment.objects.filter(user=request.user).exists()
-        
-        # show empty state for unassigned authenticated user
-        if not user_has_teams and not (request.user.is_staff or request.user.is_superuser):
-            context = {
-                'show_empty_state': True,
-                'user_has_teams': False,
-                'is_admin': _user_is_admin(request.user),
-            }
-            return render(request, 'sitesync/saved_reports.html', context)
-        
-        # Authenticated user with teams or admin - get accessible reports
-        accessible_reports = get_accessible_reports(request.user)
+    user_has_teams = UserTeamAssignment.objects.filter(user=request.user).exists()
+
+    # show empty state for unassigned authenticated user
+    if not user_has_teams and not (request.user.is_staff or request.user.is_superuser):
+        context = {
+            'show_empty_state': True,
+            'user_has_teams': False,
+            'is_admin': _user_is_admin(request.user),
+        }
+        return render(request, 'sitesync/saved_reports.html', context)
+
+    # Authenticated user with teams or admin - get accessible reports
+    accessible_reports = get_accessible_reports(request.user)
     
-    user_has_teams = (request.user.is_authenticated and 
-                      UserTeamAssignment.objects.filter(user=request.user).exists())
+    user_has_teams = UserTeamAssignment.objects.filter(user=request.user).exists()
     
     raw_site_id = (request.GET.get('site_id') or '').strip()
     site_id = None
@@ -801,6 +795,7 @@ def accept_invitation_view(request, invitation_id):
     return render(request, 'sitesync/invite_accept.html', {'invitation': invitation})
 
 
+@login_required(login_url='/login/')
 def site_list_view(request):
     query = request.GET.get('q', '').strip()
     all_sites_qs = Site.objects.annotate(
@@ -884,6 +879,7 @@ def site_list_view(request):
     })
 
 
+@login_required(login_url='/login/')
 def supply_list_view(request):
     """Display supplies for a selected site."""
     site_id = request.GET.get('site_id')
@@ -1029,6 +1025,7 @@ def supply_list_view(request):
     })
 
 
+@login_required(login_url='/login/')
 def manual_sync_view(request):
     """Trigger a manual sync and return to the site list."""
     if request.method != 'POST':
@@ -1064,6 +1061,7 @@ def manual_sync_view(request):
         }, status=500)
 
 
+@login_required(login_url='/login/')
 def settings_panel_view(request):
     """Display and update runtime configuration settings."""
     settings_instance = SettingsConfigService.get_settings()
@@ -1223,6 +1221,7 @@ def consumption_display_api_view(request):
     })
 
 
+@login_required(login_url='/login/')
 def consumption_display_view(request):
     reporting_month = request.GET.get('reporting_month', '')
     supply_id = request.GET.get('supply_id', '')
@@ -1547,6 +1546,7 @@ def role_assignment_view(request):
     
     # GET: List assignments
     assignments = RoleAssignment.objects.all().select_related('user', 'assigned_by')
+    assignable_users = get_user_model().objects.filter(is_active=True).order_by('username')
     paginator = Paginator(assignments, 50)
     page = request.GET.get('page', 1)
     
@@ -1558,6 +1558,7 @@ def role_assignment_view(request):
     context = {
         'assignments': assignments_page,
         'is_admin': is_admin,
+        'assignable_users': assignable_users,
     }
     return render(request, 'sitesync/role_assignment.html', context)
 
@@ -1700,6 +1701,7 @@ def admin_roles_view(request):
     """Admin panel role assignments section."""
     from .models import RoleAssignment
     from django.core.paginator import Paginator
+    User = get_user_model()
     
     assignments = RoleAssignment.objects.all().select_related('user', 'assigned_by').order_by('user__username')
     paginator = Paginator(assignments, 50)
@@ -1712,6 +1714,7 @@ def admin_roles_view(request):
     
     context = {
         'assignments': assignments_page,
+        'assignable_users': User.objects.filter(is_active=True).order_by('username'),
     }
     return render(request, 'sitesync/panel_roles.html', context)
 

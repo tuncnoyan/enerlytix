@@ -3,6 +3,7 @@
 import json
 from datetime import datetime, timezone
 
+from django.contrib.auth import get_user_model
 from django.test import Client, RequestFactory, TestCase
 from django.urls import reverse
 
@@ -16,6 +17,8 @@ class ReportDraftWorkflowTest(TestCase):
     def setUp(self):
         self.client = Client()
         self.factory = RequestFactory()
+        self.user = get_user_model().objects.create_user(username='reportuser', password='pass123')
+        self.client.force_login(self.user)
         self.site = Site.objects.create(
             external_id='site-ext-1',
             name='Test Site',
@@ -83,6 +86,7 @@ class ReportDraftWorkflowTest(TestCase):
                 'reporting_month': '2026-05',
             },
         )
+        request.user = self.user
         response = report_view(request)
 
         self.assertEqual(response.status_code, 200)

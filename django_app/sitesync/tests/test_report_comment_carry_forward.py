@@ -2,6 +2,7 @@
 
 import json
 
+from django.contrib.auth import get_user_model
 from django.test import Client, RequestFactory, TestCase
 
 from sitesync.models import MonthlyReport, ReportComment, Site
@@ -15,6 +16,8 @@ class ReportCommentCarryForwardTest(TestCase):
     def setUp(self):
         self.client = Client()
         self.factory = RequestFactory()
+        self.user = get_user_model().objects.create_user(username='carryuser', password='pass123')
+        self.client.force_login(self.user)
         self.site = Site.objects.create(
             external_id='site-ext-carry-1',
             name='Carry Forward Site',
@@ -78,6 +81,7 @@ class ReportCommentCarryForwardTest(TestCase):
             '/report/',
             data={'site_id': str(self.site.id), 'end_month': '2026-06'},
         )
+        request.user = self.user
         response = report_view(request)
 
         self.assertEqual(response.status_code, 200)

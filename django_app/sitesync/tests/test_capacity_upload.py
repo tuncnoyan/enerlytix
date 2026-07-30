@@ -3,6 +3,7 @@
 from datetime import datetime, timezone
 from io import BytesIO
 
+from django.contrib.auth import get_user_model
 from django.test import RequestFactory, TestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
@@ -24,6 +25,13 @@ class CapacityUploadTests(TestCase):
     def setUp(self):
         AppSettings.objects.create()
         self.factory = RequestFactory()
+        self.user = get_user_model().objects.create_user(username='capacityuser', password='pass123')
+        self.client.force_login(self.user)
+
+    def _auth_post(self, path, data):
+        request = self.factory.post(path, data=data)
+        request.user = self.user
+        return request
 
     def _build_workbook_bytes(self, rows):
         workbook = Workbook()
@@ -50,7 +58,7 @@ class CapacityUploadTests(TestCase):
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         )
 
-        request = self.factory.post(
+        request = self._auth_post(
             reverse('sitesync:settings_panel'),
             data={
                 'capacity_upload_submit': '1',
@@ -82,7 +90,7 @@ class CapacityUploadTests(TestCase):
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         )
 
-        request = self.factory.post(
+        request = self._auth_post(
             reverse('sitesync:settings_panel'),
             data={
                 'capacity_upload_submit': '1',
@@ -119,7 +127,7 @@ class CapacityUploadTests(TestCase):
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         )
 
-        request = self.factory.post(
+        request = self._auth_post(
             reverse('sitesync:settings_panel'),
             data={
                 'capacity_upload_submit': '1',

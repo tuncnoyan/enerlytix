@@ -5,6 +5,7 @@ Tests for the manual sync refresh endpoint.
 import json
 from unittest.mock import patch
 
+from django.contrib.auth import get_user_model
 from django.test import RequestFactory, TestCase
 
 from sitesync.views import manual_sync_view
@@ -15,6 +16,7 @@ class ManualSyncViewTest(TestCase):
 
     def setUp(self):
         self.factory = RequestFactory()
+        self.user = get_user_model().objects.create_user(username='syncuser', password='pass123')
 
     @patch('sitesync.views.EtainaibleSyncService')
     def test_manual_sync_redirects_on_success(self, mock_service_class):
@@ -27,6 +29,7 @@ class ManualSyncViewTest(TestCase):
         }
 
         request = self.factory.post('/sync/')
+        request.user = self.user
         response = manual_sync_view(request)
 
         self.assertEqual(response.status_code, 302)
@@ -39,6 +42,7 @@ class ManualSyncViewTest(TestCase):
         mock_service.sync_all.side_effect = RuntimeError('boom')
 
         request = self.factory.post('/sync/')
+        request.user = self.user
         response = manual_sync_view(request)
 
         self.assertEqual(response.status_code, 500)

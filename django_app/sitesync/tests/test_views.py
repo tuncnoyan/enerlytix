@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user_model
 from django.test import TestCase, RequestFactory
 from sitesync.models import Site, Supply
 from sitesync.views import site_list_view
@@ -6,6 +7,7 @@ from sitesync.views import site_list_view
 class SiteListViewTest(TestCase):
     def setUp(self):
         self.factory = RequestFactory()
+        self.user = get_user_model().objects.create_user(username='viewer', password='pass123')
         self.site1 = Site.objects.create(external_id='site-1', name='Alpha Site', description='First location')
         self.site2 = Site.objects.create(external_id='site-2', name='Beta Site', description='Second location')
         Supply.objects.create(
@@ -16,8 +18,13 @@ class SiteListViewTest(TestCase):
             device_id='dev-1',
         )
 
+    def _auth_get(self, path='/', data=None):
+        request = self.factory.get(path, data or {})
+        request.user = self.user
+        return request
+
     def test_site_list_view_renders_sites(self):
-        request = self.factory.get('/')
+        request = self._auth_get('/')
         response = site_list_view(request)
         self.assertEqual(response.status_code, 200)
         content = response.content.decode('utf-8')
@@ -29,7 +36,7 @@ class SiteListViewTest(TestCase):
         self.assertIn('Available Sites', content)
 
     def test_site_list_view_filters_by_query(self):
-        request = self.factory.get('/', {'q': 'alpha'})
+        request = self._auth_get('/', {'q': 'alpha'})
         response = site_list_view(request)
         self.assertEqual(response.status_code, 200)
         content = response.content.decode('utf-8')
@@ -45,7 +52,7 @@ class SiteListViewTest(TestCase):
             parent_account_id='supply-1',
         )
 
-        request = self.factory.get('/')
+        request = self._auth_get('/')
         response = site_list_view(request)
         content = response.content.decode('utf-8')
 
@@ -56,7 +63,7 @@ class SiteListViewTest(TestCase):
         self.assertIn('>1<', content)
 
     def test_site_list_view_renders_selection_controls(self):
-        request = self.factory.get('/')
+        request = self._auth_get('/')
         response = site_list_view(request)
         content = response.content.decode('utf-8')
 

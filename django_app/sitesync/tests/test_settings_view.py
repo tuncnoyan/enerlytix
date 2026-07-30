@@ -4,6 +4,7 @@ Integration tests for the settings page.
 
 from io import BytesIO
 
+from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
@@ -18,6 +19,7 @@ class SettingsViewIntegrationTest(TestCase):
 
     def setUp(self):
         self.factory = RequestFactory()
+        self.user = get_user_model().objects.create_user(username='settingsuser', password='pass123')
         self.settings = AppSettings.objects.create(
             etainabl_api_url='https://api.etainabl.com/2.0',
             page_size=50,
@@ -40,8 +42,18 @@ class SettingsViewIntegrationTest(TestCase):
         workbook.save(buffer)
         return buffer.getvalue()
 
+    def _auth_get(self, path='/settings/', data=None):
+        request = self.factory.get(path, data or {})
+        request.user = self.user
+        return request
+
+    def _auth_post(self, path='/settings/', data=None):
+        request = self.factory.post(path, data=data or {})
+        request.user = self.user
+        return request
+
     def test_settings_page_renders_current_values(self):
-        request = self.factory.get('/settings/')
+        request = self._auth_get('/settings/')
         response = settings_panel_view(request)
 
         self.assertEqual(response.status_code, 200)
@@ -57,7 +69,7 @@ class SettingsViewIntegrationTest(TestCase):
         self.assertIn('Invoice Data Start Page Number', content)
 
     def test_settings_page_persists_valid_post(self):
-        request = self.factory.post('/settings/', data={
+        request = self._auth_post('/settings/', data={
             'electricity_benchmark_intensity': 95.5,
             'gas_benchmark_intensity': 63.75,
             'water_benchmark_intensity': 2.05,
@@ -81,7 +93,7 @@ class SettingsViewIntegrationTest(TestCase):
         self.assertEqual(self.settings.invoice_start_page, 2)
 
     def test_settings_page_rejects_invalid_post(self):
-        request = self.factory.post('/settings/', data={
+        request = self._auth_post('/settings/', data={
             'electricity_benchmark_intensity': -1,
             'gas_benchmark_intensity': -2,
             'water_benchmark_intensity': -3,
@@ -110,7 +122,7 @@ class SettingsViewIntegrationTest(TestCase):
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         )
 
-        request = self.factory.post(
+        request = self._auth_post(
             reverse('sitesync:settings_panel'),
             data={
                 'capacity_upload_submit': '1',
@@ -134,7 +146,7 @@ class SettingsViewIntegrationTest(TestCase):
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         )
 
-        request = self.factory.post(
+        request = self._auth_post(
             reverse('sitesync:settings_panel'),
             data={
                 'capacity_upload_submit': '1',

@@ -2,6 +2,7 @@
 
 import re
 
+from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
 
@@ -13,6 +14,8 @@ class ReportCoverPagesTest(TestCase):
 
     def setUp(self):
         self.client = Client()
+        self.user = get_user_model().objects.create_user(username='coveruser', password='pass123')
+        self.client.force_login(self.user)
         self.site = Site.objects.create(
             external_id='cover-site-1',
             name='Unit 4, Lakeside Business Park',

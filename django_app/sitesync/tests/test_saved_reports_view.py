@@ -1,5 +1,6 @@
 """Tests for the saved reports browser view."""
 
+from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 
 from sitesync.models import Site
@@ -11,6 +12,13 @@ class SavedReportsViewTest(TestCase):
 
     def setUp(self):
         self.client = Client()
+        self.user = get_user_model().objects.create_user(
+            username='savedreportsadmin',
+            password='pass123',
+            is_staff=True,
+            is_superuser=True,
+        )
+        self.client.force_login(self.user)
         self.site = Site.objects.create(
             external_id='site-ext-saved-1',
             name='Saved Reports Site',

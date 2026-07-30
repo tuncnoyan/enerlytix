@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user_model
 from django.test import TestCase, RequestFactory
 from sitesync.models import Site, Supply
 from sitesync.views import site_list_view
@@ -9,6 +10,7 @@ class SiteSearchIntegrationTest(TestCase):
     def setUp(self):
         """Create sample sites and supplies for testing."""
         self.factory = RequestFactory()
+        self.user = get_user_model().objects.create_user(username='searcher', password='pass123')
         self.site_alpha = Site.objects.create(
             external_id='etainabl-101',
             name='Alpha Distribution Center',
@@ -35,9 +37,14 @@ class SiteSearchIntegrationTest(TestCase):
             device_id='meter-002',
         )
 
+    def _auth_get(self, path='/', data=None):
+        request = self.factory.get(path, data or {})
+        request.user = self.user
+        return request
+
     def test_site_list_displays_all_sites(self):
         """Verify the site list page renders all available sites."""
-        request = self.factory.get('/')
+        request = self._auth_get('/')
         response = site_list_view(request)
         self.assertEqual(response.status_code, 200)
         content = response.content.decode('utf-8')
@@ -46,7 +53,7 @@ class SiteSearchIntegrationTest(TestCase):
 
     def test_search_filters_by_site_name(self):
         """Verify search by site name filters the list correctly."""
-        request = self.factory.get('/', {'q': 'alpha'})
+        request = self._auth_get('/', {'q': 'alpha'})
         response = site_list_view(request)
         self.assertEqual(response.status_code, 200)
         content = response.content.decode('utf-8')
@@ -55,7 +62,7 @@ class SiteSearchIntegrationTest(TestCase):
 
     def test_search_filters_by_external_id(self):
         """Verify search by external ID filters the list correctly."""
-        request = self.factory.get('/', {'q': 'etainabl-102'})
+        request = self._auth_get('/', {'q': 'etainabl-102'})
         response = site_list_view(request)
         self.assertEqual(response.status_code, 200)
         content = response.content.decode('utf-8')
@@ -64,7 +71,7 @@ class SiteSearchIntegrationTest(TestCase):
 
     def test_search_filters_by_description(self):
         """Verify search by description filters the list correctly."""
-        request = self.factory.get('/', {'q': 'north'})
+        request = self._auth_get('/', {'q': 'north'})
         response = site_list_view(request)
         self.assertEqual(response.status_code, 200)
         content = response.content.decode('utf-8')
@@ -73,7 +80,7 @@ class SiteSearchIntegrationTest(TestCase):
 
     def test_search_filters_by_supply_name(self):
         """Verify search by supply name filters the list correctly."""
-        request = self.factory.get('/', {'q': 'electricity'})
+        request = self._auth_get('/', {'q': 'electricity'})
         response = site_list_view(request)
         self.assertEqual(response.status_code, 200)
         content = response.content.decode('utf-8')
@@ -81,7 +88,7 @@ class SiteSearchIntegrationTest(TestCase):
 
     def test_empty_search_result(self):
         """Verify that non-matching search shows empty state message."""
-        request = self.factory.get('/', {'q': 'nonexistent'})
+        request = self._auth_get('/', {'q': 'nonexistent'})
         response = site_list_view(request)
         self.assertEqual(response.status_code, 200)
         content = response.content.decode('utf-8')
@@ -90,7 +97,7 @@ class SiteSearchIntegrationTest(TestCase):
     def test_supplies_display_with_site(self):
         """Verify that the site list page renders correctly and can load supplies via the supply_list_view."""
         # Test that site list view renders the page
-        request = self.factory.get('/')
+        request = self._auth_get('/')
         response = site_list_view(request)
         self.assertEqual(response.status_code, 200)
         content = response.content.decode('utf-8')

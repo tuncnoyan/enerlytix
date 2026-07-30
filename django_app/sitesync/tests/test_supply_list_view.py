@@ -2,6 +2,7 @@
 Integration tests for supply list display.
 """
 
+from django.contrib.auth import get_user_model
 from django.test import TestCase, RequestFactory
 from sitesync.models import Site, Supply
 from sitesync.views import supply_list_view
@@ -13,6 +14,7 @@ class SupplyListViewIntegrationTest(TestCase):
     def setUp(self):
         """Create sample data for integration testing."""
         self.factory = RequestFactory()
+        self.user = get_user_model().objects.create_user(username='supplyuser', password='pass123')
         
         self.site1 = Site.objects.create(
             external_id='site-001',
@@ -56,16 +58,21 @@ class SupplyListViewIntegrationTest(TestCase):
             device_id='meter-elec-002',
         )
 
+    def _auth_get(self, path='/', data=None):
+        request = self.factory.get(path, data or {})
+        request.user = self.user
+        return request
+
     def test_supply_list_view_returns_200(self):
         """Verify supply list view returns successful response."""
-        request = self.factory.get('/', {'site_id': self.site1.id})
+        request = self._auth_get('/', {'site_id': self.site1.id})
         response = supply_list_view(request)
         
         self.assertEqual(response.status_code, 200)
 
     def test_supply_list_displays_all_supplies_for_site(self):
         """Verify all supplies for a site are displayed."""
-        request = self.factory.get('/', {'site_id': self.site1.id})
+        request = self._auth_get('/', {'site_id': self.site1.id})
         response = supply_list_view(request)
         content = response.content.decode('utf-8')
         
@@ -75,7 +82,7 @@ class SupplyListViewIntegrationTest(TestCase):
 
     def test_supply_list_filters_by_site_correctly(self):
         """Verify supplies are filtered by site ID."""
-        request = self.factory.get('/', {'site_id': self.site1.id})
+        request = self._auth_get('/', {'site_id': self.site1.id})
         response = supply_list_view(request)
         content = response.content.decode('utf-8')
         
@@ -86,7 +93,7 @@ class SupplyListViewIntegrationTest(TestCase):
 
     def test_supply_list_displays_utility_types(self):
         """Verify utility types are displayed for each supply."""
-        request = self.factory.get('/', {'site_id': self.site1.id})
+        request = self._auth_get('/', {'site_id': self.site1.id})
         response = supply_list_view(request)
         content = response.content.decode('utf-8')
         
@@ -96,7 +103,7 @@ class SupplyListViewIntegrationTest(TestCase):
 
     def test_supply_list_displays_device_ids(self):
         """Verify device IDs are displayed."""
-        request = self.factory.get('/', {'site_id': self.site1.id})
+        request = self._auth_get('/', {'site_id': self.site1.id})
         response = supply_list_view(request)
         content = response.content.decode('utf-8')
         
@@ -111,7 +118,7 @@ class SupplyListViewIntegrationTest(TestCase):
             name='Empty Site'
         )
         
-        request = self.factory.get('/', {'site_id': site_empty.id})
+        request = self._auth_get('/', {'site_id': site_empty.id})
         response = supply_list_view(request)
         content = response.content.decode('utf-8')
         
@@ -119,14 +126,14 @@ class SupplyListViewIntegrationTest(TestCase):
 
     def test_supply_list_missing_site_id_parameter(self):
         """Verify view handles missing site_id parameter gracefully."""
-        request = self.factory.get('/')
+        request = self._auth_get('/')
         response = supply_list_view(request)
         
         self.assertEqual(response.status_code, 200)
 
     def test_supply_list_with_invalid_site_id(self):
         """Verify view handles invalid site ID gracefully."""
-        request = self.factory.get('/', {'site_id': 99999})
+        request = self._auth_get('/', {'site_id': 99999})
         response = supply_list_view(request)
         content = response.content.decode('utf-8')
         
@@ -143,7 +150,7 @@ class SupplyListViewIntegrationTest(TestCase):
             parent_account_id='supply-elec-001',
         )
 
-        request = self.factory.get('/', {'site_id': self.site1.id})
+        request = self._auth_get('/', {'site_id': self.site1.id})
         response = supply_list_view(request)
         content = response.content.decode('utf-8')
 
@@ -153,7 +160,7 @@ class SupplyListViewIntegrationTest(TestCase):
 
     def test_supply_list_filters_by_utility_type(self):
         """Verify utility type filter only shows matching supplies."""
-        request = self.factory.get('/', {'site_id': self.site1.id, 'utility_type': 'gas'})
+        request = self._auth_get('/', {'site_id': self.site1.id, 'utility_type': 'gas'})
         response = supply_list_view(request)
         content = response.content.decode('utf-8')
 
@@ -175,7 +182,7 @@ class SupplyListViewIntegrationTest(TestCase):
             parent_account_id='supply-elec-001',
         )
 
-        request = self.factory.get('/', {'site_id': self.site1.id, 'meter_type': 'sub'})
+        request = self._auth_get('/', {'site_id': self.site1.id, 'meter_type': 'sub'})
         response = supply_list_view(request)
         content = response.content.decode('utf-8')
 
@@ -187,7 +194,7 @@ class SupplyListViewIntegrationTest(TestCase):
 
     def test_supply_list_combines_supplies_from_multiple_selected_sites(self):
         """Verify site_ids includes supplies across all selected sites."""
-        request = self.factory.get('/', {'site_ids': f'{self.site1.id},{self.site2.id}'})
+        request = self._auth_get('/', {'site_ids': f'{self.site1.id},{self.site2.id}'})
         response = supply_list_view(request)
         content = response.content.decode('utf-8')
 

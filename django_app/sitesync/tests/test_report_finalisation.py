@@ -1,5 +1,6 @@
 """Tests for monthly report finalisation and replacement-final workflow."""
 
+from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 
 from sitesync.models import MonthlyReport, MonthlyReportVersion, Site
@@ -10,6 +11,8 @@ class ReportFinalisationWorkflowTest(TestCase):
 
     def setUp(self):
         self.client = Client()
+        self.user = get_user_model().objects.create_user(username='finaluser', password='pass123')
+        self.client.force_login(self.user)
         self.site = Site.objects.create(
             external_id='site-ext-final-1',
             name='Final Test Site',

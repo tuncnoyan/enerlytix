@@ -4,6 +4,7 @@ Edge case tests for site and supply behavior.
 
 from unittest.mock import Mock, patch
 
+from django.contrib.auth import get_user_model
 from django.test import RequestFactory, TestCase, override_settings
 
 from sitesync.models import Site
@@ -16,9 +17,11 @@ class EdgeCaseTests(TestCase):
 
     def setUp(self):
         self.factory = RequestFactory()
+        self.user = get_user_model().objects.create_user(username='edgeuser', password='pass123')
 
     def test_site_list_view_handles_no_sites(self):
         request = self.factory.get('/')
+        request.user = self.user
         response = site_list_view(request)
 
         self.assertEqual(response.status_code, 200)
