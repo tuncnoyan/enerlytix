@@ -75,6 +75,7 @@ As an admin, I need to download audit logs in spreadsheet-friendly formats so I 
 - How does filtering behave when only one boundary date is provided (start only or end only)?
 - How does the viewer behave when multiple events share the same timestamp?
 - How does export behave for large filtered result sets?
+- For exports exceeding 50,000 matching rows, the system should return a clear "narrow filters" message instead of attempting a long-running or partial export.
 
 ## Requirements *(mandatory)*
 
@@ -82,7 +83,7 @@ As an admin, I need to download audit logs in spreadsheet-friendly formats so I 
 
 - **FR-001**: The system MUST create an audit log entry for all authenticated mutating actions across the application, including (at minimum) create report, delete user, and approve report actions.
 - **FR-001a**: The system MUST create audit log entries for denied or failed security-relevant attempts, including unauthorized access attempts to protected resources.
-- **FR-002**: Each audit log entry MUST include, at minimum, user identity, IP address, UTC timestamp, affected entity, normalized action type code, and human-readable action summary.
+- **FR-002**: Each audit log entry MUST include, at minimum, actor identity (actor user id when resolvable and username snapshot always), IP address, UTC timestamp, affected entity, normalized action type code, and human-readable action summary.
 - **FR-003**: The audit log MUST record action summaries in a clear activity format (for example: created report, deleted user, approved report).
 - **FR-004**: Audit logs MUST be accessible from the Admin Panel.
 - **FR-005**: Only users with admin privileges MUST be able to access the audit log viewer.
@@ -97,6 +98,7 @@ As an admin, I need to download audit logs in spreadsheet-friendly formats so I 
 - **FR-014**: The system MUST reject unauthorized access attempts to audit log viewing and export functions.
 - **FR-015**: Audit log records MUST be retained according to organizational policy with a minimum retention period of 1 year.
 - **FR-016**: Audit log timestamps MUST be stored in UTC and any localized display or export labeling MUST preserve unambiguous time interpretation.
+- **FR-017**: When filtered export result size exceeds 50,000 rows, the system MUST fail fast with a clear user-facing message instructing the admin to narrow filters, and MUST not generate a partial file.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -120,5 +122,6 @@ As an admin, I need to download audit logs in spreadsheet-friendly formats so I 
 - Audit logging scope includes authenticated mutating actions across the whole application, while viewer and export access remain admin-only in the Admin Panel.
 - Audit log retention follows organizational policy and cannot be configured below 1 year.
 - Audit timestamps are stored in UTC, while UI and exported views may be localized.
+- Acceptance trial sample size is at least 20 validation runs for SC-002 and at least 20 admin investigation runs for SC-005.
 - Admin users are expected to perform compliance review tasks from the Admin Panel, and non-admin users do not require audit log access.
 - Exported files are intended for operational and compliance use and should preserve filter intent rather than full unfiltered history by default.
