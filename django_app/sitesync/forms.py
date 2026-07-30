@@ -143,6 +143,17 @@ class TeamForm(forms.Form):
         }),
         help_text='Display name for the team'
     )
+    level = forms.IntegerField(
+        required=False,
+        min_value=1,
+        initial=1,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'min': 1,
+            'step': 1,
+        }),
+        help_text='Hierarchy level (root teams should be level 1)'
+    )
     parent_team = forms.ModelChoiceField(
         queryset=Team.objects.all(),
         required=False,
@@ -166,15 +177,21 @@ class TeamForm(forms.Form):
     )
 
     def clean(self):
-        """Validate team hierarchy (prevent circular references)."""
+        """Validate team level alignment with parent selection."""
         cleaned_data = super().clean()
-        name = cleaned_data.get('name')
+        level = cleaned_data.get('level') or 1
         parent_team = cleaned_data.get('parent_team')
+        cleaned_data['level'] = level
 
-        if parent_team and name:
-            # Check if parent_team is a descendant of this team (would create circular ref)
-            # This requires self reference to be stored first, so we validate on save instead
-            pass
+        if parent_team:
+            expected_level = parent_team.level + 1
+            if level != expected_level:
+                self.add_error(
+                    'level',
+                    f'Level must be {expected_level} when parent team is "{parent_team.name}".'
+                )
+        elif level != 1:
+            self.add_error('level', 'Root teams must be level 1.')
 
         return cleaned_data
 

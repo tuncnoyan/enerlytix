@@ -606,6 +606,11 @@ class Team(models.Model):
         db_index=True,
         help_text="Display name for the team"
     )
+    level = models.PositiveIntegerField(
+        default=1,
+        db_index=True,
+        help_text="Hierarchy level (root teams are level 1, sub-teams increment by 1)"
+    )
     parent_team = models.ForeignKey(
         'self',
         on_delete=models.PROTECT,

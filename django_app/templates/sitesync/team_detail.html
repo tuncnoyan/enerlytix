@@ -41,6 +41,13 @@
                         {% endif %}
                     </div>
                     <div class="col-md-6">
+                        <label class="form-label" for="{{ team_form.level.id_for_label }}">Level</label>
+                        {{ team_form.level }}
+                        {% if team_form.level.errors %}
+                        <div class="text-danger small mt-1">{{ team_form.level.errors|striptags }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
                         <label class="form-label" for="{{ team_form.parent_team.id_for_label }}">Parent Team</label>
                         {{ team_form.parent_team }}
                         {% if team_form.parent_team.errors %}
@@ -181,10 +188,10 @@
                         <select class="form-select" id="subTeamSelect" name="sub_team_id" required>
                             <option value="">Choose a team...</option>
                             {% for candidate in sub_team_candidates %}
-                            <option value="{{ candidate.id }}">{{ candidate.name }}</option>
+                            <option value="{{ candidate.id }}">{{ candidate.name }} (Level {{ candidate.level }})</option>
                             {% endfor %}
                         </select>
-                        <div class="form-text">Only valid teams are listed. Circular hierarchy is blocked automatically.</div>
+                        <div class="form-text">Only level {{ team.level|add:1 }} teams can be added under this team. Circular hierarchy is blocked automatically.</div>
                     </div>
                 </div>
                 <div class="modal-footer">

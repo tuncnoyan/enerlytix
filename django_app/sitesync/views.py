@@ -1293,6 +1293,7 @@ def team_detail_view(request, team_id):
     
     team_form = TeamForm(instance=team) if hasattr(TeamForm, 'Meta') else TeamForm(initial={
         'name': team.name,
+        'level': team.level,
         'parent_team': team.parent_team,
         'manager': team.manager,
         'team_lead': team.team_lead,
@@ -1323,6 +1324,18 @@ def team_detail_view(request, team_id):
                 messages.error(request, 'A team cannot be added as a sub-team of itself.')
                 return redirect('sitesync:team_detail', team_id=team.id)
 
+            if sub_team.parent_team_id == team.id:
+                messages.info(request, f"{sub_team.name} is already a sub-team of {team.name}.")
+                return redirect('sitesync:team_detail', team_id=team.id)
+
+            expected_level = team.level + 1
+            if sub_team.level != expected_level:
+                messages.error(
+                    request,
+                    f'Only level {expected_level} teams can be added under {team.name} (level {team.level}).'
+                )
+                return redirect('sitesync:team_detail', team_id=team.id)
+
             # Prevent circular hierarchy by blocking ancestor -> descendant reassignment.
             if team.id in {ancestor.id for ancestor in sub_team.get_parent_teams()}:
                 messages.info(request, f"{sub_team.name} is already in this hierarchy.")
@@ -1342,7 +1355,20 @@ def team_detail_view(request, team_id):
 
         team_form = TeamForm(request.POST)
         if team_form.is_valid():
+            selected_parent = team_form.cleaned_data.get('parent_team')
+
+            # Prevent assigning a team under one of its descendants.
+            if selected_parent and team.id in {ancestor.id for ancestor in selected_parent.get_parent_teams()}:
+                team_form.add_error('parent_team', 'Cannot set a descendant as parent team.')
+            elif team.sub_teams.exclude(level=team_form.cleaned_data['level'] + 1).exists():
+                team_form.add_error(
+                    'level',
+                    'This level is incompatible with current sub-team levels. Update sub-teams first.'
+                )
+
+        if team_form.is_valid():
             team.name = team_form.cleaned_data['name']
+            team.level = team_form.cleaned_data['level']
             team.parent_team = team_form.cleaned_data.get('parent_team')
             team.manager = team_form.cleaned_data.get('manager')
             team.team_lead = team_form.cleaned_data.get('team_lead')
@@ -1361,7 +1387,8 @@ def team_detail_view(request, team_id):
     assigned_user_ids = members.values_list('user_id', flat=True)
     assignable_users = get_user_model().objects.filter(is_active=True).exclude(id__in=assigned_user_ids).order_by('username')
     ancestor_ids = [parent.id for parent in team.get_parent_teams()]
-    sub_team_candidates = Team.objects.exclude(id=team.id).exclude(id__in=ancestor_ids).order_by('name')
+    expected_child_level = team.level + 1
+    sub_team_candidates = Team.objects.exclude(id=team.id).exclude(id__in=ancestor_ids).exclude(parent_team=team).filter(level=expected_child_level).order_by('name')
     
     context = {
         'team': team,
@@ -1611,13 +1638,22 @@ def admin_teams_view(request):
     from .forms import TeamForm
     from django.core.paginator import Paginator
 
-    team_form = TeamForm(initial={'parent_team': request.GET.get('parent_team')})
+    parent_team_id = request.GET.get('parent_team')
+    initial_data = {'parent_team': parent_team_id}
+    if parent_team_id:
+        try:
+            parent_team = Team.objects.get(id=parent_team_id)
+            initial_data['level'] = parent_team.level + 1
+        except Team.DoesNotExist:
+            initial_data['level'] = 1
+    team_form = TeamForm(initial=initial_data)
 
     if request.method == 'POST':
         team_form = TeamForm(request.POST)
         if team_form.is_valid():
             team = Team(
                 name=team_form.cleaned_data['name'],
+                level=team_form.cleaned_data['level'],
                 parent_team=team_form.cleaned_data.get('parent_team'),
                 manager=team_form.cleaned_data.get('manager'),
                 team_lead=team_form.cleaned_data.get('team_lead'),

@@ -34,6 +34,13 @@
                         {% endif %}
                     </div>
                     <div class="col-md-6">
+                        <label class="form-label" for="{{ team_form.level.id_for_label }}">Level</label>
+                        {{ team_form.level }}
+                        {% if team_form.level.errors %}
+                        <div class="text-danger small mt-1">{{ team_form.level.errors|striptags }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
                         <label class="form-label" for="{{ team_form.parent_team.id_for_label }}">Parent Team</label>
                         {{ team_form.parent_team }}
                         {% if team_form.parent_team.errors %}
@@ -71,6 +78,7 @@
         <thead>
             <tr>
                 <th>Team Name</th>
+                <th>Level</th>
                 <th>Parent Team</th>
                 <th>Manager</th>
                 <th>Team Lead</th>
@@ -82,6 +90,7 @@
             {% for team in teams %}
             <tr>
                 <td><strong>{{ team.name }}</strong></td>
+                <td><span class="badge bg-secondary">L{{ team.level }}</span></td>
                 <td>{{ team.parent_team.name|default:"—" }}</td>
                 <td>{{ team.manager.get_full_name|default:"—" }}</td>
                 <td>{{ team.team_lead.get_full_name|default:"—" }}</td>
