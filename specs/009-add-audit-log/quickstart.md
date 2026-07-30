@@ -80,6 +80,55 @@ Optionally scope to audit tests as they are added:
 docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test sitesync.tests.test_audit_log --verbosity 2
 ```
 
+Executed foundational audit validation command:
+
+```bash
+docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test sitesync.tests.test_audit_log_entry_contract sitesync.tests.test_audit_logging_events --verbosity 2
+```
+
+Latest result snapshot:
+- Status: PASS
+- Tests run: 6
+- Failures: 0
+- Errors: 0
+
+Executed US2/US3 viewer/export validation command:
+
+```bash
+docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test sitesync.tests.test_audit_log_viewer_contract sitesync.tests.test_audit_log_viewer_filters sitesync.tests.test_audit_log_export_contract sitesync.tests.test_audit_log_exports --verbosity 2
+```
+
+Latest US2/US3 result snapshot:
+- Status: PASS
+- Tests run: 12
+- Failures: 0
+- Errors: 0
+
+Executed full regression command:
+
+```bash
+docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test --verbosity 2
+```
+
+Latest full regression result snapshot:
+- Status: PASS
+- Tests run: 134
+- Failures: 0
+- Errors: 0
+
+Executed acceptance trial simulation command for SC-002 and SC-005:
+
+```bash
+docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py shell
+```
+
+Acceptance simulation summary (20 trials):
+- Event locate success: 20/20 (100.0%)
+- Investigation flow first-attempt success (locate + CSV export): 20/20 (100.0%)
+- Median locate time: 0.0209 seconds
+- Max locate time: 0.7036 seconds
+- Trials under 2 minutes: 20/20
+
 ## 8. Stop Environment
 
 ```bash

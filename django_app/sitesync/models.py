@@ -798,6 +798,52 @@ class RoleAssignment(models.Model):
         return f"{self.user.username} → {self.get_role_name_display()}"
 
 
+class AuditLogEntry(models.Model):
+    """Immutable audit trail entry for security and compliance review."""
+
+    OUTCOME_SUCCESS = 'SUCCESS'
+    OUTCOME_DENIED = 'DENIED'
+    OUTCOME_FAILED = 'FAILED'
+    OUTCOME_CHOICES = [
+        (OUTCOME_SUCCESS, 'Success'),
+        (OUTCOME_DENIED, 'Denied'),
+        (OUTCOME_FAILED, 'Failed'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    occurred_at_utc = models.DateTimeField(default=timezone.now, db_index=True)
+    actor_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='audit_log_entries',
+        null=True,
+        blank=True,
+    )
+    actor_username_snapshot = models.CharField(max_length=150)
+    source_ip = models.GenericIPAddressField(null=True, blank=True)
+    action_type = models.CharField(max_length=64, db_index=True)
+    action_outcome = models.CharField(max_length=16, choices=OUTCOME_CHOICES, db_index=True)
+    target_entity_type = models.CharField(max_length=64, db_index=True)
+    target_entity_id = models.CharField(max_length=128, null=True, blank=True)
+    target_entity_label = models.CharField(max_length=255, null=True, blank=True)
+    message = models.TextField()
+    request_path = models.CharField(max_length=255, null=True, blank=True)
+    metadata_json = models.JSONField(default=dict, blank=True)
+    retention_class = models.CharField(max_length=50, default='standard')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-occurred_at_utc', '-created_at']
+        indexes = [
+            models.Index(fields=['actor_user', 'occurred_at_utc']),
+            models.Index(fields=['action_type', 'occurred_at_utc']),
+            models.Index(fields=['target_entity_type']),
+        ]
+
+    def __str__(self):
+        return f"{self.occurred_at_utc.isoformat()} {self.action_type} {self.action_outcome}"
+
+
 # Utility functions for role and team access control (Phase 4)
 
 def has_user_role(user, role_name):

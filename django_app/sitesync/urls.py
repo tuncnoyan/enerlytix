@@ -34,4 +34,7 @@ urlpatterns = [
     path('panel/teams/', views.admin_teams_view, name='admin_teams'),
     path('panel/hierarchy/', views.admin_hierarchy_view, name='admin_hierarchy'),
     path('panel/roles/', views.admin_roles_view, name='admin_roles'),
+    path('panel/audit-logs/', views.admin_audit_logs_view, name='admin_audit_logs'),
+    path('panel/audit-logs/export.csv', views.admin_audit_logs_export_csv_view, name='admin_audit_logs_export_csv'),
+    path('panel/audit-logs/export.xlsx', views.admin_audit_logs_export_xlsx_view, name='admin_audit_logs_export_xlsx'),
 ]

@@ -160,3 +160,51 @@ Response payload:
 - `GET /api/import-runs/<import_run_id>/`
 - Returns full persisted audit details for a single import run.
 - Requires authentication.
+
+## Admin audit log viewer
+
+- `GET /panel/audit-logs/`
+- Authentication required; admin privileges required.
+
+Query parameters:
+
+- `user` (optional): actor user id
+- `keyword` (optional): message/target/actor keyword
+- `start` (optional): start datetime (UTC comparison)
+- `end` (optional): end datetime (UTC comparison)
+- `action_type` (optional): normalized action code
+- `page` (optional): page number
+
+Behavior:
+
+- Returns HTML viewer page with filter controls and paginated results.
+- Invalid filters return HTTP 200 with inline field validation errors.
+- One-sided date range filters (`start`-only or `end`-only) are supported.
+
+## Admin audit log CSV export
+
+- `GET /panel/audit-logs/export.csv`
+- Authentication required; admin privileges required.
+- Uses exactly the same filter parameters and semantics as the viewer route.
+
+Behavior:
+
+- `Content-Type: text/csv`
+- Header row always present.
+- Matching rows include UTC timestamp label for unambiguous interpretation.
+- Invalid filters return HTTP 400 JSON payload with `errors`.
+- If matching row count exceeds 50,000, returns HTTP 400 with clear "narrow filters" message and does not generate partial file.
+
+## Admin audit log XLSX export
+
+- `GET /panel/audit-logs/export.xlsx`
+- Authentication required; admin privileges required.
+- Uses exactly the same filter parameters and semantics as the viewer route.
+
+Behavior:
+
+- `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
+- Header row always present.
+- Matching rows include UTC timestamp label for unambiguous interpretation.
+- Invalid filters return HTTP 400 JSON payload with `errors`.
+- If matching row count exceeds 50,000, returns HTTP 400 with clear "narrow filters" message and does not generate partial file.

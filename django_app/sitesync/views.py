@@ -4,6 +4,7 @@ Views for the sitesync app.
 
 import logging
 import json
+import csv
 from collections import defaultdict
 from datetime import datetime, timezone as datetime_timezone
 from decimal import Decimal, ROUND_HALF_UP
@@ -11,11 +12,13 @@ from decimal import Decimal, ROUND_HALF_UP
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.db.models import Count, Q, Sum
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
 from django.utils import timezone as dj_timezone
+from openpyxl import Workbook
 from rest_framework import viewsets
 from rest_framework.decorators import api_view
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -34,15 +37,42 @@ from .models import (
     MonthlyReport,
     MonthlyReportVersion,
     Invitation,
+    AuditLogEntry,
 )
-from .forms import AccountActionForm, CapacityUploadForm, InvitationForm, SettingsForm
+from .forms import AccountActionForm, AuditLogFilterForm, CapacityUploadForm, InvitationForm, SettingsForm
 from .config_service import SettingsConfigService
 from .services import EtainaibleSyncService
 from .services import (
+    AUDIT_ACTION_ACCESS_DENIED,
+    AUDIT_ACTION_ADMIN_ACCEPT_INVITATION,
+    AUDIT_ACTION_ADMIN_ADD_SUB_TEAM,
+    AUDIT_ACTION_ADMIN_ASSIGN_ROLE,
+    AUDIT_ACTION_ADMIN_ASSIGN_TEAM,
+    AUDIT_ACTION_ADMIN_CREATE_INVITATION,
+    AUDIT_ACTION_ADMIN_CREATE_TEAM,
+    AUDIT_ACTION_ADMIN_DELETE_USER,
+    AUDIT_ACTION_ADMIN_DISABLE_USER,
+    AUDIT_ACTION_ADMIN_ENABLE_USER,
+    AUDIT_ACTION_ADMIN_EXPORT_AUDIT_LOG,
+    AUDIT_ACTION_ADMIN_REVOKE_ROLE,
+    AUDIT_ACTION_ADMIN_RESET_PASSWORD,
+    AUDIT_ACTION_ADMIN_SYNC_TRIGGER,
+    AUDIT_ACTION_ADMIN_UNASSIGN_TEAM,
+    AUDIT_ACTION_ADMIN_UPDATE_SETTINGS,
+    AUDIT_ACTION_ADMIN_UPDATE_TEAM,
+    AUDIT_ACTION_ADMIN_UPDATE_USERNAME,
+    AUDIT_ACTION_ADMIN_UPLOAD_CAPACITY,
+    AUDIT_ACTION_ADMIN_VIEW_AUDIT_LOG,
+    AUDIT_ACTION_REPORT_REPLACE_FINAL,
+    AUDIT_ACTION_REPORT_SAVE_DRAFT,
+    AUDIT_ACTION_REPORT_SAVE_FINAL,
     build_report_cover_set,
     carry_forward_comments_from_previous_final,
+    check_audit_export_threshold,
     ConsumptionImportService,
+    create_audit_log_entry,
     create_report_version,
+    get_filtered_audit_logs,
     get_capacity_lookup_by_meter_codes,
     get_or_create_monthly_report,
     get_consumption_display_records,
@@ -52,6 +82,7 @@ from .services import (
     normalize_esight_meter_code,
     normalize_reporting_month,
     reporting_month_bounds,
+    serialize_audit_entry_for_export,
     shift_months,
 )
 from .serializers import (
@@ -72,6 +103,69 @@ REPORT_UTILITY_LABELS = {
     'gas': 'Gas',
     'water': 'Water',
 }
+
+
+def _get_client_ip(request):
+    """Resolve the best-effort client IP from forwarding headers."""
+
+    forwarded_for = (request.META.get('HTTP_X_FORWARDED_FOR') or '').strip()
+    if forwarded_for:
+        return forwarded_for.split(',')[0].strip()
+    remote_addr = (request.META.get('REMOTE_ADDR') or '').strip()
+    return remote_addr or None
+
+
+def _log_denied_admin_panel_access(request):
+    """Log denied attempts to access admin-only panel routes."""
+
+    actor = request.user if getattr(request, 'user', None) and request.user.is_authenticated else None
+    actor_name = actor.get_username() if actor else 'anonymous'
+    create_audit_log_entry(
+        actor_user=actor,
+        actor_username_snapshot=actor_name,
+        source_ip=_get_client_ip(request),
+        action_type=AUDIT_ACTION_ACCESS_DENIED,
+        action_outcome=AuditLogEntry.OUTCOME_DENIED,
+        target_entity_type='admin_panel',
+        target_entity_id='route',
+        target_entity_label=request.path,
+        message=f"Denied admin panel access for {actor_name}",
+        request_path=request.path,
+        metadata_json={
+            'reason': 'admin_required',
+            'method': request.method,
+        },
+    )
+
+
+def _log_audit_event(
+    request,
+    *,
+    action_type,
+    action_outcome,
+    target_entity_type,
+    message,
+    target_entity_id=None,
+    target_entity_label=None,
+    metadata=None,
+):
+    """Write audit row with consistent actor and request context."""
+
+    actor = request.user if getattr(request, 'user', None) and request.user.is_authenticated else None
+    actor_name = actor.get_username() if actor else 'anonymous'
+    create_audit_log_entry(
+        actor_user=actor,
+        actor_username_snapshot=actor_name,
+        source_ip=_get_client_ip(request),
+        action_type=action_type,
+        action_outcome=action_outcome,
+        target_entity_type=target_entity_type,
+        target_entity_id=target_entity_id,
+        target_entity_label=target_entity_label,
+        message=message,
+        request_path=request.path,
+        metadata_json=metadata or {},
+    )
 
 
 def _previous_complete_month_key():
@@ -512,6 +606,16 @@ def report_view(request):
         created_first_version = report.current_version is None
         if save_mode == 'final':
             if report.current_status == MonthlyReport.STATUS_FINAL and not confirm_final_edit:
+                _log_audit_event(
+                    request,
+                    action_type=AUDIT_ACTION_REPORT_REPLACE_FINAL,
+                    action_outcome=AuditLogEntry.OUTCOME_DENIED,
+                    target_entity_type='report',
+                    target_entity_id=str(report.id),
+                    target_entity_label=f"{site.name} {end_month}",
+                    message='Denied final report replacement without confirmation.',
+                    metadata={'site_id': site.id, 'reporting_month': end_month},
+                )
                 return JsonResponse({
                     'detail': 'This report is already final. Confirm before editing.',
                     'warning_required': True,
@@ -534,6 +638,29 @@ def report_view(request):
         copied_reference_comments = 0
         if save_mode == 'draft' and created_first_version:
             copied_reference_comments = carry_forward_comments_from_previous_final(report, version)
+
+        if version_kind == MonthlyReportVersion.KIND_DRAFT:
+            action_type = AUDIT_ACTION_REPORT_SAVE_DRAFT
+        elif version_kind == MonthlyReportVersion.KIND_REPLACEMENT_FINAL:
+            action_type = AUDIT_ACTION_REPORT_REPLACE_FINAL
+        else:
+            action_type = AUDIT_ACTION_REPORT_SAVE_FINAL
+
+        _log_audit_event(
+            request,
+            action_type=action_type,
+            action_outcome=AuditLogEntry.OUTCOME_SUCCESS,
+            target_entity_type='report',
+            target_entity_id=str(report.id),
+            target_entity_label=f"{site.name} {end_month}",
+            message=f"Saved report version {version.version_number} as {version.version_kind}.",
+            metadata={
+                'site_id': site.id,
+                'reporting_month': end_month,
+                'version_id': str(version.id),
+                'copied_reference_comments': copied_reference_comments,
+            },
+        )
 
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({
@@ -706,10 +833,19 @@ def user_admin_view(request):
         if 'create_invitation' in request.POST:
             invitation_form = InvitationForm(request.POST)
             if invitation_form.is_valid():
-                Invitation.objects.create(
+                invitation = Invitation.objects.create(
                     email=invitation_form.cleaned_data['email'],
                     invited_by=request.user,
                     expires_at=dj_timezone.now() + dj_timezone.timedelta(days=7),
+                )
+                _log_audit_event(
+                    request,
+                    action_type=AUDIT_ACTION_ADMIN_CREATE_INVITATION,
+                    action_outcome=AuditLogEntry.OUTCOME_SUCCESS,
+                    target_entity_type='invitation',
+                    target_entity_id=str(invitation.id),
+                    target_entity_label=invitation.email,
+                    message=f"Created invitation for {invitation.email}.",
                 )
                 invitation_form = InvitationForm()
         elif 'account_action' in request.POST:
@@ -719,20 +855,46 @@ def user_admin_view(request):
                 target_user = get_user_model().objects.filter(id=target_id).first()
                 if target_user is not None:
                     action = action_form.cleaned_data['action']
+                    action_type = None
+                    message = None
+                    target_user_label = target_user.get_username()
                     if action == 'enable':
                         target_user.is_active = True
                         target_user.save(update_fields=['is_active'])
+                        action_type = AUDIT_ACTION_ADMIN_ENABLE_USER
+                        message = f"Enabled user {target_user_label}."
                     elif action == 'disable':
                         target_user.is_active = False
                         target_user.save(update_fields=['is_active'])
+                        action_type = AUDIT_ACTION_ADMIN_DISABLE_USER
+                        message = f"Disabled user {target_user_label}."
                     elif action == 'reset_password':
                         target_user.set_password('TempPassword123!')
                         target_user.save(update_fields=['password'])
+                        action_type = AUDIT_ACTION_ADMIN_RESET_PASSWORD
+                        message = f"Reset password for user {target_user_label}."
                     elif action == 'delete':
+                        action_type = AUDIT_ACTION_ADMIN_DELETE_USER
+                        message = f"Deleted user {target_user_label}."
                         target_user.delete()
                     if action_form.cleaned_data.get('new_username'):
+                        old_username = target_user_label
                         target_user.username = action_form.cleaned_data['new_username']
                         target_user.save(update_fields=['username'])
+                        action_type = AUDIT_ACTION_ADMIN_UPDATE_USERNAME
+                        target_user_label = target_user.username
+                        message = f"Renamed user {old_username} to {target_user.username}."
+
+                    if action_type and message:
+                        _log_audit_event(
+                            request,
+                            action_type=action_type,
+                            action_outcome=AuditLogEntry.OUTCOME_SUCCESS,
+                            target_entity_type='user',
+                            target_entity_id=str(target_id),
+                            target_entity_label=target_user_label,
+                            message=message,
+                        )
 
     return render(request, 'sitesync/user_admin.html', {
         'users': users,
@@ -786,6 +948,16 @@ def accept_invitation_view(request, invitation_id):
             })
         user = user_model.objects.create_user(username=username, email=invitation.email, password=password)
         invitation.accept()
+        _log_audit_event(
+            request,
+            action_type=AUDIT_ACTION_ADMIN_ACCEPT_INVITATION,
+            action_outcome=AuditLogEntry.OUTCOME_SUCCESS,
+            target_entity_type='invitation',
+            target_entity_id=str(invitation.id),
+            target_entity_label=invitation.email,
+            message=f"Accepted invitation for {invitation.email}.",
+            metadata={'created_user_id': str(user.id), 'created_username': user.get_username()},
+        )
         return render(request, 'sitesync/invite_accept.html', {
             'invitation': invitation,
             'success': True,
@@ -1049,10 +1221,40 @@ def manual_sync_view(request):
         )
         if sync_activity == 0:
             logger.warning("Manual sync completed but no sites were persisted")
+            _log_audit_event(
+                request,
+                action_type=AUDIT_ACTION_ADMIN_SYNC_TRIGGER,
+                action_outcome=AuditLogEntry.OUTCOME_SUCCESS,
+                target_entity_type='sync',
+                target_entity_id='manual',
+                target_entity_label='manual_sync',
+                message='Manual sync completed with no persistence changes.',
+                metadata={'sync_activity': sync_activity, 'results': results},
+            )
             return redirect(f"{reverse('sitesync:site_list')}?sync=empty")
+        _log_audit_event(
+            request,
+            action_type=AUDIT_ACTION_ADMIN_SYNC_TRIGGER,
+            action_outcome=AuditLogEntry.OUTCOME_SUCCESS,
+            target_entity_type='sync',
+            target_entity_id='manual',
+            target_entity_label='manual_sync',
+            message='Manual sync completed successfully.',
+            metadata={'sync_activity': sync_activity, 'results': results},
+        )
         return redirect(f"{reverse('sitesync:site_list')}?sync=success")
     except Exception as exc:
         logger.exception("Manual sync failed")
+        _log_audit_event(
+            request,
+            action_type=AUDIT_ACTION_ADMIN_SYNC_TRIGGER,
+            action_outcome=AuditLogEntry.OUTCOME_FAILED,
+            target_entity_type='sync',
+            target_entity_id='manual',
+            target_entity_label='manual_sync',
+            message='Manual sync failed.',
+            metadata={'error': str(exc)},
+        )
         return JsonResponse({
             'error': {
                 'message': 'Unable to complete sync',
@@ -1075,6 +1277,28 @@ def settings_panel_view(request):
             if capacity_form.is_valid():
                 capacity_upload_result = import_capacity_upload(capacity_form.cleaned_data['capacity_upload_file'])
                 latest_capacity_run = capacity_upload_result.get('run')
+                _log_audit_event(
+                    request,
+                    action_type=AUDIT_ACTION_ADMIN_UPLOAD_CAPACITY,
+                    action_outcome=(
+                        AuditLogEntry.OUTCOME_SUCCESS
+                        if capacity_upload_result.get('status') in {
+                            CapacityUploadRun.STATUS_SUCCESS,
+                            CapacityUploadRun.STATUS_PARTIAL_SUCCESS,
+                        }
+                        else AuditLogEntry.OUTCOME_FAILED
+                    ),
+                    target_entity_type='settings',
+                    target_entity_id='capacity_upload',
+                    target_entity_label='capacity_upload',
+                    message='Processed capacity upload from settings panel.',
+                    metadata={
+                        'status': capacity_upload_result.get('status'),
+                        'total_rows': capacity_upload_result.get('total_rows', 0),
+                        'accepted_rows': capacity_upload_result.get('accepted_rows', 0),
+                        'rejected_rows': capacity_upload_result.get('rejected_rows', 0),
+                    },
+                )
             else:
                 upload_errors = []
                 for field_errors in capacity_form.errors.values():
@@ -1087,11 +1311,30 @@ def settings_panel_view(request):
                     'errors': [str(error) for error in upload_errors],
                     'run': None,
                 }
+                _log_audit_event(
+                    request,
+                    action_type=AUDIT_ACTION_ADMIN_UPLOAD_CAPACITY,
+                    action_outcome=AuditLogEntry.OUTCOME_FAILED,
+                    target_entity_type='settings',
+                    target_entity_id='capacity_upload',
+                    target_entity_label='capacity_upload',
+                    message='Failed capacity upload validation from settings panel.',
+                    metadata={'errors': capacity_upload_result['errors']},
+                )
         else:
             form = SettingsForm(request.POST, instance=settings_instance)
             if form.is_valid():
                 logger.info("Updating application settings")
                 SettingsConfigService.update_settings(form)
+                _log_audit_event(
+                    request,
+                    action_type=AUDIT_ACTION_ADMIN_UPDATE_SETTINGS,
+                    action_outcome=AuditLogEntry.OUTCOME_SUCCESS,
+                    target_entity_type='settings',
+                    target_entity_id='app_settings',
+                    target_entity_label='application_settings',
+                    message='Updated application settings.',
+                )
             capacity_form = CapacityUploadForm()
     else:
         form = SettingsForm(instance=settings_instance)
@@ -1288,6 +1531,16 @@ def team_detail_view(request, team_id):
     ).exists()
     
     if not (is_team_admin or is_team_manager or is_team_member):
+        _log_audit_event(
+            request,
+            action_type=AUDIT_ACTION_ACCESS_DENIED,
+            action_outcome=AuditLogEntry.OUTCOME_DENIED,
+            target_entity_type='team',
+            target_entity_id=str(team_id),
+            target_entity_label='team_detail',
+            message='Denied team detail access.',
+            metadata={'reason': 'team_scope_required'},
+        )
         return JsonResponse({'error': 'Permission denied'}, status=403)
     
     team_form = TeamForm(instance=team) if hasattr(TeamForm, 'Meta') else TeamForm(initial={
@@ -1302,6 +1555,16 @@ def team_detail_view(request, team_id):
 
     if request.method == 'POST':
         if not can_edit:
+            _log_audit_event(
+                request,
+                action_type=AUDIT_ACTION_ACCESS_DENIED,
+                action_outcome=AuditLogEntry.OUTCOME_DENIED,
+                target_entity_type='team',
+                target_entity_id=str(team.id),
+                target_entity_label=team.name,
+                message='Denied team update attempt.',
+                metadata={'reason': 'team_admin_or_manager_required'},
+            )
             return JsonResponse({'error': 'Permission denied'}, status=403)
 
         action = request.POST.get('action', 'update_team')
@@ -1346,6 +1609,16 @@ def team_detail_view(request, team_id):
 
             sub_team.parent_team = team
             sub_team.save(update_fields=['parent_team', 'updated_at'])
+            _log_audit_event(
+                request,
+                action_type=AUDIT_ACTION_ADMIN_ADD_SUB_TEAM,
+                action_outcome=AuditLogEntry.OUTCOME_SUCCESS,
+                target_entity_type='team',
+                target_entity_id=str(sub_team.id),
+                target_entity_label=sub_team.name,
+                message=f"Added {sub_team.name} as sub-team of {team.name}.",
+                metadata={'parent_team_id': str(team.id), 'parent_team_name': team.name},
+            )
             logger.info(
                 f"User {request.user.username} added existing team {sub_team.name} as sub-team of {team.name}"
             )
@@ -1372,6 +1645,21 @@ def team_detail_view(request, team_id):
             team.manager = team_form.cleaned_data.get('manager')
             team.team_lead = team_form.cleaned_data.get('team_lead')
             team.save()
+            _log_audit_event(
+                request,
+                action_type=AUDIT_ACTION_ADMIN_UPDATE_TEAM,
+                action_outcome=AuditLogEntry.OUTCOME_SUCCESS,
+                target_entity_type='team',
+                target_entity_id=str(team.id),
+                target_entity_label=team.name,
+                message=f"Updated team {team.name}.",
+                metadata={
+                    'level': team.level,
+                    'parent_team_id': str(team.parent_team_id) if team.parent_team_id else None,
+                    'manager_id': str(team.manager_id) if team.manager_id else None,
+                    'team_lead_id': str(team.team_lead_id) if team.team_lead_id else None,
+                },
+            )
             logger.info(f"User {request.user.username} updated team: {team.name}")
             return redirect('sitesync:team_detail', team_id=team.id)
 
@@ -1422,6 +1710,14 @@ def user_team_assignment_view(request):
     
     if request.method == 'POST':
         if not is_admin_or_manager:
+            _log_audit_event(
+                request,
+                action_type=AUDIT_ACTION_ACCESS_DENIED,
+                action_outcome=AuditLogEntry.OUTCOME_DENIED,
+                target_entity_type='user_team_assignment',
+                message='Denied team assignment creation.',
+                metadata={'reason': 'admin_or_manager_required'},
+            )
             return JsonResponse({'error': 'Permission denied'}, status=403)
 
         return_to_team_id = request.POST.get('return_to_team_id')
@@ -1445,6 +1741,16 @@ def user_team_assignment_view(request):
                 assigned_by=request.user,
             )
             assignment.save()
+            _log_audit_event(
+                request,
+                action_type=AUDIT_ACTION_ADMIN_ASSIGN_TEAM,
+                action_outcome=AuditLogEntry.OUTCOME_SUCCESS,
+                target_entity_type='user_team_assignment',
+                target_entity_id=str(assignment.id),
+                target_entity_label=f"{user.get_username()}->{team.name}",
+                message=f"Assigned user {user.get_username()} to team {team.name}.",
+                metadata={'user_id': str(user.id), 'team_id': str(team.id)},
+            )
             logger.info(f"User {request.user.username} assigned {user.username} to team {team.name}")
             if return_to_team_id and not wants_json:
                 messages.success(request, f"{user.get_username()} added to {team.name}.")
@@ -1458,6 +1764,14 @@ def user_team_assignment_view(request):
     
     if request.method == 'DELETE':
         if not is_admin_or_manager:
+            _log_audit_event(
+                request,
+                action_type=AUDIT_ACTION_ACCESS_DENIED,
+                action_outcome=AuditLogEntry.OUTCOME_DENIED,
+                target_entity_type='user_team_assignment',
+                message='Denied team assignment deletion.',
+                metadata={'reason': 'admin_or_manager_required'},
+            )
             return JsonResponse({'error': 'Permission denied'}, status=403)
         
         assignment_id = request.GET.get('assignment_id')
@@ -1465,7 +1779,20 @@ def user_team_assignment_view(request):
             assignment = UserTeamAssignment.objects.get(id=assignment_id)
             user_name = assignment.user.username
             team_name = assignment.team.name
+            assignment_pk = str(assignment.id)
+            user_id = str(assignment.user_id)
+            team_id = str(assignment.team_id)
             assignment.delete()
+            _log_audit_event(
+                request,
+                action_type=AUDIT_ACTION_ADMIN_UNASSIGN_TEAM,
+                action_outcome=AuditLogEntry.OUTCOME_SUCCESS,
+                target_entity_type='user_team_assignment',
+                target_entity_id=assignment_pk,
+                target_entity_label=f"{user_name}->{team_name}",
+                message=f"Removed user {user_name} from team {team_name}.",
+                metadata={'user_id': user_id, 'team_id': team_id},
+            )
             logger.info(f"User {request.user.username} removed {user_name} from team {team_name}")
             return JsonResponse({'success': True})
         except UserTeamAssignment.DoesNotExist:
@@ -1507,6 +1834,14 @@ def role_assignment_view(request):
     
     if request.method == 'POST':
         if not is_admin:
+            _log_audit_event(
+                request,
+                action_type=AUDIT_ACTION_ACCESS_DENIED,
+                action_outcome=AuditLogEntry.OUTCOME_DENIED,
+                target_entity_type='role_assignment',
+                message='Denied role assignment creation.',
+                metadata={'reason': 'admin_required'},
+            )
             return JsonResponse({'error': 'Permission denied'}, status=403)
         
         form = RoleAssignmentForm(request.POST)
@@ -1524,6 +1859,16 @@ def role_assignment_view(request):
                 assigned_by=request.user,
             )
             assignment.save()
+            _log_audit_event(
+                request,
+                action_type=AUDIT_ACTION_ADMIN_ASSIGN_ROLE,
+                action_outcome=AuditLogEntry.OUTCOME_SUCCESS,
+                target_entity_type='role_assignment',
+                target_entity_id=str(assignment.id),
+                target_entity_label=f"{user.get_username()}:{role_name}",
+                message=f"Assigned role {role_name} to user {user.get_username()}.",
+                metadata={'user_id': str(user.id), 'role_name': role_name},
+            )
             logger.info(f"User {request.user.username} assigned role {role_name} to {user.username}")
             return JsonResponse({'success': True, 'assignment_id': str(assignment.id)})
         else:
@@ -1531,6 +1876,14 @@ def role_assignment_view(request):
     
     if request.method == 'DELETE':
         if not is_admin:
+            _log_audit_event(
+                request,
+                action_type=AUDIT_ACTION_ACCESS_DENIED,
+                action_outcome=AuditLogEntry.OUTCOME_DENIED,
+                target_entity_type='role_assignment',
+                message='Denied role assignment deletion.',
+                metadata={'reason': 'admin_required'},
+            )
             return JsonResponse({'error': 'Permission denied'}, status=403)
         
         assignment_id = request.GET.get('assignment_id')
@@ -1538,7 +1891,20 @@ def role_assignment_view(request):
             assignment = RoleAssignment.objects.get(id=assignment_id)
             user_name = assignment.user.username
             role_name = assignment.get_role_name_display()
+            assignment_pk = str(assignment.id)
+            role_code = assignment.role_name
+            user_id = str(assignment.user_id)
             assignment.delete()
+            _log_audit_event(
+                request,
+                action_type=AUDIT_ACTION_ADMIN_REVOKE_ROLE,
+                action_outcome=AuditLogEntry.OUTCOME_SUCCESS,
+                target_entity_type='role_assignment',
+                target_entity_id=assignment_pk,
+                target_entity_label=f"{user_name}:{role_name}",
+                message=f"Revoked role {role_name} from user {user_name}.",
+                metadata={'user_id': user_id, 'role_name': role_code},
+            )
             logger.info(f"User {request.user.username} revoked role {role_name} from {user_name}")
             return JsonResponse({'success': True})
         except RoleAssignment.DoesNotExist:
@@ -1580,6 +1946,7 @@ def admin_panel_required(view_func):
     @login_required
     def wrapper(request, *args, **kwargs):
         if not _user_is_admin(request.user):
+            _log_denied_admin_panel_access(request)
             messages.error(request, 'Admin access required.')
             return redirect('sitesync:site_list')
         return view_func(request, *args, **kwargs)
@@ -1660,6 +2027,19 @@ def admin_teams_view(request):
                 team_lead=team_form.cleaned_data.get('team_lead'),
             )
             team.save()
+            _log_audit_event(
+                request,
+                action_type=AUDIT_ACTION_ADMIN_CREATE_TEAM,
+                action_outcome=AuditLogEntry.OUTCOME_SUCCESS,
+                target_entity_type='team',
+                target_entity_id=str(team.id),
+                target_entity_label=team.name,
+                message=f"Created team {team.name}.",
+                metadata={
+                    'level': team.level,
+                    'parent_team_id': str(team.parent_team_id) if team.parent_team_id else None,
+                },
+            )
             logger.info(f"User {request.user.username} created team from admin panel: {team.name}")
             messages.success(request, f"Team '{team.name}' created successfully.")
             return redirect('sitesync:team_detail', team_id=team.id)
@@ -1717,6 +2097,196 @@ def admin_roles_view(request):
         'assignable_users': User.objects.filter(is_active=True).order_by('username'),
     }
     return render(request, 'sitesync/panel_roles.html', context)
+
+
+@admin_panel_required
+def admin_audit_logs_view(request):
+    """Render admin audit log viewer with validated filters and pagination."""
+
+    filter_form = AuditLogFilterForm(request.GET)
+    entries_page = []
+    total_count = 0
+
+    if filter_form.is_valid():
+        queryset = get_filtered_audit_logs(filters=filter_form.cleaned_data)
+        total_count = queryset.count()
+        paginator = Paginator(queryset, 50)
+        page_number = request.GET.get('page', 1)
+        try:
+            entries_page = paginator.page(page_number)
+        except Exception:
+            entries_page = paginator.page(1)
+
+        _log_audit_event(
+            request,
+            action_type=AUDIT_ACTION_ADMIN_VIEW_AUDIT_LOG,
+            action_outcome=AuditLogEntry.OUTCOME_SUCCESS,
+            target_entity_type='audit_log',
+            target_entity_id='viewer',
+            target_entity_label='viewer',
+            message=f"{request.user.get_username()} viewed audit logs.",
+            metadata={
+                'filters': {
+                    'user': str(filter_form.cleaned_data['user'].id) if filter_form.cleaned_data.get('user') else '',
+                    'keyword': filter_form.cleaned_data.get('keyword', ''),
+                    'start': filter_form.cleaned_data['start'].isoformat() if filter_form.cleaned_data.get('start') else '',
+                    'end': filter_form.cleaned_data['end'].isoformat() if filter_form.cleaned_data.get('end') else '',
+                    'action_type': filter_form.cleaned_data.get('action_type', ''),
+                },
+                'total_count': total_count,
+            },
+        )
+    else:
+        _log_audit_event(
+            request,
+            action_type=AUDIT_ACTION_ADMIN_VIEW_AUDIT_LOG,
+            action_outcome=AuditLogEntry.OUTCOME_FAILED,
+            target_entity_type='audit_log',
+            target_entity_id='viewer',
+            target_entity_label='viewer',
+            message='Audit log viewer request failed validation.',
+            metadata={'errors': filter_form.errors.get_json_data()},
+        )
+
+    action_types = (
+        AuditLogEntry.objects.order_by('action_type')
+        .values_list('action_type', flat=True)
+        .distinct()
+    )
+    filter_query = request.GET.copy()
+    if 'page' in filter_query:
+        del filter_query['page']
+
+    return render(request, 'sitesync/admin_audit_logs.html', {
+        'entries': entries_page,
+        'filter_form': filter_form,
+        'action_types': list(action_types),
+        'total_count': total_count,
+        'active_filters_querystring': filter_query.urlencode(),
+    })
+
+
+@admin_panel_required
+def admin_audit_logs_export_csv_view(request):
+    """Export filtered audit rows to CSV using shared filter semantics."""
+
+    filter_form = AuditLogFilterForm(request.GET)
+    if not filter_form.is_valid():
+        _log_audit_event(
+            request,
+            action_type=AUDIT_ACTION_ADMIN_EXPORT_AUDIT_LOG,
+            action_outcome=AuditLogEntry.OUTCOME_FAILED,
+            target_entity_type='audit_log',
+            target_entity_id='csv',
+            target_entity_label='csv_export',
+            message='Audit CSV export failed validation.',
+            metadata={'errors': filter_form.errors.get_json_data(), 'format': 'csv'},
+        )
+        return JsonResponse({'errors': filter_form.errors}, status=400)
+
+    queryset = get_filtered_audit_logs(filters=filter_form.cleaned_data)
+    allowed, row_count = check_audit_export_threshold(queryset=queryset, limit=50000)
+    if not allowed:
+        _log_audit_event(
+            request,
+            action_type=AUDIT_ACTION_ADMIN_EXPORT_AUDIT_LOG,
+            action_outcome=AuditLogEntry.OUTCOME_FAILED,
+            target_entity_type='audit_log',
+            target_entity_id='csv',
+            target_entity_label='csv_export',
+            message='Audit CSV export rejected because filter result exceeded threshold.',
+            metadata={'format': 'csv', 'row_count': row_count, 'threshold': 50000},
+        )
+        return JsonResponse({'detail': 'Export exceeds 50000 rows. Please narrow filters.'}, status=400)
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="audit_logs.csv"'
+    writer = csv.DictWriter(
+        response,
+        fieldnames=[
+            'utc_timestamp', 'actor_username', 'source_ip', 'action_type', 'action_outcome',
+            'target_entity_type', 'target_entity_id', 'target_entity_label', 'message', 'request_path',
+        ],
+    )
+    writer.writeheader()
+    for entry in queryset:
+        writer.writerow(serialize_audit_entry_for_export(entry))
+
+    _log_audit_event(
+        request,
+        action_type=AUDIT_ACTION_ADMIN_EXPORT_AUDIT_LOG,
+        action_outcome=AuditLogEntry.OUTCOME_SUCCESS,
+        target_entity_type='audit_log',
+        target_entity_id='csv',
+        target_entity_label='csv_export',
+        message=f"{request.user.get_username()} exported audit logs to CSV.",
+        metadata={'format': 'csv', 'row_count': row_count},
+    )
+    return response
+
+
+@admin_panel_required
+def admin_audit_logs_export_xlsx_view(request):
+    """Export filtered audit rows to XLSX using shared filter semantics."""
+
+    filter_form = AuditLogFilterForm(request.GET)
+    if not filter_form.is_valid():
+        _log_audit_event(
+            request,
+            action_type=AUDIT_ACTION_ADMIN_EXPORT_AUDIT_LOG,
+            action_outcome=AuditLogEntry.OUTCOME_FAILED,
+            target_entity_type='audit_log',
+            target_entity_id='xlsx',
+            target_entity_label='xlsx_export',
+            message='Audit XLSX export failed validation.',
+            metadata={'errors': filter_form.errors.get_json_data(), 'format': 'xlsx'},
+        )
+        return JsonResponse({'errors': filter_form.errors}, status=400)
+
+    queryset = get_filtered_audit_logs(filters=filter_form.cleaned_data)
+    allowed, row_count = check_audit_export_threshold(queryset=queryset, limit=50000)
+    if not allowed:
+        _log_audit_event(
+            request,
+            action_type=AUDIT_ACTION_ADMIN_EXPORT_AUDIT_LOG,
+            action_outcome=AuditLogEntry.OUTCOME_FAILED,
+            target_entity_type='audit_log',
+            target_entity_id='xlsx',
+            target_entity_label='xlsx_export',
+            message='Audit XLSX export rejected because filter result exceeded threshold.',
+            metadata={'format': 'xlsx', 'row_count': row_count, 'threshold': 50000},
+        )
+        return JsonResponse({'detail': 'Export exceeds 50000 rows. Please narrow filters.'}, status=400)
+
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.title = 'Audit Logs'
+    headers = [
+        'utc_timestamp', 'actor_username', 'source_ip', 'action_type', 'action_outcome',
+        'target_entity_type', 'target_entity_id', 'target_entity_label', 'message', 'request_path',
+    ]
+    worksheet.append(headers)
+    for entry in queryset:
+        row = serialize_audit_entry_for_export(entry)
+        worksheet.append([row[h] for h in headers])
+
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename="audit_logs.xlsx"'
+    workbook.save(response)
+
+    _log_audit_event(
+        request,
+        action_type=AUDIT_ACTION_ADMIN_EXPORT_AUDIT_LOG,
+        action_outcome=AuditLogEntry.OUTCOME_SUCCESS,
+        target_entity_type='audit_log',
+        target_entity_id='xlsx',
+        target_entity_label='xlsx_export',
+        message=f"{request.user.get_username()} exported audit logs to XLSX.",
+        metadata={'format': 'xlsx', 'row_count': row_count},
+    )
+    return response
 
 
 # ============================================================================

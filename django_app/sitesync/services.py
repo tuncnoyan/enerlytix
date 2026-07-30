@@ -12,6 +12,7 @@ import requests
 from openpyxl import load_workbook
 from django.conf import settings
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone as dj_timezone
 
 from .api_client import EtainablApiClient
@@ -20,6 +21,7 @@ from .models import (
     Site,
     Supply,
     AppSettings,
+    AuditLogEntry,
     CapacityReference,
     CapacityUploadRun,
     ImportRun,
@@ -51,6 +53,145 @@ COVER_SCOPE_TEMPLATE = (
     'profiles, and daily usage comparisons. The report aims to highlight key trends, seasonal changes, and '
     'anomalies in consumption to support ongoing energy-performance management and cost-efficiency planning.'
 )
+
+# Audit log action constants.
+AUDIT_ACTION_ADMIN_VIEW_AUDIT_LOG = 'ADMIN_VIEW_AUDIT_LOG'
+AUDIT_ACTION_ADMIN_EXPORT_AUDIT_LOG = 'ADMIN_EXPORT_AUDIT_LOG'
+AUDIT_ACTION_REPORT_SAVE_DRAFT = 'REPORT_SAVE_DRAFT'
+AUDIT_ACTION_REPORT_SAVE_FINAL = 'REPORT_SAVE_FINAL'
+AUDIT_ACTION_REPORT_REPLACE_FINAL = 'REPORT_REPLACE_FINAL'
+AUDIT_ACTION_ADMIN_CREATE_INVITATION = 'ADMIN_CREATE_INVITATION'
+AUDIT_ACTION_ADMIN_ACCEPT_INVITATION = 'ADMIN_ACCEPT_INVITATION'
+AUDIT_ACTION_ADMIN_CREATE_TEAM = 'ADMIN_CREATE_TEAM'
+AUDIT_ACTION_ADMIN_UPDATE_TEAM = 'ADMIN_UPDATE_TEAM'
+AUDIT_ACTION_ADMIN_ADD_SUB_TEAM = 'ADMIN_ADD_SUB_TEAM'
+AUDIT_ACTION_ADMIN_ASSIGN_TEAM = 'ADMIN_ASSIGN_TEAM'
+AUDIT_ACTION_ADMIN_UNASSIGN_TEAM = 'ADMIN_UNASSIGN_TEAM'
+AUDIT_ACTION_ADMIN_ASSIGN_ROLE = 'ADMIN_ASSIGN_ROLE'
+AUDIT_ACTION_ADMIN_REVOKE_ROLE = 'ADMIN_REVOKE_ROLE'
+AUDIT_ACTION_ADMIN_UPDATE_SETTINGS = 'ADMIN_UPDATE_SETTINGS'
+AUDIT_ACTION_ADMIN_UPLOAD_CAPACITY = 'ADMIN_UPLOAD_CAPACITY'
+AUDIT_ACTION_ADMIN_ENABLE_USER = 'ADMIN_ENABLE_USER'
+AUDIT_ACTION_ADMIN_DISABLE_USER = 'ADMIN_DISABLE_USER'
+AUDIT_ACTION_ADMIN_RESET_PASSWORD = 'ADMIN_RESET_PASSWORD'
+AUDIT_ACTION_ADMIN_DELETE_USER = 'ADMIN_DELETE_USER'
+AUDIT_ACTION_ADMIN_UPDATE_USERNAME = 'ADMIN_UPDATE_USERNAME'
+AUDIT_ACTION_ADMIN_SYNC_TRIGGER = 'ADMIN_SYNC_TRIGGER'
+AUDIT_ACTION_ACCESS_DENIED = 'ACCESS_DENIED'
+
+
+def create_audit_log_entry(
+    *,
+    actor_user,
+    action_type,
+    action_outcome,
+    target_entity_type,
+    message,
+    actor_username_snapshot='',
+    source_ip=None,
+    target_entity_id=None,
+    target_entity_label=None,
+    request_path='',
+    metadata_json=None,
+    retention_class='standard',
+):
+    """Persist one immutable audit row for administrative activity."""
+
+    allowed_outcomes = {
+        AuditLogEntry.OUTCOME_SUCCESS,
+        AuditLogEntry.OUTCOME_DENIED,
+        AuditLogEntry.OUTCOME_FAILED,
+    }
+    normalized_action_type = (action_type or '').strip()
+    normalized_target_entity_type = (target_entity_type or '').strip()
+    normalized_message = (message or '').strip()
+
+    if not normalized_action_type:
+        raise ValueError('action_type is required for audit logging')
+    if action_outcome not in allowed_outcomes:
+        raise ValueError(f'Unsupported action_outcome: {action_outcome}')
+    if not normalized_target_entity_type:
+        raise ValueError('target_entity_type is required for audit logging')
+    if not normalized_message:
+        raise ValueError('message is required for audit logging')
+
+    username = (actor_username_snapshot or '').strip()
+    if not username and actor_user is not None:
+        username = actor_user.get_username()
+
+    metadata_payload = metadata_json if isinstance(metadata_json, dict) else {}
+
+    return AuditLogEntry.objects.create(
+        actor_user=actor_user,
+        actor_username_snapshot=username or 'unknown',
+        source_ip=source_ip,
+        action_type=normalized_action_type,
+        action_outcome=action_outcome,
+        target_entity_type=normalized_target_entity_type,
+        target_entity_id=target_entity_id,
+        target_entity_label=target_entity_label,
+        message=normalized_message,
+        request_path=request_path,
+        metadata_json=metadata_payload,
+        retention_class=retention_class,
+    )
+
+
+def get_filtered_audit_logs(*, filters):
+    """Return audit queryset filtered with shared viewer/export semantics."""
+
+    queryset = AuditLogEntry.objects.select_related('actor_user').order_by('-occurred_at_utc', '-created_at')
+
+    user_obj = filters.get('user')
+    if user_obj is not None:
+        queryset = queryset.filter(actor_user=user_obj)
+
+    keyword = (filters.get('keyword') or '').strip()
+    if keyword:
+        queryset = queryset.filter(
+            Q(message__icontains=keyword)
+            | Q(target_entity_label__icontains=keyword)
+            | Q(target_entity_id__icontains=keyword)
+            | Q(actor_username_snapshot__icontains=keyword)
+        )
+
+    start_dt = filters.get('start')
+    if start_dt is not None:
+        queryset = queryset.filter(occurred_at_utc__gte=start_dt)
+
+    end_dt = filters.get('end')
+    if end_dt is not None:
+        queryset = queryset.filter(occurred_at_utc__lte=end_dt)
+
+    action_type = (filters.get('action_type') or '').strip()
+    if action_type:
+        queryset = queryset.filter(action_type=action_type)
+
+    return queryset
+
+
+def check_audit_export_threshold(*, queryset, limit=50000):
+    """Return (allowed, row_count) where allowed=False when export rows exceed limit."""
+
+    row_count = queryset.count()
+    return row_count <= limit, row_count
+
+
+def serialize_audit_entry_for_export(entry):
+    """Normalize one audit entry into tabular export fields."""
+
+    return {
+        'utc_timestamp': entry.occurred_at_utc.strftime('%Y-%m-%d %H:%M:%S UTC') if entry.occurred_at_utc else '',
+        'actor_username': entry.actor_username_snapshot or '',
+        'source_ip': entry.source_ip or '',
+        'action_type': entry.action_type or '',
+        'action_outcome': entry.action_outcome or '',
+        'target_entity_type': entry.target_entity_type or '',
+        'target_entity_id': entry.target_entity_id or '',
+        'target_entity_label': entry.target_entity_label or '',
+        'message': entry.message or '',
+        'request_path': entry.request_path or '',
+    }
 
 
 @dataclass

@@ -37,3 +37,14 @@ class SettingsConfigService:
         settings_instance = form.save(commit=False)
         settings_instance.save()
         return settings_instance
+
+
+def get_audit_log_retention_days():
+    """Return retention days with a hard minimum of one year."""
+
+    configured = getattr(django_settings, 'AUDIT_LOG_RETENTION_DAYS', 365)
+    try:
+        configured_days = int(configured)
+    except (TypeError, ValueError):
+        configured_days = 365
+    return max(configured_days, 365)

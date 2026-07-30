@@ -4,6 +4,7 @@ Forms for runtime configuration and user-management workflows.
 
 from django import forms
 from django.contrib.auth import get_user_model
+from django.utils import timezone as dj_timezone
 
 from .models import AppSettings
 
@@ -238,3 +239,39 @@ class RoleAssignmentForm(forms.Form):
         widget=forms.Select(attrs={'class': 'form-control'}),
         help_text='Role to assign to the user'
     )
+
+
+class AuditLogFilterForm(forms.Form):
+    """Validate and normalize admin audit filter query parameters."""
+
+    user = forms.ModelChoiceField(
+        queryset=get_user_model().objects.order_by('username'),
+        required=False,
+        empty_label='All users',
+        widget=forms.Select(attrs={'class': 'form-control'}),
+    )
+    keyword = forms.CharField(max_length=200, required=False)
+    start = forms.DateTimeField(required=False)
+    end = forms.DateTimeField(required=False)
+    action_type = forms.CharField(max_length=64, required=False)
+
+    def clean_keyword(self):
+        return (self.cleaned_data.get('keyword') or '').strip()
+
+    def clean_action_type(self):
+        return (self.cleaned_data.get('action_type') or '').strip()
+
+    def clean(self):
+        cleaned = super().clean()
+        start = cleaned.get('start')
+        end = cleaned.get('end')
+
+        if start and dj_timezone.is_naive(start):
+            cleaned['start'] = dj_timezone.make_aware(start, dj_timezone.utc)
+        if end and dj_timezone.is_naive(end):
+            cleaned['end'] = dj_timezone.make_aware(end, dj_timezone.utc)
+
+        if cleaned.get('start') and cleaned.get('end') and cleaned['start'] > cleaned['end']:
+            self.add_error('end', 'End date must be greater than or equal to start date.')
+
+        return cleaned

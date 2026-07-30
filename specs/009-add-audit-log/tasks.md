@@ -12,10 +12,10 @@
 
 **Purpose**: Prepare repository and runtime prerequisites for audit-log delivery in the containerized environment.
 
-- [ ] T001 Verify Docker test workflow commands are documented in specs/009-add-audit-log/quickstart.md
-- [ ] T002 Use django_app/requirements.txt as the canonical dependency source; add/confirm XLSX dependency there and mirror-lock top-level requirements.txt from canonical file.
-- [ ] T003 [P] Add audit feature URL placeholders in django_app/sitesync/urls.py
-- [ ] T004 [P] Add admin panel navigation placeholder for audit logs in django_app/sitesync/templates/sitesync/panel.html
+- [X] T001 Verify Docker test workflow commands are documented in specs/009-add-audit-log/quickstart.md
+- [X] T002 Use django_app/requirements.txt as the canonical dependency source; add/confirm XLSX dependency there and mirror-lock top-level requirements.txt from canonical file.
+- [X] T003 [P] Add audit feature URL placeholders in django_app/sitesync/urls.py
+- [X] T004 [P] Add admin panel navigation placeholder for audit logs in django_app/sitesync/templates/sitesync/panel.html
 
 ---
 
@@ -25,12 +25,12 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T005 Create AuditLogEntry model with UTC timestamp, action/outcome fields, snapshots, and indexes in django_app/sitesync/models.py
-- [ ] T006 Generate and commit AuditLogEntry migration using django manage.py makemigrations sitesync; commit generated file under django_app/sitesync/migrations/
-- [ ] T007 Implement normalized action-type and outcome constants in django_app/sitesync/services.py
-- [ ] T008 Implement shared audit write helper for success/denied/failed events in django_app/sitesync/services.py
-- [ ] T009 Implement admin authorization helper and denied-attempt audit logging hook in django_app/sitesync/views.py
-- [ ] T010 Enforce minimum one-year retention policy settings for audit logs in django_app/sitesync/config_service.py
+- [X] T005 Create AuditLogEntry model with UTC timestamp, action/outcome fields, snapshots, and indexes in django_app/sitesync/models.py
+- [X] T006 Generate and commit AuditLogEntry migration using django manage.py makemigrations sitesync; commit generated file under django_app/sitesync/migrations/
+- [X] T007 Implement normalized action-type and outcome constants in django_app/sitesync/services.py
+- [X] T008 Implement shared audit write helper for success/denied/failed events in django_app/sitesync/services.py
+- [X] T009 Implement admin authorization helper and denied-attempt audit logging hook in django_app/sitesync/views.py
+- [X] T010 Enforce minimum one-year retention policy settings for audit logs in django_app/sitesync/config_service.py
 
 **Checkpoint**: Foundation ready. User story implementation can begin.
 
@@ -44,18 +44,18 @@
 
 ### Tests for User Story 1
 
-- [ ] T011 [P] [US1] Add contract tests for required AuditLogEntry fields and outcomes in tests/contract/test_audit_log_entry_contract.py
-- [ ] T012 [P] [US1] Add integration tests covering representative authenticated mutating actions across report, user-management, team-management, invitation, and settings flows, plus denied-attempt logging in tests/integration/test_audit_logging_events.py
-- [ ] T012a [US1] Add integration test to create auditable event, delete the target entity, and verify audit row remains readable in viewer and exports in tests/integration/test_audit_logging_events.py
+- [X] T011 [P] [US1] Add contract tests for required AuditLogEntry fields and outcomes in tests/contract/test_audit_log_entry_contract.py
+- [X] T012 [P] [US1] Add integration tests covering representative authenticated mutating actions across report, user-management, team-management, invitation, and settings flows, plus denied-attempt logging in tests/integration/test_audit_logging_events.py
+- [X] T012a [US1] Add integration test to create auditable event, delete the target entity, and verify audit row remains readable in viewer and exports in tests/integration/test_audit_logging_events.py
 
 ### Implementation for User Story 1
 
-- [ ] T013 [US1] Instrument report create/approve flows to emit success audit events in django_app/sitesync/views.py
-- [ ] T014 [US1] Instrument user-management mutating flows to emit success audit events in django_app/sitesync/views.py
-- [ ] T014a [US1] Build a mutating-action inventory for sitesync endpoints and instrument each action class to emit audit events in django_app/sitesync/views.py and django_app/sitesync/services.py
-- [ ] T015 [US1] Instrument denied/failed security-relevant actions to emit audit events in django_app/sitesync/views.py
-- [ ] T016 [US1] Add immutable snapshot/value validation for audit writes in django_app/sitesync/services.py
-- [ ] T017 [US1] Execute US1 automated tests in Docker and record command/results in specs/009-add-audit-log/quickstart.md
+- [X] T013 [US1] Instrument report create/approve flows to emit success audit events in django_app/sitesync/views.py
+- [X] T014 [US1] Instrument user-management mutating flows to emit success audit events in django_app/sitesync/views.py
+- [X] T014a [US1] Build a mutating-action inventory for sitesync endpoints and instrument each action class to emit audit events in django_app/sitesync/views.py and django_app/sitesync/services.py
+- [X] T015 [US1] Instrument denied/failed security-relevant actions to emit audit events in django_app/sitesync/views.py
+- [X] T016 [US1] Add immutable snapshot/value validation for audit writes in django_app/sitesync/services.py
+- [X] T017 [US1] Execute US1 automated tests in Docker and record command/results in specs/009-add-audit-log/quickstart.md
 
 **Checkpoint**: User Story 1 is functional and independently testable.
 
@@ -69,17 +69,17 @@
 
 ### Tests for User Story 2
 
-- [ ] T018 [P] [US2] Add contract tests for audit viewer filter parameters and validation errors, including 200 HTML with inline errors for invalid filters, in tests/contract/test_audit_log_viewer_contract.py
-- [ ] T019 [P] [US2] Add integration tests for admin-only access and filter behavior in tests/integration/test_audit_log_viewer_filters.py
+- [X] T018 [P] [US2] Add contract tests for audit viewer filter parameters and validation errors, including 200 HTML with inline errors for invalid filters, in tests/contract/test_audit_log_viewer_contract.py
+- [X] T019 [P] [US2] Add integration tests for admin-only access and filter behavior in tests/integration/test_audit_log_viewer_filters.py
 
 ### Implementation for User Story 2
 
-- [ ] T020 [US2] Implement audit filter parsing and validation (user/keyword/start/end/action_type) in django_app/sitesync/forms.py
-- [ ] T021 [US2] Implement admin audit viewer endpoint with pagination and filter application in django_app/sitesync/views.py
-- [ ] T022 [US2] Wire audit viewer route in django_app/sitesync/urls.py and django_app/config/urls.py
-- [ ] T023 [US2] Build admin audit viewer template with filter controls and result table in django_app/sitesync/templates/sitesync/admin_audit_logs.html
-- [ ] T023a [US2] Implement explicit timezone labeling in audit viewer timestamps (display timezone label and UTC reference) in django_app/sitesync/templates/sitesync/admin_audit_logs.html and django_app/sitesync/views.py.
-- [ ] T024 [US2] Execute US2 automated tests in Docker and record command/results in specs/009-add-audit-log/quickstart.md
+- [X] T020 [US2] Implement audit filter parsing and validation (user/keyword/start/end/action_type) in django_app/sitesync/forms.py
+- [X] T021 [US2] Implement admin audit viewer endpoint with pagination and filter application in django_app/sitesync/views.py
+- [X] T022 [US2] Wire audit viewer route in django_app/sitesync/urls.py and django_app/config/urls.py
+- [X] T023 [US2] Build admin audit viewer template with filter controls and result table in django_app/sitesync/templates/sitesync/admin_audit_logs.html
+- [X] T023a [US2] Implement explicit timezone labeling in audit viewer timestamps (display timezone label and UTC reference) in django_app/sitesync/templates/sitesync/admin_audit_logs.html and django_app/sitesync/views.py.
+- [X] T024 [US2] Execute US2 automated tests in Docker and record command/results in specs/009-add-audit-log/quickstart.md
 
 **Checkpoint**: User Stories 1 and 2 both work independently.
 
@@ -93,18 +93,18 @@
 
 ### Tests for User Story 3
 
-- [ ] T025 [P] [US3] Add contract tests for CSV/XLSX export endpoints and content types, including 400 responses for invalid filters, in tests/contract/test_audit_log_export_contract.py
-- [ ] T025a [P] [US3] Add contract tests verifying CSV/XLSX timestamp columns include unambiguous timezone labeling in tests/contract/test_audit_log_export_contract.py.
-- [ ] T025b [P] [US3] Add contract tests verifying exports with >50,000 filtered rows fail fast with a clear "narrow filters" message and return no partial file in tests/contract/test_audit_log_export_contract.py.
-- [ ] T026 [P] [US3] Add integration tests for export row parity, empty-result behavior, deleted-target readability parity checks, and timezone-label consistency checks between viewer, CSV, and XLSX outputs in tests/integration/test_audit_log_exports.py
+- [X] T025 [P] [US3] Add contract tests for CSV/XLSX export endpoints and content types, including 400 responses for invalid filters, in tests/contract/test_audit_log_export_contract.py
+- [X] T025a [P] [US3] Add contract tests verifying CSV/XLSX timestamp columns include unambiguous timezone labeling in tests/contract/test_audit_log_export_contract.py.
+- [X] T025b [P] [US3] Add contract tests verifying exports with >50,000 filtered rows fail fast with a clear "narrow filters" message and return no partial file in tests/contract/test_audit_log_export_contract.py.
+- [X] T026 [P] [US3] Add integration tests for export row parity, empty-result behavior, deleted-target readability parity checks, and timezone-label consistency checks between viewer, CSV, and XLSX outputs in tests/integration/test_audit_log_exports.py
 
 ### Implementation for User Story 3
 
-- [ ] T027 [US3] Implement shared filtered-query builder reused by viewer and exports in django_app/sitesync/services.py
-- [ ] T028 [US3] Implement CSV and XLSX export handlers using active filters in django_app/sitesync/views.py
-- [ ] T028a [US3] Implement FR-017 export threshold guard (>50,000 rows) for CSV/XLSX with fail-fast user-facing message and explicit no-partial-file behavior in django_app/sitesync/views.py and django_app/sitesync/services.py.
-- [ ] T029 [US3] Add export actions/links to audit viewer UI in django_app/sitesync/templates/sitesync/admin_audit_logs.html
-- [ ] T030 [US3] Execute US3 automated tests in Docker (including FR-017 threshold/no-partial-file scenarios) and record command/results in specs/009-add-audit-log/quickstart.md
+- [X] T027 [US3] Implement shared filtered-query builder reused by viewer and exports in django_app/sitesync/services.py
+- [X] T028 [US3] Implement CSV and XLSX export handlers using active filters in django_app/sitesync/views.py
+- [X] T028a [US3] Implement FR-017 export threshold guard (>50,000 rows) for CSV/XLSX with fail-fast user-facing message and explicit no-partial-file behavior in django_app/sitesync/views.py and django_app/sitesync/services.py.
+- [X] T029 [US3] Add export actions/links to audit viewer UI in django_app/sitesync/templates/sitesync/admin_audit_logs.html
+- [X] T030 [US3] Execute US3 automated tests in Docker (including FR-017 threshold/no-partial-file scenarios) and record command/results in specs/009-add-audit-log/quickstart.md
 
 **Checkpoint**: All user stories are independently functional.
 
@@ -114,12 +114,12 @@
 
 **Purpose**: Finalize quality, security, and documentation across all stories.
 
-- [ ] T031 [P] Add focused unit tests for audit helpers and filter validators in django_app/sitesync/tests/test_audit_helpers.py
-- [ ] T032 Perform security review of admin-only access and denied-attempt logging paths in django_app/sitesync/views.py
-- [ ] T033 [P] Update API documentation for audit viewer/export contracts in docs/API.md
-- [ ] T034 [P] Update secret/security operational notes for audit data handling in docs/SECRET_MANAGEMENT.md
-- [ ] T035 Run full regression test suite in Docker and capture final validation commands in specs/009-add-audit-log/quickstart.md
-- [ ] T036 Execute and document acceptance validation trials for SC-002 and SC-005 (time-to-find-event and first-attempt success rate) using scenarios in specs/009-add-audit-log/quickstart.md, and store results in specs/009-add-audit-log/checklists/requirements.md.
+- [X] T031 [P] Add focused unit tests for audit helpers and filter validators in django_app/sitesync/tests/test_audit_helpers.py
+- [X] T032 Perform security review of admin-only access and denied-attempt logging paths in django_app/sitesync/views.py
+- [X] T033 [P] Update API documentation for audit viewer/export contracts in docs/API.md
+- [X] T034 [P] Update secret/security operational notes for audit data handling in docs/SECRET_MANAGEMENT.md
+- [X] T035 Run full regression test suite in Docker and capture final validation commands in specs/009-add-audit-log/quickstart.md
+- [X] T036 Execute and document acceptance validation trials for SC-002 and SC-005 (time-to-find-event and first-attempt success rate) using scenarios in specs/009-add-audit-log/quickstart.md, and store results in specs/009-add-audit-log/checklists/requirements.md.
 
 ---
 
