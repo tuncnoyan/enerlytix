@@ -8,6 +8,7 @@ from collections import defaultdict
 from datetime import datetime, timezone as datetime_timezone
 from decimal import Decimal, ROUND_HALF_UP
 
+from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q, Sum
@@ -1261,68 +1262,6 @@ def import_run_detail_view(request, import_run_id):
 # Team Management Views (Phase 4)
 
 @login_required
-def team_list_view(request):
-    """
-    GET: Return paginated list of teams the user is assigned to or manages.
-    POST: Create a new team (admin/manager only).
-    """
-    from django.core.paginator import Paginator
-    from .models import Team, UserTeamAssignment
-    from .forms import TeamForm
-
-    # Check if user is admin or manager
-    is_admin_or_manager = (
-        request.user.is_staff or 
-        request.user.is_superuser or
-        request.user.role_assignments.filter(role_name='admin').exists() or
-        request.user.role_assignments.filter(role_name='manager').exists()
-    )
-
-    if request.method == 'POST':
-        if not is_admin_or_manager:
-            return JsonResponse({'error': 'Permission denied'}, status=403)
-        
-        form = TeamForm(request.POST)
-        if form.is_valid():
-            team = Team(
-                name=form.cleaned_data['name'],
-                parent_team=form.cleaned_data.get('parent_team'),
-                manager=form.cleaned_data.get('manager'),
-                team_lead=form.cleaned_data.get('team_lead'),
-            )
-            team.save()
-            logger.info(f"User {request.user.username} created team: {team.name}")
-            return redirect('team_detail', team_id=team.id)
-        else:
-            return JsonResponse({'errors': form.errors}, status=400)
-    
-    # GET: List teams
-    if is_admin_or_manager:
-        teams = Team.objects.all()
-    else:
-        # User can only see teams they're assigned to
-        assigned_team_ids = UserTeamAssignment.objects.filter(
-            user=request.user
-        ).values_list('team_id', flat=True)
-        teams = Team.objects.filter(id__in=assigned_team_ids)
-    
-    teams = teams.order_by('name')
-    paginator = Paginator(teams, 20)
-    page = request.GET.get('page', 1)
-    
-    try:
-        teams_page = paginator.page(page)
-    except Exception:
-        teams_page = paginator.page(1)
-    
-    context = {
-        'teams': teams_page,
-        'is_admin_or_manager': is_admin_or_manager,
-    }
-    return render(request, 'sitesync/team_list.html', context)
-
-
-@login_required
 def team_detail_view(request, team_id):
     """
     GET: Return team details and member list.
@@ -1352,33 +1291,87 @@ def team_detail_view(request, team_id):
     if not (is_team_admin or is_team_manager or is_team_member):
         return JsonResponse({'error': 'Permission denied'}, status=403)
     
+    team_form = TeamForm(instance=team) if hasattr(TeamForm, 'Meta') else TeamForm(initial={
+        'name': team.name,
+        'parent_team': team.parent_team,
+        'manager': team.manager,
+        'team_lead': team.team_lead,
+    })
+
+    can_edit = is_team_admin or is_team_manager
+
     if request.method == 'POST':
-        if not (is_team_admin or is_team_manager):
+        if not can_edit:
             return JsonResponse({'error': 'Permission denied'}, status=403)
-        
-        form = TeamForm(request.POST)
-        if form.is_valid():
-            team.name = form.cleaned_data['name']
-            team.parent_team = form.cleaned_data.get('parent_team')
-            team.manager = form.cleaned_data.get('manager')
-            team.team_lead = form.cleaned_data.get('team_lead')
+
+        action = request.POST.get('action', 'update_team')
+
+        if action == 'add_sub_team':
+            sub_team_id = request.POST.get('sub_team_id')
+
+            if not sub_team_id:
+                messages.error(request, 'Please select a team to add as a sub-team.')
+                return redirect('sitesync:team_detail', team_id=team.id)
+
+            try:
+                sub_team = Team.objects.get(id=sub_team_id)
+            except Team.DoesNotExist:
+                messages.error(request, 'Selected team was not found.')
+                return redirect('sitesync:team_detail', team_id=team.id)
+
+            if sub_team.id == team.id:
+                messages.error(request, 'A team cannot be added as a sub-team of itself.')
+                return redirect('sitesync:team_detail', team_id=team.id)
+
+            # Prevent circular hierarchy by blocking ancestor -> descendant reassignment.
+            if team.id in {ancestor.id for ancestor in sub_team.get_parent_teams()}:
+                messages.info(request, f"{sub_team.name} is already in this hierarchy.")
+                return redirect('sitesync:team_detail', team_id=team.id)
+
+            if sub_team.id in {ancestor.id for ancestor in team.get_parent_teams()}:
+                messages.error(request, 'Cannot create circular hierarchy. The selected team is an ancestor of this team.')
+                return redirect('sitesync:team_detail', team_id=team.id)
+
+            sub_team.parent_team = team
+            sub_team.save(update_fields=['parent_team', 'updated_at'])
+            logger.info(
+                f"User {request.user.username} added existing team {sub_team.name} as sub-team of {team.name}"
+            )
+            messages.success(request, f"{sub_team.name} added as a sub-team of {team.name}.")
+            return redirect('sitesync:team_detail', team_id=team.id)
+
+        team_form = TeamForm(request.POST)
+        if team_form.is_valid():
+            team.name = team_form.cleaned_data['name']
+            team.parent_team = team_form.cleaned_data.get('parent_team')
+            team.manager = team_form.cleaned_data.get('manager')
+            team.team_lead = team_form.cleaned_data.get('team_lead')
             team.save()
             logger.info(f"User {request.user.username} updated team: {team.name}")
-            return redirect('team_detail', team_id=team.id)
-        else:
-            return JsonResponse({'errors': form.errors}, status=400)
+            return redirect('sitesync:team_detail', team_id=team.id)
+
+        wants_json = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.GET.get('format') == 'json'
+        if wants_json:
+            return JsonResponse({'errors': team_form.errors}, status=400)
     
     # GET: Display team details
     members = team.user_assignments.all().select_related('user')
     sub_teams = team.sub_teams.all()
     parent_team = team.parent_team
+    assigned_user_ids = members.values_list('user_id', flat=True)
+    assignable_users = get_user_model().objects.filter(is_active=True).exclude(id__in=assigned_user_ids).order_by('username')
+    ancestor_ids = [parent.id for parent in team.get_parent_teams()]
+    sub_team_candidates = Team.objects.exclude(id=team.id).exclude(id__in=ancestor_ids).order_by('name')
     
     context = {
         'team': team,
         'members': members,
         'sub_teams': sub_teams,
         'parent_team': parent_team,
-        'can_edit': is_team_admin or is_team_manager,
+        'can_edit': can_edit,
+        'assignable_users': assignable_users,
+        'sub_team_candidates': sub_team_candidates,
+        'team_form': team_form,
     }
     return render(request, 'sitesync/team_detail.html', context)
 
@@ -1404,6 +1397,9 @@ def user_team_assignment_view(request):
     if request.method == 'POST':
         if not is_admin_or_manager:
             return JsonResponse({'error': 'Permission denied'}, status=403)
+
+        return_to_team_id = request.POST.get('return_to_team_id')
+        wants_json = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.GET.get('format') == 'json'
         
         form = UserTeamAssignmentForm(request.POST)
         if form.is_valid():
@@ -1412,6 +1408,9 @@ def user_team_assignment_view(request):
             
             # Check if assignment already exists
             if UserTeamAssignment.objects.filter(user=user, team=team).exists():
+                if return_to_team_id and not wants_json:
+                    messages.error(request, 'User is already assigned to this team.')
+                    return redirect('sitesync:team_detail', team_id=return_to_team_id)
                 return JsonResponse({'error': 'User already assigned to this team'}, status=400)
             
             assignment = UserTeamAssignment(
@@ -1421,8 +1420,14 @@ def user_team_assignment_view(request):
             )
             assignment.save()
             logger.info(f"User {request.user.username} assigned {user.username} to team {team.name}")
+            if return_to_team_id and not wants_json:
+                messages.success(request, f"{user.get_username()} added to {team.name}.")
+                return redirect('sitesync:team_detail', team_id=return_to_team_id)
             return JsonResponse({'success': True, 'assignment_id': str(assignment.id)})
         else:
+            if return_to_team_id and not wants_json:
+                messages.error(request, 'Unable to add member. Please select a valid user.')
+                return redirect('sitesync:team_detail', team_id=return_to_team_id)
             return JsonResponse({'errors': form.errors}, status=400)
     
     if request.method == 'DELETE':
@@ -1603,7 +1608,26 @@ def admin_users_view(request):
 def admin_teams_view(request):
     """Admin panel teams section."""
     from .models import Team
+    from .forms import TeamForm
     from django.core.paginator import Paginator
+
+    team_form = TeamForm(initial={'parent_team': request.GET.get('parent_team')})
+
+    if request.method == 'POST':
+        team_form = TeamForm(request.POST)
+        if team_form.is_valid():
+            team = Team(
+                name=team_form.cleaned_data['name'],
+                parent_team=team_form.cleaned_data.get('parent_team'),
+                manager=team_form.cleaned_data.get('manager'),
+                team_lead=team_form.cleaned_data.get('team_lead'),
+            )
+            team.save()
+            logger.info(f"User {request.user.username} created team from admin panel: {team.name}")
+            messages.success(request, f"Team '{team.name}' created successfully.")
+            return redirect('sitesync:team_detail', team_id=team.id)
+
+        messages.error(request, 'Unable to create team. Please fix the highlighted fields.')
     
     teams = Team.objects.all().order_by('name')
     paginator = Paginator(teams, 20)
@@ -1616,6 +1640,7 @@ def admin_teams_view(request):
     
     context = {
         'teams': teams_page,
+        'team_form': team_form,
     }
     return render(request, 'sitesync/panel_teams.html', context)
 

@@ -46,12 +46,12 @@ Certain endpoints require admin or manager role.
 
 ## Team Management Endpoints
 
-### GET /teams/
+### GET /panel/teams/
 List all teams (paginated, hierarchical).
 
 **Request**:
 ```http
-GET /teams/?page=1&search=Finance HTTP/1.1
+GET /panel/teams/?page=1&search=Finance HTTP/1.1
 Host: localhost:8000
 Cookie: sessionid=...
 ```
@@ -128,12 +128,12 @@ Cookie: sessionid=...
 
 ---
 
-### POST /teams/
+### POST /panel/teams/
 Create a new team.
 
 **Request**:
 ```http
-POST /teams/ HTTP/1.1
+POST /panel/teams/ HTTP/1.1
 Host: localhost:8000
 Content-Type: application/json
 Cookie: sessionid=...

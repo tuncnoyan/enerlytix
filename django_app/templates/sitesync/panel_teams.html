@@ -11,9 +11,57 @@
         <p class="text-muted">Create and organize teams, assign managers and leads</p>
     </div>
     <div class="col-md-4 text-end">
-        <a href="{% url 'sitesync:team_list' %}" class="btn btn-primary">
+        <button type="button" class="btn btn-primary" data-bs-toggle="collapse" data-bs-target="#createTeamCollapse" aria-expanded="false" aria-controls="createTeamCollapse">
             <i class="bi bi-diagram-3"></i> Create Team
-        </a>
+        </button>
+    </div>
+</div>
+
+<div class="collapse {% if team_form.errors %}show{% endif %} mb-4" id="createTeamCollapse">
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Create Team</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" action="{% url 'sitesync:admin_teams' %}">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label" for="{{ team_form.name.id_for_label }}">Team Name</label>
+                        {{ team_form.name }}
+                        {% if team_form.name.errors %}
+                        <div class="text-danger small mt-1">{{ team_form.name.errors|striptags }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="{{ team_form.parent_team.id_for_label }}">Parent Team</label>
+                        {{ team_form.parent_team }}
+                        {% if team_form.parent_team.errors %}
+                        <div class="text-danger small mt-1">{{ team_form.parent_team.errors|striptags }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="{{ team_form.manager.id_for_label }}">Manager</label>
+                        {{ team_form.manager }}
+                        {% if team_form.manager.errors %}
+                        <div class="text-danger small mt-1">{{ team_form.manager.errors|striptags }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="{{ team_form.team_lead.id_for_label }}">Team Lead</label>
+                        {{ team_form.team_lead }}
+                        {% if team_form.team_lead.errors %}
+                        <div class="text-danger small mt-1">{{ team_form.team_lead.errors|striptags }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-12 text-end">
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check2-circle"></i> Save Team
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
@@ -39,7 +87,7 @@
                 <td>{{ team.team_lead.get_full_name|default:"—" }}</td>
                 <td><span class="badge bg-info">{{ team.user_assignments.count }}</span></td>
                 <td>
-                    <a href="{% url 'sitesync:team_detail' team.id %}" class="btn btn-sm btn-outline-primary">View</a>
+                    <a href="{% url 'sitesync:team_detail' team.id %}" class="btn btn-sm btn-outline-primary">Edit</a>
                 </td>
             </tr>
             {% endfor %}
@@ -63,6 +111,6 @@
 </nav>
 {% endif %}
 {% else %}
-<div class="alert alert-info">No teams found. <a href="{% url 'sitesync:team_list' %}">Create a team</a> to get started.</div>
+<div class="alert alert-info">No teams found. Use <strong>Create Team</strong> to get started.</div>
 {% endif %}
 {% endblock %}

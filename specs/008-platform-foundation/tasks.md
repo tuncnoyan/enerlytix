@@ -117,7 +117,7 @@ docker compose -f django_app/docker/docker-compose.yml exec -T web python manage
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [x] T017 [P] [US4] Contract test for Team CRUD endpoints in `tests/contract/test_team_management.md` — Define POST /teams/, GET /teams/{id}, PUT /teams/{id}, DELETE /teams/{id} — DEFERRED: Comprehensive API docs created in contracts/team-management.md (T088) instead
+- [x] T017 [P] [US4] Contract test for Team CRUD endpoints in `tests/contract/test_team_management.md` — Define POST /panel/teams/, GET /teams/{id}, PUT /teams/{id}, DELETE /teams/{id} — DEFERRED: Comprehensive API docs created in contracts/team-management.md (T088) instead
 - [x] T018 [P] [US4] Contract test for user team assignment in `tests/contract/test_user_team_assignment.md` — Define POST /users/{id}/assignments, GET /users/{id}/assignments — DEFERRED: Assignment endpoints documented in contracts/team-management.md (T088)
 - [x] T019 [US4] Integration test for team creation and hierarchy in `tests/integration/test_team_hierarchy.py` — Test creating root team, sub-team, verifying parent_team FK, hierarchy traversal — SUPERSEDED: Comprehensive test_team_hierarchy_full.py created in Phase 7 (T074)
 
@@ -130,15 +130,15 @@ docker compose -f django_app/docker/docker-compose.yml exec -T web python manage
 - [x] T024 [P] [US4] Create TeamForm in `sitesync/forms.py` — COMPLETE (Form for team creation, name, parent_team selection, manager selection)
 - [x] T025 [P] [US4] Create UserTeamAssignmentForm in `sitesync/forms.py` — COMPLETE (Form for assigning users to teams)
 - [x] T026 [P] [US4] Create RoleAssignmentForm in `sitesync/forms.py` — COMPLETE (Form for assigning roles to users)
-- [x] T027 [US4] Create team management view in `sitesync/views.py`: `team_list_view()` — COMPLETE (GET returns paginated team list with hierarchy info; POST creates new team)
+- [x] T027 [US4] Create team management view in `sitesync/views.py`: `admin_teams_view()` — COMPLETE (GET renders consolidated teams list at /panel/teams/; POST creates new team)
 - [x] T028 [US4] Create team detail and edit view in `sitesync/views.py`: `team_detail_view()` — COMPLETE (GET returns team details and members; PUT/POST edits team properties, manager, team_lead)
 - [x] T029 [US4] Create user team assignment view in `sitesync/views.py`: `user_team_assignment_view()` — COMPLETE (GET lists assignments for a user; POST creates new assignment; DELETE removes assignment)
 - [x] T030 [US4] Create role assignment view in `sitesync/views.py`: `role_assignment_view()` — COMPLETE (GET lists roles for a user; POST assigns new role; DELETE revokes role)
-- [x] T031 [US4] Create team templates for UI in `templates/sitesync/team_list.html`, `team_detail.html` — COMPLETE (List view with create button, detail view with edit form, assignment templates)
+- [x] T031 [US4] Create team templates for UI in `templates/sitesync/panel_teams.html`, `team_detail.html` — COMPLETE (Panel list/create view with edit actions, detail view with editable Team Information, assignment templates)
 - [x] T032 [US4] Implement team deletion cascade logic in `sitesync/models.py` — COMPLETE (FK with PROTECT prevents deletion, migrations handle cascade)
 - [x] T033 [US4] Add team hierarchy traversal helper methods in `sitesync/models.py`: `get_parent_teams()`, `get_sub_teams()`, `get_all_reports_in_scope()` — COMPLETE (All hierarchy methods on Team model)
 - [x] T034 [US4] Add role checking utility functions in `sitesync/models.py`: `has_user_role()`, `get_user_roles()`, `is_admin_or_manager()` — COMPLETE (6 utility functions for access control)
-- [x] T035 [US4] Add URL routes for team management in `sitesync/urls.py` — COMPLETE (/teams/, /teams/<id>/, /teams/assignments/, /roles/assignments/)
+- [x] T035 [US4] Add URL routes for team management in `sitesync/urls.py` — COMPLETE (/panel/teams/, /teams/<id>/, /teams/assignments/, /roles/assignments/)
 - [x] T036 [US4] Add admin decorators and access checks to team views — COMPLETE (is_admin_or_manager checks, team membership validation, permission denied returns)
 - [x] T037 [US4] Add logging for team operations in `sitesync/views.py` — COMPLETE (logger.info calls for team creation, updates, user assignments, role changes)
 

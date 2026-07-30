@@ -60,6 +60,9 @@ htmlcov/
 *.css.map
 *.js.map
 
+# Node
+node_modules/
+
 # OS
 .DS_Store
 Thumbs.db

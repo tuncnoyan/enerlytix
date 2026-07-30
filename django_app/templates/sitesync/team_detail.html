@@ -1,7 +1,9 @@
-{% extends "sitesync/base.html" %}
+{% extends "sitesync/panel_base.html" %}
 {% load static %}
 
 {% block title %}{{ team.name }} - Team Details{% endblock %}
+{% block nav_teams %}is-active{% endblock %}
+{% block breadcrumb_label %}Team Details{% endblock %}
 
 {% block content %}
 <div class="container mt-5">
@@ -16,7 +18,7 @@
         </div>
         {% if can_edit %}
         <div class="col-md-4 text-end">
-            <a href="{% url 'sitesync:team_list' %}" class="btn btn-secondary">Back to Teams</a>
+            <a href="{% url 'sitesync:admin_teams' %}" class="btn btn-secondary">Back to Teams</a>
         </div>
         {% endif %}
     </div>
@@ -27,6 +29,52 @@
             <h5>Team Information</h5>
         </div>
         <div class="card-body">
+            {% if can_edit %}
+            <form method="post" action="{% url 'sitesync:team_detail' team.id %}">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label" for="{{ team_form.name.id_for_label }}">Team Name</label>
+                        {{ team_form.name }}
+                        {% if team_form.name.errors %}
+                        <div class="text-danger small mt-1">{{ team_form.name.errors|striptags }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="{{ team_form.parent_team.id_for_label }}">Parent Team</label>
+                        {{ team_form.parent_team }}
+                        {% if team_form.parent_team.errors %}
+                        <div class="text-danger small mt-1">{{ team_form.parent_team.errors|striptags }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="{{ team_form.manager.id_for_label }}">Manager</label>
+                        {{ team_form.manager }}
+                        {% if team_form.manager.errors %}
+                        <div class="text-danger small mt-1">{{ team_form.manager.errors|striptags }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="{{ team_form.team_lead.id_for_label }}">Team Lead</label>
+                        {{ team_form.team_lead }}
+                        {% if team_form.team_lead.errors %}
+                        <div class="text-danger small mt-1">{{ team_form.team_lead.errors|striptags }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Created:</strong><br>{{ team.created_at|date:"Y-m-d H:i" }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Last Updated:</strong><br>{{ team.updated_at|date:"Y-m-d H:i" }}</p>
+                    </div>
+                    <div class="col-12 text-end">
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check2-circle"></i> Save Changes
+                        </button>
+                    </div>
+                </div>
+            </form>
+            {% else %}
             <div class="row">
                 <div class="col-md-6">
                     <p><strong>Manager:</strong><br>{{ team.manager.get_full_name|default:"Not assigned" }}</p>
@@ -43,6 +91,7 @@
                     <p><strong>Last Updated:</strong><br>{{ team.updated_at|date:"Y-m-d H:i" }}</p>
                 </div>
             </div>
+            {% endif %}
         </div>
     </div>
 
@@ -90,9 +139,9 @@
                 </div>
                 {% if can_edit %}
                 <div class="col-md-4 text-end">
-                    <a href="{% url 'sitesync:team_list' %}" class="btn btn-sm btn-success">
-                        <i class="bi bi-diagram-3"></i> Create Sub-team
-                    </a>
+                    <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#addSubTeamModal">
+                        <i class="bi bi-diagram-3"></i> Add Sub-team
+                    </button>
                 </div>
                 {% endif %}
             </div>
@@ -116,6 +165,37 @@
 
 <!-- Add Member Modal -->
 {% if can_edit %}
+<div class="modal fade" id="addSubTeamModal" tabindex="-1" aria-labelledby="addSubTeamLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addSubTeamLabel">Add Sub-team</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'sitesync:team_detail' team.id %}">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_sub_team">
+                    <div class="mb-3">
+                        <label for="subTeamSelect" class="form-label">Select Existing Team</label>
+                        <select class="form-select" id="subTeamSelect" name="sub_team_id" required>
+                            <option value="">Choose a team...</option>
+                            {% for candidate in sub_team_candidates %}
+                            <option value="{{ candidate.id }}">{{ candidate.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Only valid teams are listed. Circular hierarchy is blocked automatically.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Add Sub-team</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="addMemberModal" tabindex="-1" aria-labelledby="addMemberLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -123,14 +203,18 @@
                 <h5 class="modal-title" id="addMemberLabel">Add Team Member</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="addMemberForm">
+            <form id="addMemberForm" method="post" action="{% url 'sitesync:user_team_assignment' %}">
                 <div class="modal-body">
                     {% csrf_token %}
+                    <input type="hidden" name="team" value="{{ team.id }}">
+                    <input type="hidden" name="return_to_team_id" value="{{ team.id }}">
                     <div class="mb-3">
                         <label for="memberSelect" class="form-label">Select User</label>
                         <select class="form-select" id="memberSelect" name="user" required>
                             <option value="">Choose a user...</option>
-                            <!-- Populated by JavaScript -->
+                            {% for candidate in assignable_users %}
+                            <option value="{{ candidate.id }}">{{ candidate.get_full_name|default:candidate.username }} ({{ candidate.email }})</option>
+                            {% endfor %}
                         </select>
                     </div>
                 </div>

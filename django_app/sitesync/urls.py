@@ -25,7 +25,6 @@ urlpatterns = [
     path('api/report-data/', views.report_data_api_view, name='report_data_api'),
     path('api/import-runs/<uuid:import_run_id>/', views.import_run_detail_view, name='import_run_detail'),
     # Team Management Routes (Phase 4)
-    path('teams/', views.team_list_view, name='team_list'),
     path('teams/<uuid:team_id>/', views.team_detail_view, name='team_detail'),
     path('teams/assignments/', views.user_team_assignment_view, name='user_team_assignment'),
     path('roles/assignments/', views.role_assignment_view, name='role_assignment'),
