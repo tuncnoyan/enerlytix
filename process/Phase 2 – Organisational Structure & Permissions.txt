@@ -1,0 +1,35 @@
+Phase 2 – Organisational Structure & Permissions
+Goal: Establish reporting hierarchy before implementing approval workflows.
+
+Features:
+1. Role Hierarchy
+1.1. Admin
+1.2. Manager
+1.3. Team Lead
+1.4. User
+
+
+2. Team Structure
+Organisation
+ ├─ Manager
+ │
+ ├─ Team A
+ │   ├─ Team Lead
+ │   ├─ User
+ │   └─ User
+ │
+ └─ Team B
+     ├─ Team Lead
+     └─ User
+
+3. Group Management
+3.1. Create teams
+3.2. Assign users
+3.3. Change managers
+3.4. Transfer team leads
+
+4. Permissions
+4.1. User: Own reports only
+4.2. Team Lead: Own reports + Team reports
+4.3. Manager: Organisation reports
+4.4. Admin: Everything

@@ -1,0 +1,23 @@
+Phase 3 – Audit & Compliance
+Goal: Introduce traceability before collaborative editing.
+
+Features:
+1. Activity Logging
+Track:
+- User
+- IP address
+- Timestamp
+- Entity affected
+- Action performed
+
+Examples:
+Created Report #123
+Deleted User John Smith
+Approved Report #456
+
+2. Audit Log Viewer should have following Filters:
+- User
+- Keyword
+- Date range
+- Action type
+It should also allow log downloads on Excel (xlsx) and csv format with the same filters.

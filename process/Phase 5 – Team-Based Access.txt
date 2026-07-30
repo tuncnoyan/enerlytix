@@ -1,0 +1,14 @@
+Phase 5 – Team-Based Access
+Goal: Implement managerial visibility.
+
+Features
+1. Team Lead
+- Can edit: Own reports + Reports owned by team members
+
+2. Manager
+- Can edit: Own reports + Reports owned by organisation
+
+3. Edge Cases
+- User transferred teams: Report ownerships should be transferred to a designated user.
+- Team lead changed: Report ownerships should be transferred to a designated user. Team members should be transferred to the manager or designated new team lead.
+- Manager changed: Report ownerships should be transferred to a designated user. The manager should be removed from the organisation.

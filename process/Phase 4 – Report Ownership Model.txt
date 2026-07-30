@@ -1,0 +1,25 @@
+Phase 4 – Report Ownership Model
+Goal: Establish controlled collaboration.
+
+Features:
+
+1. Report Owner
+1.1. Store:
+- Owner
+- Created Date
+- Last Modified By
+- Last Modified Date
+
+2. Permissions
+- Owner: Read + Write + Share
+- Others: Read only
+- Additional Access
+-- Owner can grant: Read and/or Write to named users.
+
+3. Saved Reports Page
+- Display fields:
+-- Report Name
+-- Owner
+-- Last Edited By
+-- Last Edited At
+-- Status
