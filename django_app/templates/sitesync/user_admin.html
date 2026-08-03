@@ -196,6 +196,42 @@
         }
         .topbar-links a:hover { color: var(--cxg-dark-green); }
         .topbar-links a.is-active { color: var(--cxg-primary-432); border-bottom-color: var(--cxg-primary-430); }
+        .topbar-user-menu { position: relative; }
+        .topbar-user-menu summary { list-style: none; }
+        .topbar-user-menu summary::-webkit-details-marker { display: none; }
+        .topbar-user-trigger {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            color: var(--cxg-primary-430); font-size: 0.78rem; font-weight: 600;
+            padding: 0.3rem 0.15rem; border-bottom: 2px solid transparent;
+            cursor: pointer; white-space: nowrap;
+        }
+        .topbar-user-avatar {
+            width: 1.2rem; height: 1.2rem; border-radius: 999px;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: var(--cxg-primary-432); color: var(--cxg-white);
+            font-size: 0.62rem; font-weight: 800; line-height: 1; text-transform: uppercase;
+        }
+        .topbar-user-trigger::after { content: '▾'; margin-left: 0.32rem; font-size: 0.62rem; }
+        .topbar-user-menu[open] .topbar-user-trigger { color: var(--cxg-primary-432); border-bottom-color: var(--cxg-primary-430); }
+        .topbar-user-dropdown {
+            position: absolute; right: 0; top: calc(100% + 0.4rem);
+            min-width: 10.5rem; background: var(--cxg-white);
+            border: 1px solid var(--cxg-border); border-radius: 0.45rem;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.15);
+            padding: 0.35rem; z-index: 40;
+        }
+        .topbar-user-dropdown a,
+        .topbar-user-dropdown .logout-btn {
+            display: block; width: 100%; text-align: left;
+            border: 0; border-radius: 0.35rem;
+            padding: 0.45rem 0.55rem; background: transparent;
+            color: var(--cxg-primary-430); font-size: 0.8rem; font-weight: 600;
+            text-decoration: none;
+        }
+        .topbar-user-dropdown a:hover,
+        .topbar-user-dropdown .logout-btn:hover { background: var(--cxg-bg-10); color: var(--cxg-primary-432); }
         .logout-form { margin: 0; }
         .logout-btn {
             background: none; border: none; cursor: pointer;
@@ -313,11 +349,16 @@
             <a href="{% url 'sitesync:settings_panel' %}">Settings</a>
             {% if is_admin %}<a href="{% url 'sitesync:admin_panel' %}">&#x25CF; Admin Panel</a>{% endif %}
             <a href="{% url 'sitesync:user_admin' %}" class="is-active">Users</a>
-            <a href="{% url 'sitesync:profile' %}">Profile</a>
-            <form method="post" action="{% url 'logout' %}" class="logout-form">
-                {% csrf_token %}
-                <button type="submit" class="logout-btn">Logout</button>
-            </form>
+            <details class="topbar-user-menu">
+                <summary class="topbar-user-trigger"><span class="topbar-user-avatar">{{ user.get_full_name|default:user.username|slice:":1"|upper }}</span><span>{{ user.get_full_name|default:user.username }}</span></summary>
+                <div class="topbar-user-dropdown">
+                    <a href="{% url 'sitesync:profile' %}">Profile</a>
+                    <form method="post" action="{% url 'logout' %}" class="logout-form">
+                        {% csrf_token %}
+                        <button type="submit" class="logout-btn">Logout</button>
+                    </form>
+                </div>
+            </details>
         </nav>
     </div>
 

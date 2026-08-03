@@ -21,12 +21,17 @@
         <nav class="panel-topnav">
             <a href="{% url 'sitesync:site_list' %}">Home</a>
             <a href="{% url 'sitesync:saved_reports' %}">Saved Reports</a>
-            <a href="{% url 'sitesync:profile' %}">Profile</a>
             <a href="{% url 'sitesync:admin_panel' %}" class="panel-topnav-active">Admin Panel</a>
-            <form method="post" action="{% url 'logout' %}" class="panel-logout-form">
-                {% csrf_token %}
-                <button type="submit" class="panel-logout-btn">Logout</button>
-            </form>
+            <details class="panel-user-menu">
+                <summary class="panel-user-trigger"><span class="panel-user-avatar">{{ user.get_full_name|default:user.username|slice:":1"|upper }}</span><span>{{ user.get_full_name|default:user.username }}</span></summary>
+                <div class="panel-user-dropdown">
+                    <a href="{% url 'sitesync:profile' %}">Profile</a>
+                    <form method="post" action="{% url 'logout' %}" class="panel-logout-form">
+                        {% csrf_token %}
+                        <button type="submit" class="panel-logout-btn">Logout</button>
+                    </form>
+                </div>
+            </details>
         </nav>
     </header>
 

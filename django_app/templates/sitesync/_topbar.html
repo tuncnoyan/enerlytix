@@ -4,11 +4,16 @@
     <nav class="topbar-links">
         <a href="{% url 'sitesync:site_list' %}"{% if active_page == 'home' %} class="is-active"{% endif %}>Home</a>
         <a href="{% url 'sitesync:saved_reports' %}"{% if active_page == 'reports' %} class="is-active"{% endif %}>Saved Reports</a>
-        <a href="{% url 'sitesync:profile' %}"{% if active_page == 'profile' %} class="is-active"{% endif %}>Profile</a>
         {% if is_admin %}<a href="{% url 'sitesync:admin_panel' %}" class="topbar-admin{% if active_page == 'admin' %} is-active{% endif %}">Admin Panel</a>{% endif %}
-        <form method="post" action="{% url 'logout' %}" class="topbar-logout-form">
-            {% csrf_token %}
-            <button type="submit" class="topbar-logout-btn">Logout</button>
-        </form>
+        <details class="topbar-user-menu{% if active_page == 'profile' %} is-active{% endif %}">
+            <summary class="topbar-user-trigger"><span class="topbar-user-avatar">{{ user.get_full_name|default:user.username|slice:":1"|upper }}</span><span>{{ user.get_full_name|default:user.username }}</span></summary>
+            <div class="topbar-user-dropdown">
+                <a href="{% url 'sitesync:profile' %}"{% if active_page == 'profile' %} class="is-active"{% endif %}>Profile</a>
+                <form method="post" action="{% url 'logout' %}" class="topbar-logout-form">
+                    {% csrf_token %}
+                    <button type="submit" class="topbar-logout-btn">Logout</button>
+                </form>
+            </div>
+        </details>
     </nav>
 </div>

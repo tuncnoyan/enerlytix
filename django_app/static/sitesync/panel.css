@@ -59,6 +59,93 @@ body {
     gap: 1.1rem;
 }
 
+.panel-user-menu {
+    position: relative;
+}
+
+.panel-user-menu summary {
+    list-style: none;
+}
+
+.panel-user-menu summary::-webkit-details-marker {
+    display: none;
+}
+
+.panel-user-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--cxg-primary-430);
+    text-decoration: none;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.3rem 0.15rem;
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.panel-user-avatar {
+    width: 1.2rem;
+    height: 1.2rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--cxg-primary-432);
+    color: var(--cxg-white);
+    font-size: 0.62rem;
+    font-weight: 800;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.panel-user-trigger::after {
+    content: '▾';
+    margin-left: 0.32rem;
+    font-size: 0.62rem;
+}
+
+.panel-user-menu[open] .panel-user-trigger,
+.panel-user-trigger:hover {
+    color: var(--cxg-dark-green);
+}
+
+.panel-user-dropdown {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 0.4rem);
+    min-width: 10.5rem;
+    background: var(--cxg-white);
+    border: 1px solid var(--cxg-border);
+    border-radius: 0.45rem;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.15);
+    padding: 0.35rem;
+    z-index: 40;
+}
+
+.panel-user-dropdown a,
+.panel-user-dropdown .panel-logout-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    border: 0;
+    border-radius: 0.35rem;
+    padding: 0.45rem 0.55rem;
+    color: var(--cxg-primary-430);
+    background: transparent;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.panel-user-dropdown a:hover,
+.panel-user-dropdown .panel-logout-btn:hover {
+    background: var(--cxg-bg-10);
+    color: var(--cxg-primary-432);
+}
+
 .panel-topnav a {
     color: var(--cxg-primary-430);
     text-decoration: none;
