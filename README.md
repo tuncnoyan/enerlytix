@@ -198,6 +198,14 @@ From django_app:
 - python manage.py check
 - python manage.py test
 
+### Docker-only verification for report ownership implementation
+
+For feature work under report ownership model, run verification in Docker only:
+
+- docker compose -f django_app/docker/docker-compose.yml up -d --build
+- docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py migrate
+- docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test sitesync.tests
+
 Optional pytest workflow (if configured in your environment):
 
 - pytest

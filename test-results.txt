@@ -1046,3 +1046,15 @@ Ran 110 tests in 4.009s
 
 FAILED (failures=10, errors=38)
 Destroying test database for alias 'default'...
+
+=== 2026-08-03 Report Ownership Model Docker Validation ===
+Command: docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py migrate
+Result: Applied migrations sitesync.0018_report_ownership_model and sitesync.0019_site_team_scope successfully.
+
+Command: docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test sitesync.tests.test_report_ownership_access sitesync.tests.test_report_collaborator_grants sitesync.tests.test_report_owner_fallback_transfer sitesync.tests.test_saved_reports_ownership_listing
+Result: Ran 7 tests in 2.550s - OK.
+Notes: Expected warning-level request logs for denied-write (403) and no-candidate fallback (400) paths observed during negative-path assertions.
+
+=== 2026-08-03 Convergence Task Validation ===
+Command: docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test sitesync.tests.test_report_scope_convergence sitesync.tests.test_report_ownership_access sitesync.tests.test_saved_reports_ownership_listing sitesync.tests.test_report_owner_fallback_transfer
+Result: Ran 8 tests in 2.359s - OK.

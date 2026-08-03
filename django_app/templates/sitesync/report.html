@@ -529,6 +529,18 @@
             .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
 
+        .report-access-banner {
+            margin: 0.5rem 0 0.9rem;
+            padding: 0.55rem 0.8rem;
+            border: 1px solid #d8e0e8;
+            border-radius: 0.5rem;
+            background: #f8fafc;
+            color: #334155;
+            font-size: 0.86rem;
+            font-weight: 700;
+            display: none;
+        }
+
         @media print {
             .topbar, .hero-actions, .nav-panel { display: none !important; }
             body { background: #fff; }
@@ -561,6 +573,7 @@
             </aside>
 
             <main class="content-panel">
+                <div id="report-access-banner" class="report-access-banner" aria-live="polite"></div>
                 <section id="cover-editor" class="cover-editor" aria-label="Report cover editor">
                     <h3>Cover Page Editor</h3>
                     <div class="cover-editor-grid">

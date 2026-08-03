@@ -25,6 +25,47 @@
   - Allowed: PNG/JPG/SVG
   - Max size: 2 MB
 
+### Report save authorization semantics
+
+- `POST /report/`
+- Required fields: `site_id`, `end_month`, `save_mode`, `comments`
+- Effective write modes: `owner`, `collaborator`, `admin`
+- Read-only callers are denied at submission time with HTTP 403 and no partial write
+- Successful writes update report ownership metadata (`owner_user`, `created_by_user`, `last_modified_by_user`, `last_modified_at`)
+
+### Report ownership workflows
+
+- `POST /reports/<report_id>/ownership/grants/`
+  - Body: `granted_user_id`
+  - Owner-only endpoint
+  - Creates an active collaborator write grant
+
+- `POST /reports/<report_id>/ownership/grants/revoke/`
+  - Body: `granted_user_id`
+  - Owner-only endpoint
+  - Deactivates collaborator write grant and preserves grant history
+
+- `POST /reports/<report_id>/ownership/transfer/`
+  - Body: `new_owner_user_id`, `reason`
+  - Owner-only endpoint
+  - Persists transfer event and keeps previous owner as collaborator by default
+
+- `POST /reports/<report_id>/ownership/unavailability/approve/`
+  - Body: `owner_user_id`, `reason`
+  - Team-lead approval endpoint
+  - Triggers fallback ownership transfer in strict order: team lead, manager, scoped admin
+
+### Saved reports ownership metadata
+
+- `GET /reports/`
+- Supports HTML view and JSON projection (`X-Requested-With: XMLHttpRequest` or `?format=json`)
+- Each row includes ownership/accountability fields:
+  - `owner_name`
+  - `created_at`
+  - `last_edited_by_name`
+  - `last_edited_at`
+  - `access_mode`
+
 ## Manual sync
 
 - `POST /sync/`

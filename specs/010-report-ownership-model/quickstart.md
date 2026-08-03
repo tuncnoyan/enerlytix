@@ -23,7 +23,7 @@ docker compose -f django_app/docker/docker-compose.yml exec -T web python manage
 Run tests in Docker only:
 
 ```powershell
-docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test tests/integration tests/contract tests/unit
+docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test sitesync.tests
 ```
 
 ## Validation Scenarios
@@ -97,3 +97,15 @@ Expected:
 - Data model: [data-model.md](data-model.md)
 - Ownership contract: [contracts/report-ownership.md](contracts/report-ownership.md)
 - Saved reports contract: [contracts/saved-reports-ownership.md](contracts/saved-reports-ownership.md)
+
+## Validation Execution Log
+
+Validated in Docker runtime on 2026-08-03:
+
+1. `docker compose -f django_app/docker/docker-compose.yml up -d --build`
+2. `docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py migrate`
+3. `docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test sitesync.tests.test_report_ownership_access sitesync.tests.test_report_collaborator_grants sitesync.tests.test_report_owner_fallback_transfer sitesync.tests.test_saved_reports_ownership_listing`
+
+Outcome:
+- Migrations applied: `sitesync.0018_report_ownership_model`, `sitesync.0019_site_team_scope`
+- Ownership feature test bundle: `Ran 7 tests ... OK`

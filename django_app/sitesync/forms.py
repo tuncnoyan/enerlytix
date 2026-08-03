@@ -275,3 +275,53 @@ class AuditLogFilterForm(forms.Form):
             self.add_error('end', 'End date must be greater than or equal to start date.')
 
         return cleaned
+
+
+class ReportWriteGrantForm(forms.Form):
+    """Owner-only grant form for report-level write permissions."""
+
+    granted_user = forms.ModelChoiceField(
+        queryset=get_user_model().objects.filter(is_active=True).order_by('username'),
+        required=True,
+    )
+
+
+class ReportWriteRevokeForm(forms.Form):
+    """Owner-only revoke form for report-level write permissions."""
+
+    granted_user = forms.ModelChoiceField(
+        queryset=get_user_model().objects.filter(is_active=True).order_by('username'),
+        required=True,
+    )
+
+
+class ReportOwnershipTransferForm(forms.Form):
+    """Manual transfer form for report ownership."""
+
+    new_owner_user = forms.ModelChoiceField(
+        queryset=get_user_model().objects.filter(is_active=True).order_by('username'),
+        required=True,
+    )
+    reason = forms.CharField(required=True, max_length=500)
+
+    def clean_reason(self):
+        value = (self.cleaned_data.get('reason') or '').strip()
+        if not value:
+            raise forms.ValidationError('A transfer reason is required.')
+        return value
+
+
+class ReportOwnerUnavailabilityApprovalForm(forms.Form):
+    """Team-lead approval form to initiate owner fallback transfer."""
+
+    owner_user = forms.ModelChoiceField(
+        queryset=get_user_model().objects.filter(is_active=True).order_by('username'),
+        required=True,
+    )
+    reason = forms.CharField(required=True, max_length=500)
+
+    def clean_reason(self):
+        value = (self.cleaned_data.get('reason') or '').strip()
+        if not value:
+            raise forms.ValidationError('An approval reason is required.')
+        return value

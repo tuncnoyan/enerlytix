@@ -16,9 +16,9 @@
             color: #1f2937;
         }
         .page {
-            max-width: 1100px;
+            max-width: 1600px;
             margin: 0 auto;
-            padding: 1rem;
+            padding: 1rem 1.25rem;
         }
         .panel {
             background: #ffffff;
@@ -52,6 +52,19 @@
         }
         .status-draft { background: #dbeafe; color: #1e3a8a; }
         .status-final { background: #dcfce7; color: #166534; }
+        .access-pill {
+            display: inline-block;
+            border-radius: 999px;
+            padding: 0.18rem 0.55rem;
+            font-size: 0.74rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        .access-owner { background: #d1fae5; color: #065f46; }
+        .access-collaborator { background: #ede9fe; color: #5b21b6; }
+        .access-admin { background: #fee2e2; color: #991b1b; }
+        .access-read-only { background: #e2e8f0; color: #334155; }
         .open-link {
             color: #0369a1;
             font-weight: 700;
@@ -70,6 +83,9 @@
         <div class="panel">
             <h1>Saved Reports</h1>
             <p>Browse draft and final monthly reports by site and reporting month.</p>
+            {% if show_empty_state %}
+                {% include 'sitesync/reports_empty_state.html' %}
+            {% else %}
             <div id="saved-reports-empty" class="empty" style="display:none;">No saved reports found.</div>
             <table id="saved-reports-table" aria-live="polite">
                 <thead>
@@ -77,15 +93,22 @@
                         <th>Site</th>
                         <th>Reporting Month</th>
                         <th>Status</th>
+                        <th>Owner</th>
+                        <th>Created At</th>
+                        <th>Last Edited By</th>
+                        <th>Last Edited At</th>
+                        <th>Access</th>
                         <th>Updated</th>
                         <th>Open</th>
                     </tr>
                 </thead>
                 <tbody id="saved-reports-body"></tbody>
             </table>
+            {% endif %}
         </div>
     </div>
 
+    {% if not show_empty_state %}
     <script>
         window.ENERLYTIX_SAVED_REPORTS_CONTEXT = {
             reports: {{ reports_json|safe }},
@@ -93,5 +116,6 @@
         };
     </script>
     <script src="{% static 'sitesync/js/saved_reports.js' %}"></script>
+    {% endif %}
 </body>
 </html>

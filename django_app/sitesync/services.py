@@ -31,6 +31,9 @@ from .models import (
     MonthlyReport,
     MonthlyReportVersion,
     ReportComment,
+    ReportWriteGrant,
+    ReportOwnershipUnavailabilityApproval,
+    ReportOwnershipTransferEvent,
 )
 
 logger = logging.getLogger(__name__)
@@ -78,6 +81,10 @@ AUDIT_ACTION_ADMIN_DELETE_USER = 'ADMIN_DELETE_USER'
 AUDIT_ACTION_ADMIN_UPDATE_USERNAME = 'ADMIN_UPDATE_USERNAME'
 AUDIT_ACTION_ADMIN_SYNC_TRIGGER = 'ADMIN_SYNC_TRIGGER'
 AUDIT_ACTION_ACCESS_DENIED = 'ACCESS_DENIED'
+AUDIT_ACTION_REPORT_GRANT_WRITE = 'REPORT_GRANT_WRITE'
+AUDIT_ACTION_REPORT_REVOKE_WRITE = 'REPORT_REVOKE_WRITE'
+AUDIT_ACTION_REPORT_TRANSFER_OWNERSHIP = 'REPORT_TRANSFER_OWNERSHIP'
+AUDIT_ACTION_REPORT_APPROVE_UNAVAILABLE_OWNER = 'REPORT_APPROVE_UNAVAILABLE_OWNER'
 
 
 def create_audit_log_entry(
@@ -1236,13 +1243,30 @@ def import_capacity_upload(uploaded_file) -> Dict:
         return _build_capacity_upload_result(run)
 
 
-def get_or_create_monthly_report(site: Site, reporting_month: str) -> MonthlyReport:
+def get_or_create_monthly_report(site: Site, reporting_month: str, actor_user=None) -> MonthlyReport:
     """Return the unique monthly report identity for site + reporting month."""
+    defaults = {'current_status': MonthlyReport.STATUS_DRAFT}
+    if actor_user is not None:
+        defaults['owner_user'] = actor_user
+        defaults['created_by_user'] = actor_user
+        defaults['last_modified_by_user'] = actor_user
+        defaults['last_modified_at'] = dj_timezone.now()
+
     report, _ = MonthlyReport.objects.get_or_create(
         site=site,
         reporting_month=reporting_month,
-        defaults={'current_status': MonthlyReport.STATUS_DRAFT},
+        defaults=defaults,
     )
+
+    if report.owner_user_id is None and actor_user is not None:
+        report.owner_user = actor_user
+        if report.created_by_user_id is None:
+            report.created_by_user = actor_user
+        if report.last_modified_by_user_id is None:
+            report.last_modified_by_user = actor_user
+            report.last_modified_at = dj_timezone.now()
+        report.save(update_fields=['owner_user', 'created_by_user', 'last_modified_by_user', 'last_modified_at', 'updated_at'])
+
     return report
 
 
@@ -1256,6 +1280,7 @@ def create_report_version(
     version_kind: str,
     comments: Optional[Dict[str, str]] = None,
     derived_from_version: Optional[MonthlyReportVersion] = None,
+    actor_user=None,
 ) -> MonthlyReportVersion:
     """Create an immutable report version and update report pointers."""
     version = MonthlyReportVersion.objects.create(
@@ -1278,8 +1303,227 @@ def create_report_version(
         report.current_final_version = version
     else:
         report.current_status = MonthlyReport.STATUS_DRAFT
-    report.save(update_fields=['current_version', 'current_final_version', 'current_status', 'updated_at'])
+
+    if actor_user is not None:
+        if report.owner_user_id is None:
+            report.owner_user = actor_user
+        if report.created_by_user_id is None:
+            report.created_by_user = actor_user
+        report.last_modified_by_user = actor_user
+    report.last_modified_at = dj_timezone.now()
+
+    report.save(
+        update_fields=[
+            'current_version',
+            'current_final_version',
+            'current_status',
+            'owner_user',
+            'created_by_user',
+            'last_modified_by_user',
+            'last_modified_at',
+            'updated_at',
+        ]
+    )
     return version
+
+
+def get_report_write_grant(report: MonthlyReport, user) -> Optional[ReportWriteGrant]:
+    """Return active write grant for the report and user if present."""
+    if not user or not getattr(user, 'is_authenticated', False):
+        return None
+    return ReportWriteGrant.objects.filter(report=report, granted_user=user, is_active=True).first()
+
+
+def get_report_access_mode(report: MonthlyReport, user) -> str:
+    """Return one of owner, collaborator, admin, or read_only for report access."""
+    if not user or not getattr(user, 'is_authenticated', False):
+        return 'read_only'
+    if report.owner_user_id == user.id:
+        return 'owner'
+    if get_report_write_grant(report, user) is not None:
+        return 'collaborator'
+    if user.is_staff or user.is_superuser:
+        return 'admin'
+    return 'read_only'
+
+
+def user_can_write_report(report: MonthlyReport, user) -> bool:
+    """Return True if user is authorized to edit report content."""
+    return get_report_access_mode(report, user) in {'owner', 'collaborator', 'admin'}
+
+
+def grant_report_write_access(*, report: MonthlyReport, granted_user, granted_by) -> ReportWriteGrant:
+    """Grant report write access to a named user; owner-only operation."""
+    if report.owner_user_id != getattr(granted_by, 'id', None):
+        raise PermissionError('Only the report owner can grant write access')
+    if getattr(granted_user, 'id', None) == report.owner_user_id:
+        raise ValueError('Owner already has write access')
+
+    existing = ReportWriteGrant.objects.filter(report=report, granted_user=granted_user, is_active=True).first()
+    if existing:
+        raise ValueError('Write access already granted to this user')
+
+    return ReportWriteGrant.objects.create(
+        report=report,
+        granted_user=granted_user,
+        granted_by=granted_by,
+        is_active=True,
+    )
+
+
+def revoke_report_write_access(*, report: MonthlyReport, granted_user, revoked_by) -> Optional[ReportWriteGrant]:
+    """Revoke active write access for a named user; owner-only operation."""
+    if report.owner_user_id != getattr(revoked_by, 'id', None):
+        raise PermissionError('Only the report owner can revoke write access')
+
+    grant = ReportWriteGrant.objects.filter(report=report, granted_user=granted_user, is_active=True).first()
+    if not grant:
+        return None
+
+    grant.is_active = False
+    grant.revoked_by = revoked_by
+    grant.revoked_at = dj_timezone.now()
+    grant.save(update_fields=['is_active', 'revoked_by', 'revoked_at'])
+    return grant
+
+
+def _is_user_assigned_to_scope(user, *, site: Site) -> bool:
+    """Return True when user is in the same site/team scope or has platform admin status."""
+    if user.is_staff or user.is_superuser:
+        return True
+    from .models import UserTeamAssignment
+
+    if site.team_id is None:
+        return False
+
+    if user.id in {site.team.team_lead_id, site.team.manager_id}:
+        return True
+
+    team_ids = {site.team_id}
+    for sub_team in site.team.get_sub_teams():
+        team_ids.add(sub_team.id)
+    for parent_team in site.team.get_parent_teams():
+        team_ids.add(parent_team.id)
+
+    return UserTeamAssignment.objects.filter(user=user, team_id__in=team_ids).exists()
+
+
+def _fallback_candidates_for_report(report: MonthlyReport) -> List:
+    """Build ordered fallback candidates: team lead, manager, then scoped admin."""
+    site = report.site
+    if site.team_id is None:
+        return []
+
+    candidates = []
+    if site.team_id:
+        if site.team.team_lead and site.team.team_lead.is_active:
+            candidates.append(site.team.team_lead)
+        if site.team.manager and site.team.manager.is_active and site.team.manager_id != getattr(site.team.team_lead, 'id', None):
+            candidates.append(site.team.manager)
+
+    from .models import RoleAssignment, UserTeamAssignment
+    scoped_admin_ids = set()
+    if site.team_id:
+        team_ids = {site.team_id}
+        team_ids.update([team.id for team in site.team.get_sub_teams()])
+        team_ids.update([team.id for team in site.team.get_parent_teams()])
+        scoped_admin_ids.update(
+            UserTeamAssignment.objects.filter(team_id__in=team_ids).values_list('user_id', flat=True)
+        )
+
+    from django.contrib.auth import get_user_model
+    UserModel = get_user_model()
+
+    role_admin_ids = set(
+        RoleAssignment.objects.filter(role_name='admin').values_list('user_id', flat=True)
+    )
+    if scoped_admin_ids:
+        role_admin_ids = role_admin_ids.intersection(scoped_admin_ids)
+    for user in UserModel.objects.filter(id__in=role_admin_ids, is_active=True).order_by('id'):
+        if user.id not in {candidate.id for candidate in candidates}:
+            candidates.append(user)
+
+    return candidates
+
+
+def transfer_report_ownership(
+    *,
+    report: MonthlyReport,
+    new_owner,
+    transfer_mode: str,
+    transfer_reason: str = '',
+    approval_record: Optional[ReportOwnershipUnavailabilityApproval] = None,
+    executed_by=None,
+) -> ReportOwnershipTransferEvent:
+    """Transfer report ownership and persist transfer event."""
+    previous_owner = report.owner_user
+    if previous_owner and previous_owner.id == new_owner.id:
+        raise ValueError('new owner must be different from current owner')
+
+    report.owner_user = new_owner
+    report.last_modified_by_user = executed_by or new_owner
+    report.last_modified_at = dj_timezone.now()
+    report.save(update_fields=['owner_user', 'last_modified_by_user', 'last_modified_at', 'updated_at'])
+
+    if previous_owner:
+        ReportWriteGrant.objects.get_or_create(
+            report=report,
+            granted_user=previous_owner,
+            is_active=True,
+            defaults={'granted_by': new_owner},
+        )
+
+    return ReportOwnershipTransferEvent.objects.create(
+        report=report,
+        from_owner=previous_owner,
+        to_owner=new_owner,
+        transfer_mode=transfer_mode,
+        transfer_reason=transfer_reason or '',
+        approval_record=approval_record,
+        executed_by=executed_by,
+    )
+
+
+def approve_owner_unavailability_and_transfer(*, report: MonthlyReport, owner_user, approved_by, reason: str):
+    """Approve owner unavailability and execute deterministic fallback transfer."""
+    from .models import has_user_role
+
+    if not reason.strip():
+        raise ValueError('approval reason is required')
+    if report.owner_user_id != owner_user.id:
+        raise ValueError('owner_user must match report owner')
+    if not has_user_role(approved_by, 'team_lead') and approved_by.id != getattr(report.site.team, 'team_lead_id', None):
+        raise PermissionError('team lead approval is required')
+    if report.site.team_id is None:
+        raise LookupError('Fallback transfer requires site team scope to be configured')
+
+    approval = ReportOwnershipUnavailabilityApproval.objects.create(
+        report=report,
+        owner_user=owner_user,
+        approved_by=approved_by,
+        approval_reason=reason.strip(),
+        status=ReportOwnershipUnavailabilityApproval.STATUS_APPROVED,
+    )
+
+    for candidate in _fallback_candidates_for_report(report):
+        if candidate.id == owner_user.id:
+            continue
+        if not candidate.is_active:
+            continue
+        if not _is_user_assigned_to_scope(candidate, site=report.site):
+            continue
+
+        transfer_event = transfer_report_ownership(
+            report=report,
+            new_owner=candidate,
+            transfer_mode=ReportOwnershipTransferEvent.MODE_AUTO_FALLBACK,
+            transfer_reason=f'Fallback transfer after team-lead approval: {reason.strip()}',
+            approval_record=approval,
+            executed_by=approved_by,
+        )
+        return approval, transfer_event
+
+    raise LookupError('No eligible fallback ownership candidate found in required order')
 
 
 def get_previous_month_final_version(site: Site, reporting_month: str) -> Optional[MonthlyReportVersion]:
@@ -1870,17 +2114,11 @@ def get_accessible_reports(user):
         QuerySet: Filtered MonthlyReport objects
     """
     from django.db.models import Q
-    from .models import UserTeamAssignment, RoleAssignment, Team
+    from .models import RoleAssignment, UserTeamAssignment, Team
     
     # Admins see all reports
     if user.is_staff or user.is_superuser:
         return MonthlyReport.objects.all()
-    
-    # Get user's roles
-    roles = RoleAssignment.objects.filter(
-        user=user
-    ).values_list('role_name', flat=True)
-    role_list = list(roles)
     
     # Build list of accessible teams
     accessible_team_ids = set()
@@ -1890,38 +2128,49 @@ def get_accessible_reports(user):
         user=user
     ).values_list('team_id', flat=True)
     accessible_team_ids.update(user_teams)
+
+    # Role-assignment based hierarchical expansion from assigned teams.
+    role_names = set(
+        RoleAssignment.objects.filter(user=user).values_list('role_name', flat=True)
+    )
+    if role_names.intersection({'manager', 'team_lead'}):
+        for team_id in user_teams:
+            team = Team.objects.filter(id=team_id).first()
+            if not team:
+                continue
+            accessible_team_ids.update([sub.id for sub in team.get_sub_teams()])
     
     # 2. Teams where user is the manager (includes all sub-teams)
-    if 'manager' in role_list:
-        managed_teams = Team.objects.filter(
-            manager=user
-        ).values_list('id', flat=True)
-        for team_id in managed_teams:
-            team = Team.objects.get(id=team_id)
-            accessible_team_ids.add(team_id)
-            # Add all sub-teams
-            sub_teams = team.get_sub_teams()
-            accessible_team_ids.update([t.id for t in sub_teams])
-    
-    # 3. Teams where user is the team lead
-    if 'team_lead' in role_list:
-        led_teams = Team.objects.filter(
-            team_lead=user
-        ).values_list('id', flat=True)
-        for team_id in led_teams:
-            team = Team.objects.get(id=team_id)
-            accessible_team_ids.add(team_id)
-            # Add relevant sub-teams
-            sub_teams = team.get_sub_teams()
-            accessible_team_ids.update([t.id for t in sub_teams])
+    for team in Team.objects.filter(manager=user):
+        accessible_team_ids.add(team.id)
+        accessible_team_ids.update([t.id for t in team.get_sub_teams()])
+
+    # 3. Teams where user is the team lead (includes relevant sub-teams)
+    for team in Team.objects.filter(team_lead=user):
+        accessible_team_ids.add(team.id)
+        accessible_team_ids.update([t.id for t in team.get_sub_teams()])
     
     # If no accessible teams, return empty QuerySet
     if not accessible_team_ids:
         return MonthlyReport.objects.none()
     
-    # TODO: When Site.team is added, filter reports by accessible teams
-    # For now, return all reports if user has any team assignment
-    return MonthlyReport.objects.all()
+    # Team-scoped visibility plus constrained legacy fallback for null-team records.
+    # Legacy records remain visible only to directly authorized users.
+    return MonthlyReport.objects.filter(
+        Q(site__team_id__in=accessible_team_ids)
+        |
+        (
+            Q(site__team_id__isnull=True)
+            &
+            (
+                Q(owner_user=user)
+                | Q(created_by_user=user)
+                | Q(write_grants__granted_user=user, write_grants__is_active=True)
+                | Q(owner_user__team_assignments__team_id__in=accessible_team_ids)
+                | Q(created_by_user__team_assignments__team_id__in=accessible_team_ids)
+            )
+        )
+    ).distinct()
 
 
 # ============================================================================

@@ -1,0 +1,111 @@
+from django.contrib.auth import get_user_model
+from django.test import Client, TestCase
+from django.urls import reverse
+from django.utils import timezone
+
+from sitesync.models import MonthlyReport, RoleAssignment, Site, Team, UserTeamAssignment
+from sitesync.services import get_accessible_reports
+
+
+User = get_user_model()
+
+
+class SavedReportsTeamContextTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.owner = User.objects.create_user(username='team_owner', password='pass123456')
+        self.team_lead = User.objects.create_user(username='team_lead_user', password='pass123456')
+        self.unassigned = User.objects.create_user(username='no_team_user', password='pass123456')
+
+        self.team = Team.objects.create(name='Team One', level=1, team_lead=self.team_lead)
+        UserTeamAssignment.objects.create(user=self.owner, team=self.team)
+
+        self.site = Site.objects.create(external_id='team-site-1', name='Team Scoped Site', team=self.team)
+        self.report = MonthlyReport.objects.create(
+            site=self.site,
+            reporting_month='2026-08',
+            owner_user=self.owner,
+            created_by_user=self.owner,
+            last_modified_by_user=self.owner,
+            last_modified_at=timezone.now(),
+        )
+
+    def test_team_lead_without_membership_row_still_has_team_context(self):
+        self.client.force_login(self.team_lead)
+        response = self.client.get(reverse('sitesync:saved_reports'))
+        self.client.logout()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "You haven't been assigned to a team yet")
+
+        visible_ids = set(get_accessible_reports(self.team_lead).values_list('id', flat=True))
+        self.assertIn(self.report.id, visible_ids)
+
+    def test_request_team_assignment_page_renders_for_unassigned_user(self):
+        self.client.force_login(self.unassigned)
+        response = self.client.get(reverse('sitesync:request_team_assignment'))
+        self.client.logout()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Request Team Assignment')
+
+    def test_request_team_assignment_redirects_for_team_lead_context(self):
+        self.client.force_login(self.team_lead)
+        response = self.client.get(reverse('sitesync:request_team_assignment'))
+        self.client.logout()
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse('sitesync:saved_reports'), response.url)
+
+    def test_team_lead_sees_null_team_reports_created_by_team_members(self):
+        member_two = User.objects.create_user(username='team_member_two', password='pass123456')
+        UserTeamAssignment.objects.create(user=member_two, team=self.team)
+
+        null_team_site = Site.objects.create(external_id='team-site-legacy', name='Legacy Site')
+        report_one = MonthlyReport.objects.create(
+            site=null_team_site,
+            reporting_month='2026-06',
+            owner_user=self.owner,
+            created_by_user=self.owner,
+            last_modified_by_user=self.owner,
+            last_modified_at=timezone.now(),
+            current_status=MonthlyReport.STATUS_FINAL,
+        )
+        report_two = MonthlyReport.objects.create(
+            site=null_team_site,
+            reporting_month='2026-07',
+            owner_user=member_two,
+            created_by_user=member_two,
+            last_modified_by_user=member_two,
+            last_modified_at=timezone.now(),
+            current_status=MonthlyReport.STATUS_FINAL,
+        )
+
+        visible_ids = set(get_accessible_reports(self.team_lead).values_list('id', flat=True))
+        self.assertIn(report_one.id, visible_ids)
+        self.assertIn(report_two.id, visible_ids)
+
+    def test_role_assigned_manager_sees_subteam_member_null_team_reports(self):
+        top_manager = User.objects.create_user(username='top_manager_user', password='pass123456')
+        member_user = User.objects.create_user(username='sub_member_user', password='pass123456')
+
+        top_team = Team.objects.create(name='Top Team', level=1)
+        child_team = Team.objects.create(name='Child Team', level=2, parent_team=top_team)
+
+        UserTeamAssignment.objects.create(user=top_manager, team=top_team)
+        UserTeamAssignment.objects.create(user=member_user, team=child_team)
+        RoleAssignment.objects.create(user=top_manager, role_name='manager')
+
+        legacy_site = Site.objects.create(external_id='legacy-mgr-site', name='Legacy Manager Site')
+        subteam_report = MonthlyReport.objects.create(
+            site=legacy_site,
+            reporting_month='2026-08',
+            owner_user=member_user,
+            created_by_user=member_user,
+            last_modified_by_user=member_user,
+            last_modified_at=timezone.now(),
+            current_status=MonthlyReport.STATUS_FINAL,
+        )
+
+        visible_ids = set(get_accessible_reports(top_manager).values_list('id', flat=True))
+        self.assertIn(subteam_report.id, visible_ids)

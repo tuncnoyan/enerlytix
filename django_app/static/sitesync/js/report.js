@@ -319,6 +319,42 @@
 
     function getContext() { return window.ENERLYTIX_REPORT_CONTEXT || {}; }
 
+    function isReportReadOnly() {
+        const mode = String(getContext().accessMode || 'read_only').toLowerCase();
+        return mode !== 'owner' && mode !== 'collaborator' && mode !== 'admin';
+    }
+
+    function setAccessBanner() {
+        const banner = document.getElementById('report-access-banner');
+        if (!banner) {
+            return;
+        }
+
+        const mode = String(getContext().accessMode || 'read_only').toLowerCase();
+        if (mode === 'owner' || mode === 'collaborator' || mode === 'admin') {
+            banner.style.display = 'block';
+            banner.textContent = `Access mode: ${mode.replaceAll('_', ' ')} (editable)`;
+            return;
+        }
+
+        banner.style.display = 'block';
+        banner.textContent = 'Access mode: read only. You can view this report, but cannot save edits.';
+    }
+
+    function applyReadOnlyToCoverEditor() {
+        if (!isReportReadOnly()) {
+            return;
+        }
+        const root = document.getElementById('cover-editor');
+        if (!root) {
+            return;
+        }
+        root.querySelectorAll('input, textarea, button, select').forEach((el) => {
+            el.disabled = true;
+            el.setAttribute('aria-disabled', 'true');
+        });
+    }
+
     (function initializeCommentState() {
         const ctx = getContext();
         const initial = ctx.initialComments || {};
@@ -330,6 +366,10 @@
     }());
 
     async function saveDraftReport() {
+        if (isReportReadOnly()) {
+            window.alert('You have read-only access to this report.');
+            return;
+        }
         const ctx = getContext();
         if (!ctx.siteId || !ctx.endMonth) {
             window.alert('Site and reporting month are required before saving a draft.');
@@ -361,6 +401,10 @@
     }
 
     async function saveFinalReport(confirmFinalEdit = false) {
+        if (isReportReadOnly()) {
+            window.alert('You have read-only access to this report.');
+            return;
+        }
         const ctx = getContext();
         if (!ctx.siteId || !ctx.endMonth) {
             window.alert('Site and reporting month are required before saving final.');
@@ -411,7 +455,13 @@
     }
 
     const saveDraftButton = document.getElementById('save-draft-button');
+    setAccessBanner();
+    applyReadOnlyToCoverEditor();
     if (saveDraftButton) {
+        if (isReportReadOnly()) {
+            saveDraftButton.disabled = true;
+            saveDraftButton.title = 'Read-only access';
+        }
         saveDraftButton.addEventListener('click', () => {
             saveDraftReport().catch(() => window.alert('Unable to save draft report.'));
         });
@@ -419,6 +469,10 @@
 
     const saveFinalButton = document.getElementById('save-final-button');
     if (saveFinalButton) {
+        if (isReportReadOnly()) {
+            saveFinalButton.disabled = true;
+            saveFinalButton.title = 'Read-only access';
+        }
         saveFinalButton.addEventListener('click', () => {
             saveFinalReport(false).catch(() => window.alert('Unable to save final report.'));
         });
@@ -483,6 +537,11 @@
         root.querySelectorAll('.comment-box').forEach((ta) => {
             const sid = ta.dataset.sectionId;
             if (sid && state.comments.has(sid)) { ta.value = state.comments.get(sid); }
+            if (isReportReadOnly()) {
+                ta.readOnly = true;
+                ta.setAttribute('aria-readonly', 'true');
+                ta.title = 'Read-only comment';
+            }
             ta.addEventListener('input', () => state.comments.set(sid, ta.value));
         });
     }

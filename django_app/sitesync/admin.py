@@ -11,6 +11,10 @@ from .models import (
     HalfHourlyConsumption,
     MonthlyConsumption,
     InvoiceCost,
+    MonthlyReport,
+    ReportWriteGrant,
+    ReportOwnershipUnavailabilityApproval,
+    ReportOwnershipTransferEvent,
 )
 
 
@@ -133,3 +137,48 @@ class InvoiceCostAdmin(admin.ModelAdmin):
     search_fields = ('supply__name', 'supply__external_id', 'canonical_month_key')
     list_filter = ('canonical_month_key', 'created_at', 'updated_at')
     autocomplete_fields = ('import_run', 'supply')
+
+
+@admin.register(MonthlyReport)
+class MonthlyReportAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'site',
+        'reporting_month',
+        'current_status',
+        'owner_user',
+        'last_modified_by_user',
+        'last_modified_at',
+        'updated_at',
+    )
+    list_filter = ('current_status', 'reporting_month', 'owner_user')
+    search_fields = ('site__name', 'reporting_month', 'owner_user__username')
+
+
+@admin.register(ReportWriteGrant)
+class ReportWriteGrantAdmin(admin.ModelAdmin):
+    list_display = ('id', 'report', 'granted_user', 'granted_by', 'is_active', 'granted_at', 'revoked_at')
+    list_filter = ('is_active', 'granted_at')
+    search_fields = ('report__site__name', 'granted_user__username', 'granted_by__username')
+
+
+@admin.register(ReportOwnershipUnavailabilityApproval)
+class ReportOwnershipUnavailabilityApprovalAdmin(admin.ModelAdmin):
+    list_display = ('id', 'report', 'owner_user', 'approved_by', 'status', 'approved_at')
+    list_filter = ('status', 'approved_at')
+    search_fields = ('report__site__name', 'owner_user__username', 'approved_by__username')
+
+
+@admin.register(ReportOwnershipTransferEvent)
+class ReportOwnershipTransferEventAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'report',
+        'from_owner',
+        'to_owner',
+        'transfer_mode',
+        'transferred_at',
+        'executed_by',
+    )
+    list_filter = ('transfer_mode', 'transferred_at')
+    search_fields = ('report__site__name', 'from_owner__username', 'to_owner__username')

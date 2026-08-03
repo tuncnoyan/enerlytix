@@ -42,6 +42,14 @@ class Site(models.Model):
         null=True,
         help_text="Original Etainabl floor area unit (sqm or sqft)"
     )
+    team = models.ForeignKey(
+        'Team',
+        on_delete=models.SET_NULL,
+        related_name='sites',
+        null=True,
+        blank=True,
+        help_text='Owning team used for report access scope and ownership fallback checks',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -498,6 +506,28 @@ class MonthlyReport(models.Model):
         null=True,
         blank=True,
     )
+    owner_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='owned_monthly_reports',
+        null=True,
+        blank=True,
+    )
+    created_by_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='created_monthly_reports',
+        null=True,
+        blank=True,
+    )
+    last_modified_by_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='last_modified_monthly_reports',
+        null=True,
+        blank=True,
+    )
+    last_modified_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -512,6 +542,8 @@ class MonthlyReport(models.Model):
         indexes = [
             models.Index(fields=['site', 'reporting_month']),
             models.Index(fields=['current_status']),
+            models.Index(fields=['owner_user']),
+            models.Index(fields=['site', 'owner_user', 'current_status']),
         ]
 
     def __str__(self):
@@ -594,6 +626,143 @@ class ReportComment(models.Model):
 
     def __str__(self):
         return f"ReportComment {self.report_version_id} {self.visual_key}"
+
+
+class ReportWriteGrant(models.Model):
+    """Owner-managed named-user report write delegation."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    report = models.ForeignKey(MonthlyReport, on_delete=models.CASCADE, related_name='write_grants')
+    granted_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='report_write_grants',
+    )
+    granted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='report_write_grants_issued',
+        null=True,
+        blank=True,
+    )
+    granted_at = models.DateTimeField(auto_now_add=True)
+    revoked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='report_write_grants_revoked',
+        null=True,
+        blank=True,
+    )
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['-granted_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['report', 'granted_user'],
+                condition=models.Q(is_active=True),
+                name='uniq_active_report_write_grant',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['report', 'is_active']),
+            models.Index(fields=['granted_user']),
+        ]
+
+    def __str__(self):
+        state = 'active' if self.is_active else 'revoked'
+        return f"ReportWriteGrant {self.report_id} -> {self.granted_user_id} ({state})"
+
+
+class ReportOwnershipUnavailabilityApproval(models.Model):
+    """Approval record that gates automatic fallback ownership transfer."""
+
+    STATUS_APPROVED = 'approved'
+    STATUS_CANCELLED = 'cancelled'
+    STATUS_CHOICES = [
+        (STATUS_APPROVED, 'Approved'),
+        (STATUS_CANCELLED, 'Cancelled'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    report = models.ForeignKey(MonthlyReport, on_delete=models.CASCADE, related_name='unavailability_approvals')
+    owner_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='ownership_unavailability_records',
+    )
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='ownership_unavailability_approvals',
+    )
+    approval_reason = models.TextField()
+    approved_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_APPROVED)
+
+    class Meta:
+        ordering = ['-approved_at']
+        indexes = [
+            models.Index(fields=['report', 'status']),
+            models.Index(fields=['approved_at']),
+        ]
+
+    def __str__(self):
+        return f"OwnershipApproval {self.report_id} ({self.status})"
+
+
+class ReportOwnershipTransferEvent(models.Model):
+    """Auditable ownership transfer event for a monthly report."""
+
+    MODE_AUTO_FALLBACK = 'auto_fallback'
+    MODE_MANUAL_TRANSFER = 'manual_owner_transfer'
+    MODE_CHOICES = [
+        (MODE_AUTO_FALLBACK, 'Auto Fallback'),
+        (MODE_MANUAL_TRANSFER, 'Manual Owner Transfer'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    report = models.ForeignKey(MonthlyReport, on_delete=models.CASCADE, related_name='ownership_transfers')
+    from_owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='ownership_transfers_from',
+        null=True,
+        blank=True,
+    )
+    to_owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='ownership_transfers_to',
+    )
+    transfer_mode = models.CharField(max_length=32, choices=MODE_CHOICES)
+    transfer_reason = models.TextField(blank=True)
+    approval_record = models.ForeignKey(
+        ReportOwnershipUnavailabilityApproval,
+        on_delete=models.SET_NULL,
+        related_name='transfer_events',
+        null=True,
+        blank=True,
+    )
+    transferred_at = models.DateTimeField(auto_now_add=True)
+    executed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='ownership_transfers_executed',
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        ordering = ['-transferred_at']
+        indexes = [
+            models.Index(fields=['report', 'transferred_at']),
+            models.Index(fields=['to_owner', 'transferred_at']),
+        ]
+
+    def __str__(self):
+        return f"OwnershipTransfer {self.report_id} -> {self.to_owner_id}"
 
 class Team(models.Model):
     """

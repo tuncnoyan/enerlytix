@@ -36,10 +36,21 @@ from .models import (
     InvoiceCost,
     MonthlyReport,
     MonthlyReportVersion,
+    ReportWriteGrant,
     Invitation,
     AuditLogEntry,
 )
-from .forms import AccountActionForm, AuditLogFilterForm, CapacityUploadForm, InvitationForm, SettingsForm
+from .forms import (
+    AccountActionForm,
+    AuditLogFilterForm,
+    CapacityUploadForm,
+    InvitationForm,
+    ReportOwnerUnavailabilityApprovalForm,
+    ReportOwnershipTransferForm,
+    ReportWriteGrantForm,
+    ReportWriteRevokeForm,
+    SettingsForm,
+)
 from .config_service import SettingsConfigService
 from .services import EtainaibleSyncService
 from .services import (
@@ -63,9 +74,14 @@ from .services import (
     AUDIT_ACTION_ADMIN_UPDATE_USERNAME,
     AUDIT_ACTION_ADMIN_UPLOAD_CAPACITY,
     AUDIT_ACTION_ADMIN_VIEW_AUDIT_LOG,
+    AUDIT_ACTION_REPORT_APPROVE_UNAVAILABLE_OWNER,
+    AUDIT_ACTION_REPORT_GRANT_WRITE,
     AUDIT_ACTION_REPORT_REPLACE_FINAL,
+    AUDIT_ACTION_REPORT_REVOKE_WRITE,
     AUDIT_ACTION_REPORT_SAVE_DRAFT,
     AUDIT_ACTION_REPORT_SAVE_FINAL,
+    AUDIT_ACTION_REPORT_TRANSFER_OWNERSHIP,
+    approve_owner_unavailability_and_transfer,
     build_report_cover_set,
     carry_forward_comments_from_previous_final,
     check_audit_export_threshold,
@@ -74,7 +90,9 @@ from .services import (
     create_report_version,
     get_filtered_audit_logs,
     get_capacity_lookup_by_meter_codes,
+    get_report_access_mode,
     get_or_create_monthly_report,
+    grant_report_write_access,
     get_consumption_display_records,
     get_previous_month_final_version,
     import_capacity_upload,
@@ -84,6 +102,9 @@ from .services import (
     reporting_month_bounds,
     serialize_audit_entry_for_export,
     shift_months,
+    transfer_report_ownership,
+    user_can_write_report,
+    revoke_report_write_access,
 )
 from .serializers import (
     SiteSerializer,
@@ -392,7 +413,7 @@ def _weekday_weekend_for_supply(supply, end_month, hh_series):
 
 
 
-def _report_editor_context(raw_site_id, raw_end_month, raw_reporting_month, raw_supply_ids):
+def _report_editor_context(raw_site_id, raw_end_month, raw_reporting_month, raw_supply_ids, user=None):
     """Build common context for the report editor view."""
     site_id = (raw_site_id or '').strip()
     supply_ids = (raw_supply_ids or '').strip()
@@ -424,6 +445,13 @@ def _report_editor_context(raw_site_id, raw_end_month, raw_reporting_month, raw_
                     initial_comments[comment.visual_key] = comment.text
                     reference_comment_keys.append(comment.visual_key)
 
+    access_mode = 'read_only'
+    if monthly_report is not None:
+        access_mode = get_report_access_mode(monthly_report, user)
+    elif user is not None and getattr(user, 'is_authenticated', False):
+        # New unsaved report sessions should be editable so the first save can establish ownership.
+        access_mode = 'owner'
+
     report_context = {
         'siteId': site.id if site else site_id,
         'endMonth': end_month,
@@ -431,6 +459,7 @@ def _report_editor_context(raw_site_id, raw_end_month, raw_reporting_month, raw_
         'supplyIds': supply_ids,
         'initialComments': initial_comments,
         'referenceCommentKeys': reference_comment_keys,
+        'accessMode': access_mode,
         'coverDefaults': build_report_cover_set(site.name if site else '', end_month),
     }
 
@@ -440,6 +469,7 @@ def _report_editor_context(raw_site_id, raw_end_month, raw_reporting_month, raw_
         'end_month': end_month,
         'supply_ids': supply_ids,
         'monthly_report': monthly_report,
+        'report_access_mode': access_mode,
         'initial_comments_json': json.dumps(initial_comments),
         'reference_comment_keys_json': json.dumps(reference_comment_keys),
         'report_context': report_context,
@@ -602,7 +632,21 @@ def report_view(request):
             except json.JSONDecodeError:
                 return JsonResponse({'detail': 'comments must be valid JSON object'}, status=400)
 
-        report = get_or_create_monthly_report(site, end_month)
+        report = get_or_create_monthly_report(site, end_month, actor_user=request.user)
+        access_mode = get_report_access_mode(report, request.user)
+        if not user_can_write_report(report, request.user):
+            _log_audit_event(
+                request,
+                action_type=AUDIT_ACTION_ACCESS_DENIED,
+                action_outcome=AuditLogEntry.OUTCOME_DENIED,
+                target_entity_type='report',
+                target_entity_id=str(report.id),
+                target_entity_label=f"{site.name} {end_month}",
+                message='Denied report write without ownership or active grant.',
+                metadata={'site_id': site.id, 'reporting_month': end_month, 'access_mode': access_mode},
+            )
+            return JsonResponse({'detail': 'You do not have write access to this report.'}, status=403)
+
         created_first_version = report.current_version is None
         if save_mode == 'final':
             if report.current_status == MonthlyReport.STATUS_FINAL and not confirm_final_edit:
@@ -633,6 +677,7 @@ def report_view(request):
             version_kind=version_kind,
             comments=comments_payload,
             derived_from_version=report.current_version,
+            actor_user=request.user,
         )
 
         copied_reference_comments = 0
@@ -669,6 +714,7 @@ def report_view(request):
                 'status': report.current_status,
                 'reporting_month': report.reporting_month,
                 'copied_reference_comments': copied_reference_comments,
+                'access_mode': get_report_access_mode(report, request.user),
             })
 
         return redirect(f"{reverse('sitesync:report')}?site_id={site.id}&end_month={end_month}")
@@ -678,6 +724,7 @@ def report_view(request):
         request.GET.get('end_month', ''),
         request.GET.get('reporting_month', ''),
         request.GET.get('supply_ids', ''),
+        user=request.user,
     )
     context['is_admin'] = _user_is_admin(getattr(request, 'user', None))
     return render(request, 'sitesync/report.html', context)
@@ -687,10 +734,14 @@ def report_view(request):
 def saved_reports_view(request):
     """Entry point for the saved reports browser with team-based access scoping."""
     from .services import get_accessible_reports
-    from .models import UserTeamAssignment
+    from .models import Team, UserTeamAssignment
+    from django.db.models import Q
     import json
-    
-    user_has_teams = UserTeamAssignment.objects.filter(user=request.user).exists()
+
+    user_has_teams = (
+        UserTeamAssignment.objects.filter(user=request.user).exists()
+        or Team.objects.filter(Q(manager=request.user) | Q(team_lead=request.user)).exists()
+    )
 
     # show empty state for unassigned authenticated user
     if not user_has_teams and not (request.user.is_staff or request.user.is_superuser):
@@ -704,7 +755,10 @@ def saved_reports_view(request):
     # Authenticated user with teams or admin - get accessible reports
     accessible_reports = get_accessible_reports(request.user)
     
-    user_has_teams = UserTeamAssignment.objects.filter(user=request.user).exists()
+    user_has_teams = (
+        UserTeamAssignment.objects.filter(user=request.user).exists()
+        or Team.objects.filter(Q(manager=request.user) | Q(team_lead=request.user)).exists()
+    )
     
     raw_site_id = (request.GET.get('site_id') or '').strip()
     site_id = None
@@ -719,7 +773,7 @@ def saved_reports_view(request):
         accessible_reports = accessible_reports.filter(site_id=site_id)
     
     # Order reports
-    accessible_reports = accessible_reports.select_related('site').order_by('-reporting_month', 'site__name')
+    accessible_reports = accessible_reports.select_related('site', 'owner_user', 'created_by_user', 'last_modified_by_user').order_by('-reporting_month', 'site__name')
 
     reports_payload = [
         {
@@ -727,8 +781,14 @@ def saved_reports_view(request):
             'site_id': report.site_id,
             'site_name': report.site.name,
             'reporting_month': report.reporting_month,
+            'owner_name': report.owner_user.get_username() if report.owner_user else 'Unassigned',
+            'created_at': report.created_at.isoformat() if report.created_at else None,
+            'created_by_name': report.created_by_user.get_username() if report.created_by_user else 'Unknown',
+            'last_edited_by_name': report.last_modified_by_user.get_username() if report.last_modified_by_user else 'Unknown',
+            'last_edited_at': (report.last_modified_at or report.updated_at).isoformat() if (report.last_modified_at or report.updated_at) else None,
             'status': report.current_status,
             'updated_at': report.updated_at.isoformat(),
+            'access_mode': get_report_access_mode(report, request.user),
             'open_url': f"{reverse('sitesync:report')}?site_id={report.site_id}&end_month={report.reporting_month}",
         }
         for report in accessible_reports
@@ -762,6 +822,218 @@ def saved_reports_view(request):
         'show_welcome': show_welcome,
         'welcome_team_name': welcome_team_name,
         'is_admin': _user_is_admin(getattr(request, 'user', None)),
+    })
+
+
+@login_required(login_url='/login/')
+def report_grant_write_access_view(request, report_id):
+    """Owner-only endpoint to grant report write access to a named user."""
+    if request.method != 'POST':
+        return JsonResponse({'detail': 'Method not allowed'}, status=405)
+
+    report = get_object_or_404(MonthlyReport, id=report_id)
+    payload = request.POST.copy()
+    if 'granted_user' not in payload and payload.get('granted_user_id'):
+        payload['granted_user'] = payload.get('granted_user_id')
+
+    form = ReportWriteGrantForm(payload)
+    if not form.is_valid():
+        return JsonResponse({'errors': form.errors}, status=400)
+
+    granted_user = form.cleaned_data['granted_user']
+    try:
+        grant = grant_report_write_access(report=report, granted_user=granted_user, granted_by=request.user)
+    except PermissionError as exc:
+        _log_audit_event(
+            request,
+            action_type=AUDIT_ACTION_ACCESS_DENIED,
+            action_outcome=AuditLogEntry.OUTCOME_DENIED,
+            target_entity_type='report',
+            target_entity_id=str(report.id),
+            target_entity_label=f"{report.site.name} {report.reporting_month}",
+            message='Denied report write grant attempt by non-owner.',
+            metadata={'granted_user_id': granted_user.id},
+        )
+        return JsonResponse({'detail': str(exc)}, status=403)
+    except ValueError as exc:
+        return JsonResponse({'detail': str(exc)}, status=400)
+
+    _log_audit_event(
+        request,
+        action_type=AUDIT_ACTION_REPORT_GRANT_WRITE,
+        action_outcome=AuditLogEntry.OUTCOME_SUCCESS,
+        target_entity_type='report_write_grant',
+        target_entity_id=str(grant.id),
+        target_entity_label=f"{report.site.name} {report.reporting_month}",
+        message=f"Granted report write access to {granted_user.get_username()}.",
+        metadata={'report_id': str(report.id), 'granted_user_id': granted_user.id},
+    )
+
+    return JsonResponse({'success': True, 'grant_id': str(grant.id), 'granted_user': granted_user.get_username()})
+
+
+@login_required(login_url='/login/')
+def report_revoke_write_access_view(request, report_id):
+    """Owner-only endpoint to revoke report write access from a named user."""
+    if request.method != 'POST':
+        return JsonResponse({'detail': 'Method not allowed'}, status=405)
+
+    report = get_object_or_404(MonthlyReport, id=report_id)
+    payload = request.POST.copy()
+    if 'granted_user' not in payload and payload.get('granted_user_id'):
+        payload['granted_user'] = payload.get('granted_user_id')
+
+    form = ReportWriteRevokeForm(payload)
+    if not form.is_valid():
+        return JsonResponse({'errors': form.errors}, status=400)
+
+    granted_user = form.cleaned_data['granted_user']
+    try:
+        grant = revoke_report_write_access(report=report, granted_user=granted_user, revoked_by=request.user)
+    except PermissionError as exc:
+        _log_audit_event(
+            request,
+            action_type=AUDIT_ACTION_ACCESS_DENIED,
+            action_outcome=AuditLogEntry.OUTCOME_DENIED,
+            target_entity_type='report',
+            target_entity_id=str(report.id),
+            target_entity_label=f"{report.site.name} {report.reporting_month}",
+            message='Denied report write revoke attempt by non-owner.',
+            metadata={'granted_user_id': granted_user.id},
+        )
+        return JsonResponse({'detail': str(exc)}, status=403)
+
+    if grant is None:
+        return JsonResponse({'detail': 'No active write grant for this user'}, status=404)
+
+    _log_audit_event(
+        request,
+        action_type=AUDIT_ACTION_REPORT_REVOKE_WRITE,
+        action_outcome=AuditLogEntry.OUTCOME_SUCCESS,
+        target_entity_type='report_write_grant',
+        target_entity_id=str(grant.id),
+        target_entity_label=f"{report.site.name} {report.reporting_month}",
+        message=f"Revoked report write access from {granted_user.get_username()}.",
+        metadata={'report_id': str(report.id), 'granted_user_id': granted_user.id},
+    )
+
+    return JsonResponse({'success': True, 'grant_id': str(grant.id), 'revoked_user': granted_user.get_username()})
+
+
+@login_required(login_url='/login/')
+def report_transfer_ownership_view(request, report_id):
+    """Owner-only endpoint to manually transfer report ownership."""
+    if request.method != 'POST':
+        return JsonResponse({'detail': 'Method not allowed'}, status=405)
+
+    report = get_object_or_404(MonthlyReport, id=report_id)
+    payload = request.POST.copy()
+    if 'new_owner_user' not in payload and payload.get('new_owner_user_id'):
+        payload['new_owner_user'] = payload.get('new_owner_user_id')
+
+    form = ReportOwnershipTransferForm(payload)
+    if not form.is_valid():
+        return JsonResponse({'errors': form.errors}, status=400)
+
+    if report.owner_user_id != request.user.id:
+        _log_audit_event(
+            request,
+            action_type=AUDIT_ACTION_ACCESS_DENIED,
+            action_outcome=AuditLogEntry.OUTCOME_DENIED,
+            target_entity_type='report',
+            target_entity_id=str(report.id),
+            target_entity_label=f"{report.site.name} {report.reporting_month}",
+            message='Denied ownership transfer by non-owner.',
+        )
+        return JsonResponse({'detail': 'Only owner can transfer report ownership'}, status=403)
+
+    new_owner = form.cleaned_data['new_owner_user']
+    reason = form.cleaned_data['reason']
+    try:
+        event = transfer_report_ownership(
+            report=report,
+            new_owner=new_owner,
+            transfer_mode='manual_owner_transfer',
+            transfer_reason=reason,
+            executed_by=request.user,
+        )
+    except ValueError as exc:
+        return JsonResponse({'detail': str(exc)}, status=400)
+
+    _log_audit_event(
+        request,
+        action_type=AUDIT_ACTION_REPORT_TRANSFER_OWNERSHIP,
+        action_outcome=AuditLogEntry.OUTCOME_SUCCESS,
+        target_entity_type='report_ownership_transfer',
+        target_entity_id=str(event.id),
+        target_entity_label=f"{report.site.name} {report.reporting_month}",
+        message=f"Transferred report ownership to {new_owner.get_username()}.",
+        metadata={'report_id': str(report.id), 'new_owner_user_id': new_owner.id, 'mode': 'manual_owner_transfer'},
+    )
+
+    return JsonResponse({'success': True, 'transfer_event_id': str(event.id), 'new_owner': new_owner.get_username()})
+
+
+@login_required(login_url='/login/')
+def report_approve_unavailable_owner_view(request, report_id):
+    """Team-lead approval endpoint to trigger fallback ownership transfer."""
+    if request.method != 'POST':
+        return JsonResponse({'detail': 'Method not allowed'}, status=405)
+
+    report = get_object_or_404(MonthlyReport, id=report_id)
+    payload = request.POST.copy()
+    if 'owner_user' not in payload and payload.get('owner_user_id'):
+        payload['owner_user'] = payload.get('owner_user_id')
+
+    form = ReportOwnerUnavailabilityApprovalForm(payload)
+    if not form.is_valid():
+        return JsonResponse({'errors': form.errors}, status=400)
+
+    owner_user = form.cleaned_data['owner_user']
+    reason = form.cleaned_data['reason']
+
+    try:
+        approval, transfer_event = approve_owner_unavailability_and_transfer(
+            report=report,
+            owner_user=owner_user,
+            approved_by=request.user,
+            reason=reason,
+        )
+    except PermissionError as exc:
+        _log_audit_event(
+            request,
+            action_type=AUDIT_ACTION_ACCESS_DENIED,
+            action_outcome=AuditLogEntry.OUTCOME_DENIED,
+            target_entity_type='report',
+            target_entity_id=str(report.id),
+            target_entity_label=f"{report.site.name} {report.reporting_month}",
+            message='Denied unavailable-owner approval attempt.',
+            metadata={'owner_user_id': owner_user.id},
+        )
+        return JsonResponse({'detail': str(exc)}, status=403)
+    except (ValueError, LookupError) as exc:
+        return JsonResponse({'detail': str(exc)}, status=400)
+
+    _log_audit_event(
+        request,
+        action_type=AUDIT_ACTION_REPORT_APPROVE_UNAVAILABLE_OWNER,
+        action_outcome=AuditLogEntry.OUTCOME_SUCCESS,
+        target_entity_type='report_ownership_transfer',
+        target_entity_id=str(transfer_event.id),
+        target_entity_label=f"{report.site.name} {report.reporting_month}",
+        message='Approved owner unavailability and executed fallback transfer.',
+        metadata={
+            'report_id': str(report.id),
+            'approval_id': str(approval.id),
+            'new_owner_user_id': transfer_event.to_owner_id,
+        },
+    )
+
+    return JsonResponse({
+        'success': True,
+        'approval_id': str(approval.id),
+        'transfer_event_id': str(transfer_event.id),
+        'new_owner_user_id': transfer_event.to_owner_id,
     })
 
 
@@ -2301,13 +2573,18 @@ def request_team_assignment_view(request):
     GET: Renders a form for users to provide reason/message
     POST: Creates a request and notifies administrators
     """
-    from .models import UserTeamAssignment
+    from .models import Team, UserTeamAssignment
+    from django.db.models import Q
     import logging
     
     logger = logging.getLogger(__name__)
     
     # Check if user already has team assignments
-    if UserTeamAssignment.objects.filter(user=request.user).exists():
+    has_team_context = (
+        UserTeamAssignment.objects.filter(user=request.user).exists()
+        or Team.objects.filter(Q(manager=request.user) | Q(team_lead=request.user)).exists()
+    )
+    if has_team_context:
         messages.info(request, 'You are already assigned to a team.')
         return redirect('sitesync:saved_reports')
     

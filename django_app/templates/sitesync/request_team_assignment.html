@@ -1,49 +1,107 @@
-{% extends "sitesync/base.html" %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Request Team Assignment | Enerlytix</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="{% static 'sitesync/cxg-base.css' %}" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            background: #f4f7fa;
+            color: #1f2937;
+        }
+        .page {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 1rem 1.25rem;
+        }
+        .panel {
+            background: #ffffff;
+            border: 1px solid #d6dee6;
+            border-radius: 0.6rem;
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+            padding: 1.15rem;
+        }
+        .field-label {
+            display: block;
+            margin-bottom: 0.35rem;
+            font-weight: 700;
+            color: #334155;
+        }
+        .field-input {
+            width: 100%;
+            min-height: 8.2rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 0.45rem;
+            padding: 0.7rem 0.75rem;
+            font-family: inherit;
+            font-size: 0.95rem;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+        .field-help {
+            margin-top: 0.35rem;
+            color: #64748b;
+            font-size: 0.83rem;
+        }
+        .actions {
+            display: flex;
+            gap: 0.7rem;
+            margin-top: 0.95rem;
+            flex-wrap: wrap;
+        }
+        .button-primary,
+        .button-secondary {
+            border: 0;
+            border-radius: 0.45rem;
+            padding: 0.55rem 0.9rem;
+            font-weight: 700;
+            text-decoration: none;
+            display: inline-block;
+            cursor: pointer;
+        }
+        .button-primary {
+            background: #2563eb;
+            color: #fff;
+        }
+        .button-secondary {
+            background: #e2e8f0;
+            color: #334155;
+        }
+    </style>
+</head>
+<body>
+    {% include 'sitesync/_topbar.html' with active_page='reports' %}
 
-{% block title %}Request Team Assignment{% endblock %}
+    <div class="page">
+        <div class="panel">
+            <h1>Request Team Assignment</h1>
+            <p>You do not currently have team access. Submit a short request and an administrator can assign you to the right team.</p>
 
-{% block content %}
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0"><i class="bi bi-hand-thumbs-up"></i> Request Team Assignment</h4>
+            <form method="post">
+                {% csrf_token %}
+                <label class="field-label" for="message">Message (optional)</label>
+                <textarea
+                    class="field-input"
+                    id="message"
+                    name="message"
+                    placeholder="Example: I need access to Team One saved reports for monthly reporting support."
+                ></textarea>
+                <div class="field-help">Include which team and what you need access for to speed up approval.</div>
+
+                <div class="actions">
+                    <button type="submit" class="button-primary">Submit request</button>
+                    <a href="{% url 'sitesync:saved_reports' %}" class="button-secondary">Cancel</a>
                 </div>
-                <div class="card-body">
-                    <p>You currently don't have access to any team. Please provide a brief message explaining which team or project you need access to, and an administrator will review your request.</p>
-                    
-                    <form method="post">
-                        {% csrf_token %}
-                        
-                        <div class="mb-3">
-                            <label for="message" class="form-label">Message (Optional)</label>
-                            <textarea 
-                                class="form-control" 
-                                id="message" 
-                                name="message" 
-                                rows="5" 
-                                placeholder="e.g., I need access to the Sales division reports for Q1 analysis..."
-                            ></textarea>
-                            <small class="form-text text-muted">Please be as specific as possible to help us assign you to the right team.</small>
-                        </div>
-                        
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-send"></i> Submit Request
-                            </button>
-                            <a href="{% url 'sitesync:saved_reports' %}" class="btn btn-outline-secondary">Cancel</a>
-                        </div>
-                    </form>
-                </div>
-                <div class="card-footer text-muted">
-                    <small>
-                        <strong>Having trouble?</strong> Contact support at 
-                        <a href="mailto:support@enerlytix.com">support@enerlytix.com</a>
-                    </small>
-                </div>
-            </div>
+            </form>
+
+            <p class="field-help" style="margin-top:1rem;">Need help? Contact <a href="mailto:support@enerlytix.com">support@enerlytix.com</a>.</p>
         </div>
     </div>
-</div>
-{% endblock %}
+</body>
+</html>
