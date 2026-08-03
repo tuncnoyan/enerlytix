@@ -15,6 +15,7 @@
 - Q: Who can revoke delegated write access? -> A: Report owner, original grantor, or same-organisation team lead/manager.
 - Q: How are concurrent grant/revoke conflicts resolved? -> A: Last-write-wins by server commit timestamp, with both actions logged.
 - Q: Who can view delegation details? -> A: Any user with read access to the report.
+- Q: What makes a delegate ineligible and when is it enforced? -> A: Ineligible means inactive account or out-of-scope for delegation policy; eligibility is enforced at grant time and rechecked at report-save submission.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -29,7 +30,7 @@ As a report owner, I need to grant and remove write access for teammates so I ca
 **Acceptance Scenarios**:
 
 1. **Given** I own a report and another active user is in my team, **When** I grant that user write access, **Then** that user can edit and save updates to my report.
-2. **Given** I own a report and have granted a same-team user write access, **When** I revoke that access, **Then** that user can no longer save edits to the report.
+2. **Given** I own a report and the report has an active delegated writer, **When** I revoke that access, **Then** that user can no longer save edits to the report.
 3. **Given** I own a report, **When** I attempt to grant write access to a user outside my organisation, **Then** the system rejects the grant and explains the scope restriction.
 
 ---
@@ -71,6 +72,7 @@ As a user working with reports, I need clear visibility of who has delegated wri
 - A report owner attempts to grant access to an inactive account: the request is rejected.
 - Two authorized grantors submit conflicting grant/revoke changes for the same user at nearly the same time: the system applies last-write-wins by server commit timestamp and logs both actions.
 - A delegated writer loses eligibility (for example, account deactivated) before saving changes: save is blocked at submit time.
+- A delegated writer who was eligible at grant time but becomes inactive or out-of-scope before saving changes: save is blocked at submit time.
 - A lead or manager is temporarily acting as report owner and also grants themselves access: system avoids duplicate effective write access records.
 - A report has multiple delegated writers and one is revoked: remaining delegated writers keep access unchanged.
 
@@ -80,16 +82,16 @@ As a user working with reports, I need clear visibility of who has delegated wri
 
 - **FR-001**: The system MUST keep report ownership unchanged when delegated write access is granted or revoked.
 - **FR-002**: The system MUST allow a report owner to grant write access to active users within the same team.
-- **FR-003**: The system MUST allow a report owner to revoke write access that they previously granted.
+- **FR-003**: The system MUST allow the report owner to revoke any active delegated write access on their report.
 - **FR-004**: The system MUST allow team leads to grant write access to any report in their organisation, including granting access to themselves.
 - **FR-005**: The system MUST allow managers to grant write access to any report in their organisation, including granting access to themselves.
 - **FR-006**: The system MUST prevent users without owner, team lead, or manager grant authority from granting or revoking write access.
 - **FR-007**: The system MUST prevent any user from granting or revoking write access for reports outside their organisation scope.
 - **FR-008**: The system MUST enforce write permission checks at the moment a report edit is submitted.
 - **FR-009**: The system MUST store delegation records containing report, delegate user, grantor user, grant timestamp, and active status.
-- **FR-010**: The system MUST allow revocation by the report owner, the original grantor, and same-organisation team leads/managers so delegated write access can be removed without deleting report content.
+- **FR-010**: The system MUST also allow revocation by the original grantor and by same-organisation team leads/managers, so delegated write access can be removed without changing report ownership or deleting report content.
 - **FR-011**: The system MUST expose current active delegated writers and grantor identity to any user who has read access to that report.
-- **FR-012**: The system MUST treat delegated write access as effective until explicitly revoked or the delegate account becomes ineligible.
+- **FR-012**: The system MUST treat delegated write access as effective until explicitly revoked or the delegate becomes ineligible. A delegate is ineligible when the account is inactive or the user is no longer within the required delegation scope; eligibility MUST be checked at grant time and at report-save submission.
 - **FR-013**: The system MUST keep an auditable history of delegation grant and revoke actions for each report.
 - **FR-014**: When concurrent grant and revoke actions target the same delegate/report pair, the system MUST apply last-write-wins using server commit timestamp and preserve both actions in audit history.
 
