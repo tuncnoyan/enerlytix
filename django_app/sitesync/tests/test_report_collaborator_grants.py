@@ -3,7 +3,7 @@ from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from sitesync.models import MonthlyReport, ReportWriteGrant, Site
+from sitesync.models import MonthlyReport, ReportWriteGrant, Site, Team, UserTeamAssignment
 
 
 User = get_user_model()
@@ -14,7 +14,10 @@ class ReportCollaboratorGrantTests(TestCase):
         self.client = Client()
         self.owner = User.objects.create_user(username='owner2', email='owner2@example.com', password='pw123456')
         self.collaborator = User.objects.create_user(username='collab2', email='collab2@example.com', password='pw123456')
-        self.site = Site.objects.create(external_id='site-grant-1', name='Grant Site')
+        self.team = Team.objects.create(name='Grant Team', level=1)
+        self.site = Site.objects.create(external_id='site-grant-1', name='Grant Site', team=self.team)
+        UserTeamAssignment.objects.create(user=self.owner, team=self.team)
+        UserTeamAssignment.objects.create(user=self.collaborator, team=self.team)
         self.report = MonthlyReport.objects.create(
             site=self.site,
             reporting_month='2026-07',

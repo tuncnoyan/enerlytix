@@ -463,6 +463,66 @@
         window.alert('Final report saved.');
     }
 
+    async function updateDelegation(action) {
+        const ctx = getContext();
+        if (!ctx.reportId) {
+            return;
+        }
+
+        const isGrant = action === 'grant';
+        const select = document.getElementById(isGrant ? 'delegation-grant-user' : 'delegation-revoke-user');
+        const feedback = document.getElementById('delegation-feedback');
+        const userId = select ? String(select.value || '').trim() : '';
+        if (!userId) {
+            if (feedback) {
+                feedback.textContent = isGrant ? 'Select a user to grant.' : 'Select a delegate to revoke.';
+            }
+            return;
+        }
+
+        const route = isGrant
+            ? `/reports/${encodeURIComponent(ctx.reportId)}/delegations/grant/`
+            : `/reports/${encodeURIComponent(ctx.reportId)}/delegations/revoke/`;
+
+        const payload = new URLSearchParams();
+        payload.set('granted_user_id', userId);
+
+        const response = await fetch(route, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: payload.toString(),
+        });
+
+        let message = isGrant ? 'Write access granted.' : 'Write access revoked.';
+        try {
+            const body = await response.json();
+            if (body && body.detail) {
+                message = String(body.detail);
+            }
+            if (body && body.errors) {
+                message = JSON.stringify(body.errors);
+            }
+        } catch (_err) {
+            // Keep fallback message.
+        }
+
+        if (!response.ok) {
+            if (feedback) {
+                feedback.textContent = message;
+            }
+            return;
+        }
+
+        if (feedback) {
+            feedback.textContent = message;
+        }
+        window.location.reload();
+    }
+
     function renderEmptyState(message) {
         const el = document.getElementById('report-empty');
         if (el) { el.textContent = message; el.style.display = 'block'; }
@@ -495,6 +555,30 @@
         }
         saveFinalButton.addEventListener('click', () => {
             saveFinalReport(false).catch(() => window.alert('Unable to save final report.'));
+        });
+    }
+
+    const delegationGrantButton = document.getElementById('delegation-grant-button');
+    if (delegationGrantButton) {
+        delegationGrantButton.addEventListener('click', () => {
+            updateDelegation('grant').catch(() => {
+                const feedback = document.getElementById('delegation-feedback');
+                if (feedback) {
+                    feedback.textContent = 'Unable to grant write access right now.';
+                }
+            });
+        });
+    }
+
+    const delegationRevokeButton = document.getElementById('delegation-revoke-button');
+    if (delegationRevokeButton) {
+        delegationRevokeButton.addEventListener('click', () => {
+            updateDelegation('revoke').catch(() => {
+                const feedback = document.getElementById('delegation-feedback');
+                if (feedback) {
+                    feedback.textContent = 'Unable to revoke write access right now.';
+                }
+            });
         });
     }
 

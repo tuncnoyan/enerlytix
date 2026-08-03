@@ -171,6 +171,71 @@
             font-size: 0.86rem;
         }
 
+        .delegation-panel {
+            border: 1px solid var(--cxg-border);
+            border-radius: 0.65rem;
+            background: #f9fbfc;
+            padding: 0.8rem;
+            margin-bottom: 0.9rem;
+        }
+
+        .delegation-panel h3 {
+            margin: 0 0 0.55rem;
+            font-size: 0.9rem;
+        }
+
+        .delegation-list {
+            margin: 0;
+            padding-left: 1.1rem;
+            color: #475569;
+            font-size: 0.84rem;
+            display: grid;
+            gap: 0.25rem;
+        }
+
+        .delegation-empty {
+            margin: 0;
+            color: #64748b;
+            font-size: 0.82rem;
+        }
+
+        .delegation-controls {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(14rem, 1fr));
+            gap: 0.65rem;
+            margin: 0.35rem 0 0.7rem;
+        }
+
+        .delegation-control-row {
+            display: flex;
+            gap: 0.45rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .delegation-select {
+            min-width: 14rem;
+            max-width: 100%;
+            flex: 1 1 auto;
+            border: 1px solid var(--cxg-border);
+            border-radius: 0.45rem;
+            padding: 0.38rem 0.45rem;
+            background: #ffffff;
+            color: #334155;
+        }
+
+        .delegation-feedback {
+            margin: 0.2rem 0 0;
+            font-size: 0.8rem;
+            color: #334155;
+        }
+
+        .delegation-hint {
+            margin: 0.15rem 0 0.55rem;
+            color: #475569;
+            font-size: 0.8rem;
+        }
+
         .cover-editor {
             border: 1px solid var(--cxg-border);
             border-radius: 0.65rem;
@@ -669,6 +734,50 @@
                     </div>
                 </section>
                 <div class="report-meta" id="report-meta"></div>
+                <section class="delegation-panel" aria-label="Delegated writers">
+                    <h3>Active Delegated Writers</h3>
+                    {% if can_manage_delegations and monthly_report %}
+                        {% if delegation_role_hint %}
+                            <p class="delegation-hint">{{ delegation_role_hint }}</p>
+                        {% endif %}
+                        <div class="delegation-controls">
+                            <div>
+                                <label for="delegation-grant-user" class="small-label">Grant write access</label>
+                                <div class="delegation-control-row">
+                                    <select id="delegation-grant-user" class="delegation-select">
+                                        <option value="">Select user</option>
+                                        {% for candidate in delegation_candidates %}
+                                            <option value="{{ candidate.id }}">{{ candidate.username }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button id="delegation-grant-button" class="button button-primary" type="button">Grant</button>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="delegation-revoke-user" class="small-label">Revoke write access</label>
+                                <div class="delegation-control-row">
+                                    <select id="delegation-revoke-user" class="delegation-select">
+                                        <option value="">Select active delegate</option>
+                                        {% for delegation in active_delegations %}
+                                            <option value="{{ delegation.delegate_user_id }}">{{ delegation.delegate_user }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button id="delegation-revoke-button" class="button button-secondary" type="button">Revoke</button>
+                                </div>
+                            </div>
+                        </div>
+                        <p id="delegation-feedback" class="delegation-feedback" aria-live="polite"></p>
+                    {% endif %}
+                    {% if active_delegations %}
+                        <ul class="delegation-list">
+                            {% for delegation in active_delegations %}
+                                <li>{{ delegation.delegate_user }} granted by {{ delegation.granted_by_user|default:'unknown' }} ({{ delegation.granted_by_role }})</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="delegation-empty">No active delegated writers. Owner-only write access applies.</p>
+                    {% endif %}
+                </section>
                 <div id="report-empty" class="empty-state">Loading report...</div>
                 <div id="report-sections" class="section-grid" aria-live="polite"></div>
             </main>

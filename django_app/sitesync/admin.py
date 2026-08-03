@@ -13,6 +13,7 @@ from .models import (
     InvoiceCost,
     MonthlyReport,
     ReportWriteGrant,
+    ReportWriteDelegationEvent,
     ReportOwnershipUnavailabilityApproval,
     ReportOwnershipTransferEvent,
 )
@@ -157,9 +158,35 @@ class MonthlyReportAdmin(admin.ModelAdmin):
 
 @admin.register(ReportWriteGrant)
 class ReportWriteGrantAdmin(admin.ModelAdmin):
-    list_display = ('id', 'report', 'granted_user', 'granted_by', 'is_active', 'granted_at', 'revoked_at')
+    list_display = (
+        'id',
+        'report',
+        'granted_user',
+        'granted_by',
+        'granted_by_role',
+        'is_active',
+        'granted_at',
+        'revoked_by_role',
+        'revoked_at',
+    )
     list_filter = ('is_active', 'granted_at')
     search_fields = ('report__site__name', 'granted_user__username', 'granted_by__username')
+
+
+@admin.register(ReportWriteDelegationEvent)
+class ReportWriteDelegationEventAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'report',
+        'delegate_user',
+        'action',
+        'action_by_user',
+        'action_by_role',
+        'action_at',
+        'resolution_basis',
+    )
+    list_filter = ('action', 'action_by_role', 'action_at')
+    search_fields = ('report__site__name', 'delegate_user__username', 'action_by_user__username')
 
 
 @admin.register(ReportOwnershipUnavailabilityApproval)

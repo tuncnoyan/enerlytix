@@ -26,6 +26,42 @@ Run feature-focused tests in Docker only:
 docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test sitesync.tests.test_report_write_delegation_access sitesync.tests.test_report_write_delegation_authority sitesync.tests.test_report_write_delegation_visibility sitesync.tests.test_report_write_delegation_conflicts
 ```
 
+## Execution Log
+
+Date: 2026-08-03
+
+1. Delegation migration
+
+```powershell
+docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py migrate
+```
+
+Result: PASS (`sitesync.0021_report_write_delegation_event_and_roles` applied successfully)
+
+2. Delegation core test bundle
+
+```powershell
+docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test sitesync.tests.test_report_write_delegation_access sitesync.tests.test_report_write_delegation_authority sitesync.tests.test_report_write_delegation_visibility sitesync.tests.test_report_write_delegation_conflicts sitesync.tests.test_audit_logging_events
+```
+
+Result: PASS (13 tests)
+
+3. Ownership and saved-reports compatibility suites
+
+```powershell
+docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test sitesync.tests.test_report_ownership_access sitesync.tests.test_report_collaborator_grants sitesync.tests.test_report_owner_fallback_transfer sitesync.tests.test_saved_reports_ownership_listing sitesync.tests.test_saved_reports_view
+```
+
+Result: PASS (12 tests)
+
+4. Consolidated delegation + saved-reports verification
+
+```powershell
+docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test sitesync.tests.test_saved_reports_view sitesync.tests.test_saved_reports_ownership_listing sitesync.tests.test_report_write_delegation_access sitesync.tests.test_report_write_delegation_authority sitesync.tests.test_report_write_delegation_visibility sitesync.tests.test_report_write_delegation_conflicts sitesync.tests.test_audit_logging_events
+```
+
+Result: PASS (19 tests)
+
 ## Validation Scenarios
 
 ### SC-001 Owner grants same-team delegate
@@ -91,6 +127,23 @@ Steps:
 Expected:
 - At least 90% of participants complete identification within 15 seconds.
 - Results are captured in this quickstart validation log for release evidence.
+
+Current status: Pending manual UAT execution with representative users.
+
+Suggested capture table:
+
+| Participant | Completion Time (seconds) | Success (<=15s) |
+|---|---:|---|
+| U1 |  |  |
+| U2 |  |  |
+| U3 |  |  |
+| U4 |  |  |
+| U5 |  |  |
+| U6 |  |  |
+| U7 |  |  |
+| U8 |  |  |
+| U9 |  |  |
+| U10 |  |  |
 
 ## References
 

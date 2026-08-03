@@ -33,6 +33,19 @@
 - Cover sequence is consistent across draft, final, PDF, and PPTX exports.
 - In PPTX exports, front-cover text fields remain editable.
 
+## Report write delegation
+
+- Delegation endpoints support grant/revoke workflows for owner, team lead, and manager roles within scope.
+- Active delegation rows are visible to report readers via `/reports/<report_id>/delegations/`.
+- Save authorization is evaluated at submit time and denies stale/ineligible delegates.
+- Grant/revoke actions are captured as immutable delegation events for audit history.
+
+Run delegation-focused tests in Docker only:
+
+```bash
+docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test sitesync.tests.test_report_write_delegation_access sitesync.tests.test_report_write_delegation_authority sitesync.tests.test_report_write_delegation_visibility sitesync.tests.test_report_write_delegation_conflicts
+```
+
 ## Usage and invoice import
 
 - Trigger import with `POST /api/consumption-import/`.

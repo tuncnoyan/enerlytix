@@ -37,13 +37,26 @@
 
 - `POST /reports/<report_id>/ownership/grants/`
   - Body: `granted_user_id`
-  - Owner-only endpoint
+  - Allowed for report owner, same-organisation team lead, or same-organisation manager
+  - Owner grants require same-team delegate
   - Creates an active collaborator write grant
 
 - `POST /reports/<report_id>/ownership/grants/revoke/`
   - Body: `granted_user_id`
-  - Owner-only endpoint
+  - Allowed for report owner, original grantor, or same-organisation team lead/manager
   - Deactivates collaborator write grant and preserves grant history
+
+- `GET /reports/<report_id>/delegations/`
+  - Read-access endpoint
+  - Returns active delegated writers and grantor metadata
+
+- `POST /reports/<report_id>/delegations/grant/`
+  - Alias route for delegation grant
+  - Body: `granted_user_id`
+
+- `POST /reports/<report_id>/delegations/revoke/`
+  - Alias route for delegation revoke
+  - Body: `granted_user_id`
 
 - `POST /reports/<report_id>/ownership/transfer/`
   - Body: `new_owner_user_id`, `reason`
@@ -65,6 +78,11 @@
   - `last_edited_by_name`
   - `last_edited_at`
   - `access_mode`
+
+### Delegation concurrency semantics
+
+- Concurrent grant/revoke operations for the same report/delegate pair use last-write-wins by server commit timestamp.
+- Grant and revoke actions are persisted as immutable delegation events for auditability.
 
 ## Manual sync
 

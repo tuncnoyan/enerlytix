@@ -197,3 +197,15 @@ class InvoiceCostSerializer(serializers.ModelSerializer):
     class Meta:
         model = InvoiceCost
         fields = '__all__'
+
+
+class ReportDelegationActionSerializer(serializers.Serializer):
+    delegate_user_id = serializers.UUIDField()
+
+
+class ReportDelegationVisibilitySerializer(serializers.Serializer):
+    delegate_user = serializers.CharField()
+    granted_by_user = serializers.CharField(allow_blank=True)
+    granted_by_role = serializers.CharField()
+    granted_at = serializers.DateTimeField()
+    is_active = serializers.BooleanField()

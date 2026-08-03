@@ -32,6 +32,8 @@ from .models import (
     MonthlyReportVersion,
     ReportComment,
     ReportWriteGrant,
+    ReportWriteDelegationEvent,
+    Team,
     ReportOwnershipUnavailabilityApproval,
     ReportOwnershipTransferEvent,
 )
@@ -1331,7 +1333,348 @@ def get_report_write_grant(report: MonthlyReport, user) -> Optional[ReportWriteG
     """Return active write grant for the report and user if present."""
     if not user or not getattr(user, 'is_authenticated', False):
         return None
-    return ReportWriteGrant.objects.filter(report=report, granted_user=user, is_active=True).first()
+
+    grant = ReportWriteGrant.objects.filter(report=report, granted_user=user, is_active=True).first()
+    if grant is None:
+        return None
+
+    # Submit-time eligibility re-check: inactive or out-of-scope delegates lose effective access.
+    if not _is_grant_delegate_still_eligible(report=report, grant=grant):
+        return None
+    return grant
+
+
+def _team_scope_ids_for_site(site: Site) -> Set:
+    if site.team_id is None:
+        return set()
+
+    team_ids = {site.team_id}
+    for sub_team in site.team.get_sub_teams():
+        team_ids.add(sub_team.id)
+    parent_teams = site.team.get_parent_teams()
+    for parent_team in parent_teams:
+        team_ids.add(parent_team.id)
+
+    # Organisation scope should include sibling branches under each ancestor.
+    for parent_team in parent_teams:
+        for sibling_branch_team in parent_team.get_sub_teams():
+            team_ids.add(sibling_branch_team.id)
+
+    return team_ids
+
+
+def _scope_team_ids_for_report(report: MonthlyReport) -> Set:
+    """Return delegation scope team IDs for a report.
+
+    Primary scope is report.site.team hierarchy. If site team is missing,
+    fall back to the report owner's assigned teams and their hierarchy.
+    """
+    if report.site and report.site.team_id:
+        return _team_scope_ids_for_site(report.site)
+
+    from .models import UserTeamAssignment
+
+    owner = report.owner_user
+    if owner is None:
+        return set()
+
+    scope_team_ids: Set = set()
+    owner_team_ids = UserTeamAssignment.objects.filter(user=owner).values_list('team_id', flat=True)
+    for team in Team.objects.filter(id__in=owner_team_ids):
+        scope_team_ids.add(team.id)
+        for sub_team in team.get_sub_teams():
+            scope_team_ids.add(sub_team.id)
+        for parent_team in team.get_parent_teams():
+            scope_team_ids.add(parent_team.id)
+
+    return scope_team_ids
+
+
+def _team_ids_led_by_user(user) -> Set:
+    """Return team IDs where the user is explicitly configured as team lead."""
+    if not user or not getattr(user, 'is_authenticated', False):
+        return set()
+    return set(Team.objects.filter(team_lead=user).values_list('id', flat=True))
+
+
+def _is_team_lead_for_report(user, *, report: MonthlyReport) -> bool:
+    """Return True when user is a lead for the report owner's/site team context."""
+    from .models import UserTeamAssignment
+
+    lead_team_ids = _team_ids_led_by_user(user)
+    if not lead_team_ids:
+        return False
+
+    if report.site and report.site.team_id and report.site.team_id in lead_team_ids:
+        return True
+
+    owner = report.owner_user
+    if owner is None:
+        return False
+
+    owner_team_ids = set(UserTeamAssignment.objects.filter(user=owner).values_list('team_id', flat=True))
+    return bool(owner_team_ids.intersection(lead_team_ids))
+
+
+def _is_user_assigned_to_scope_strict(user, *, site: Site) -> bool:
+    """Scope membership check without implicit admin bypass for delegation decisions."""
+    from .models import UserTeamAssignment
+
+    if not user or not getattr(user, 'is_authenticated', False):
+        return False
+    if site.team_id is None:
+        return False
+
+    scope_team_ids = _team_scope_ids_for_site(site)
+
+    # Directly assigned on the report team itself.
+    if user.id in {site.team.team_lead_id, site.team.manager_id}:
+        return True
+
+    # Leads/managers attached to parent/sub-team nodes in the same hierarchy are in scope.
+    if Team.objects.filter(id__in=scope_team_ids).filter(Q(team_lead=user) | Q(manager=user)).exists():
+        return True
+    return UserTeamAssignment.objects.filter(user=user, team_id__in=scope_team_ids).exists()
+
+
+def _is_user_in_report_scope(user, *, report: MonthlyReport) -> bool:
+    """Return True when user belongs to report delegation scope."""
+    from .models import UserTeamAssignment
+
+    if not user or not getattr(user, 'is_authenticated', False):
+        return False
+
+    scope_team_ids = _scope_team_ids_for_report(report)
+    if not scope_team_ids:
+        return False
+
+    if Team.objects.filter(id__in=scope_team_ids).filter(Q(team_lead=user) | Q(manager=user)).exists():
+        return True
+
+    return UserTeamAssignment.objects.filter(user=user, team_id__in=scope_team_ids).exists()
+
+
+def _users_share_any_team(user_a, user_b) -> bool:
+    from .models import UserTeamAssignment
+
+    if not user_a or not user_b:
+        return False
+
+    team_ids_a = set(UserTeamAssignment.objects.filter(user=user_a).values_list('team_id', flat=True))
+    if not team_ids_a:
+        return False
+    return UserTeamAssignment.objects.filter(user=user_b, team_id__in=team_ids_a).exists()
+
+
+def _resolve_grantor_role(*, report: MonthlyReport, actor_user) -> Optional[str]:
+    if not actor_user or not getattr(actor_user, 'is_authenticated', False):
+        return None
+    if report.owner_user_id == actor_user.id:
+        return ReportWriteGrant.ROLE_OWNER
+
+    from .models import has_user_role
+
+    # Admins can manage delegation for reports and are tracked under manager-equivalent authority.
+    if has_user_role(actor_user, 'admin'):
+        return ReportWriteGrant.ROLE_MANAGER
+
+    scope_team_ids = _scope_team_ids_for_report(report)
+    is_scope_team_lead = _is_team_lead_for_report(actor_user, report=report)
+    is_scope_manager = Team.objects.filter(id__in=scope_team_ids, manager=actor_user).exists()
+
+    if _is_user_in_report_scope(actor_user, report=report):
+        if (
+            actor_user.id == getattr(report.site.team, 'team_lead_id', None)
+            or is_scope_team_lead
+        ):
+            return ReportWriteGrant.ROLE_TEAM_LEAD
+        if (
+            actor_user.id == getattr(report.site.team, 'manager_id', None)
+            or is_scope_manager
+            or has_user_role(actor_user, 'manager')
+        ):
+            return ReportWriteGrant.ROLE_MANAGER
+
+    return None
+
+
+def _validate_delegate_scope_for_grant(*, report: MonthlyReport, granted_user, granted_by_role: str, granted_by_user=None):
+    from .models import has_user_role
+
+    if not granted_user.is_active:
+        raise ValueError('Cannot grant write access to an inactive user')
+
+    if granted_by_user is not None and has_user_role(granted_by_user, 'admin'):
+        return
+
+    if granted_by_role == ReportWriteGrant.ROLE_OWNER:
+        owner = report.owner_user
+        if owner is None or not _users_share_any_team(owner, granted_user):
+            raise ValueError('Owner grants require delegate to be in the same team')
+        return
+
+    if granted_by_role == ReportWriteGrant.ROLE_TEAM_LEAD:
+        if granted_by_user is not None and getattr(granted_user, 'id', None) == getattr(granted_by_user, 'id', None):
+            return
+
+        lead_team_ids = _team_ids_led_by_user(granted_by_user)
+        if not lead_team_ids:
+            raise ValueError('Team lead grants require team-lead assignment to a team')
+
+        from .models import UserTeamAssignment
+
+        if not UserTeamAssignment.objects.filter(user=granted_user, team_id__in=lead_team_ids).exists():
+            raise ValueError("Team lead grants require delegate to be in the team lead's team")
+        return
+
+    if not _is_user_in_report_scope(granted_user, report=report):
+        raise ValueError('Delegate must be in the same organisation scope as the report')
+
+
+def _is_grant_delegate_still_eligible(*, report: MonthlyReport, grant: ReportWriteGrant) -> bool:
+    user = grant.granted_user
+    if not user or not user.is_active:
+        return False
+
+    if grant.granted_by_role == ReportWriteGrant.ROLE_OWNER:
+        owner = report.owner_user
+        return owner is not None and _users_share_any_team(owner, user)
+
+    return _is_user_in_report_scope(user, report=report)
+
+
+def _can_revoke_report_grant(*, report: MonthlyReport, grant: ReportWriteGrant, revoked_by) -> bool:
+    if report.owner_user_id == getattr(revoked_by, 'id', None):
+        return True
+    if grant.granted_by_id == getattr(revoked_by, 'id', None):
+        return True
+    return _resolve_grantor_role(report=report, actor_user=revoked_by) in {
+        ReportWriteGrant.ROLE_TEAM_LEAD,
+        ReportWriteGrant.ROLE_MANAGER,
+    }
+
+
+def _record_report_delegation_event(
+    *,
+    report: MonthlyReport,
+    delegate_user,
+    action: str,
+    action_by_user,
+    action_by_role: str,
+    resolution_basis: Optional[str] = None,
+    correlation_key=None,
+    notes: str = '',
+) -> ReportWriteDelegationEvent:
+    return ReportWriteDelegationEvent.objects.create(
+        report=report,
+        delegate_user=delegate_user,
+        action=action,
+        action_by_user=action_by_user,
+        action_by_role=action_by_role,
+        resolution_basis=resolution_basis,
+        correlation_key=correlation_key,
+        notes=notes or '',
+    )
+
+
+def get_report_delegation_history(report: MonthlyReport):
+    return ReportWriteDelegationEvent.objects.filter(report=report).select_related(
+        'delegate_user',
+        'action_by_user',
+    )
+
+
+def get_active_report_write_grant_for_update(*, report: MonthlyReport, granted_user) -> Optional[ReportWriteGrant]:
+    """Select active grant row with lock for transaction-safe grant/revoke decisions."""
+    return (
+        ReportWriteGrant.objects.select_for_update()
+        .filter(report=report, granted_user=granted_user, is_active=True)
+        .first()
+    )
+
+
+def get_report_delegation_visibility_rows(report: MonthlyReport) -> List[Dict[str, object]]:
+    """Return active delegation rows for report visibility responses."""
+    rows = []
+    for grant in ReportWriteGrant.objects.filter(report=report, is_active=True).select_related(
+        'granted_user',
+        'granted_by',
+    ):
+        rows.append(
+            {
+                'delegate_user_id': str(grant.granted_user_id),
+                'delegate_user': grant.granted_user.get_username(),
+                'granted_by_user_id': str(grant.granted_by_id) if grant.granted_by_id else '',
+                'granted_by_user': grant.granted_by.get_username() if grant.granted_by else '',
+                'granted_by_role': grant.granted_by_role,
+                'granted_at': grant.granted_at,
+                'is_active': grant.is_active,
+            }
+        )
+    return rows
+
+
+def can_user_manage_report_delegations(report: MonthlyReport, user) -> bool:
+    """Return True when user can grant/revoke delegation for a report."""
+    return _resolve_grantor_role(report=report, actor_user=user) is not None
+
+
+def get_user_report_delegation_role(report: MonthlyReport, user) -> Optional[str]:
+    """Return effective delegation role for user on report, if any."""
+    return _resolve_grantor_role(report=report, actor_user=user)
+
+
+def get_report_delegation_role_hint(report: MonthlyReport, user) -> str:
+    """Return UI hint describing delegation scope for the current user role."""
+    role = get_user_report_delegation_role(report, user)
+    if role == ReportWriteGrant.ROLE_OWNER:
+        return 'You can grant as owner to active users in your same team.'
+    if role == ReportWriteGrant.ROLE_TEAM_LEAD:
+        return 'You can grant as team lead to active users in your own team, including yourself.'
+    if role == ReportWriteGrant.ROLE_MANAGER:
+        return 'You can grant as manager to active users in your organisation, including yourself.'
+    return ''
+
+
+def get_report_delegation_candidate_users(report: MonthlyReport, actor_user) -> List[Dict[str, object]]:
+    """Return active user options that the actor can delegate to for this report."""
+    from .models import UserTeamAssignment
+    from django.contrib.auth import get_user_model
+
+    from .models import has_user_role
+
+    role = _resolve_grantor_role(report=report, actor_user=actor_user)
+    if role is None:
+        return []
+
+    user_model = get_user_model()
+    base_qs = user_model.objects.filter(is_active=True)
+
+    if has_user_role(actor_user, 'admin'):
+        users = base_qs.distinct().exclude(id=report.owner_user_id).order_by('username')
+        return [{'id': str(user.id), 'username': user.get_username()} for user in users]
+
+    if role == ReportWriteGrant.ROLE_OWNER:
+        owner_team_ids = UserTeamAssignment.objects.filter(user=report.owner_user).values_list('team_id', flat=True)
+        base_qs = base_qs.filter(team_assignments__team_id__in=owner_team_ids)
+    elif role == ReportWriteGrant.ROLE_TEAM_LEAD:
+        lead_team_ids = _team_ids_led_by_user(actor_user)
+        scoped_user_ids = set(UserTeamAssignment.objects.filter(team_id__in=lead_team_ids).values_list('user_id', flat=True))
+        scoped_user_ids.add(actor_user.id)
+        base_qs = base_qs.filter(id__in=scoped_user_ids)
+    else:
+        scope_team_ids = _scope_team_ids_for_report(report)
+        scoped_user_ids = set(UserTeamAssignment.objects.filter(team_id__in=scope_team_ids).values_list('user_id', flat=True))
+        scoped_user_ids.add(actor_user.id)
+        base_qs = base_qs.filter(id__in=scoped_user_ids)
+
+    users = (
+        base_qs.distinct()
+        .exclude(id=report.owner_user_id)
+        .order_by('username')
+    )
+
+    return [{'id': str(user.id), 'username': user.get_username()} for user in users]
 
 
 def get_report_access_mode(report: MonthlyReport, user) -> str:
@@ -1353,38 +1696,99 @@ def user_can_write_report(report: MonthlyReport, user) -> bool:
 
 
 def grant_report_write_access(*, report: MonthlyReport, granted_user, granted_by) -> ReportWriteGrant:
-    """Grant report write access to a named user; owner-only operation."""
-    if report.owner_user_id != getattr(granted_by, 'id', None):
-        raise PermissionError('Only the report owner can grant write access')
-    if getattr(granted_user, 'id', None) == report.owner_user_id:
+    """Grant report write access with owner/team-lead/manager delegation rules."""
+    granted_by_role = _resolve_grantor_role(report=report, actor_user=granted_by)
+    if granted_by_role is None:
+        raise PermissionError('Only report owner, same-organisation team lead, or manager can grant write access')
+
+    if granted_by_role == ReportWriteGrant.ROLE_OWNER and getattr(granted_user, 'id', None) == report.owner_user_id:
         raise ValueError('Owner already has write access')
 
-    existing = ReportWriteGrant.objects.filter(report=report, granted_user=granted_user, is_active=True).first()
-    if existing:
-        raise ValueError('Write access already granted to this user')
-
-    return ReportWriteGrant.objects.create(
+    _validate_delegate_scope_for_grant(
         report=report,
         granted_user=granted_user,
-        granted_by=granted_by,
-        is_active=True,
+        granted_by_role=granted_by_role,
+        granted_by_user=granted_by,
     )
+
+    with transaction.atomic():
+        existing_active = get_active_report_write_grant_for_update(report=report, granted_user=granted_user)
+        if existing_active:
+            raise ValueError('Write access already granted to this user')
+
+        existing = (
+            ReportWriteGrant.objects.select_for_update()
+            .filter(report=report, granted_user=granted_user)
+            .order_by('-granted_at')
+            .first()
+        )
+        if existing is None:
+            grant = ReportWriteGrant.objects.create(
+                report=report,
+                granted_user=granted_user,
+                granted_by=granted_by,
+                granted_by_role=granted_by_role,
+                is_active=True,
+            )
+        else:
+            grant = existing
+            grant.granted_by = granted_by
+            grant.granted_by_role = granted_by_role
+            grant.granted_at = dj_timezone.now()
+            grant.revoked_by = None
+            grant.revoked_by_role = None
+            grant.revoked_at = None
+            grant.is_active = True
+            grant.save(
+                update_fields=[
+                    'granted_by',
+                    'granted_by_role',
+                    'granted_at',
+                    'revoked_by',
+                    'revoked_by_role',
+                    'revoked_at',
+                    'is_active',
+                ]
+            )
+
+        _record_report_delegation_event(
+            report=report,
+            delegate_user=granted_user,
+            action=ReportWriteDelegationEvent.ACTION_GRANT,
+            action_by_user=granted_by,
+            action_by_role=granted_by_role,
+        )
+        return grant
 
 
 def revoke_report_write_access(*, report: MonthlyReport, granted_user, revoked_by) -> Optional[ReportWriteGrant]:
-    """Revoke active write access for a named user; owner-only operation."""
-    if report.owner_user_id != getattr(revoked_by, 'id', None):
-        raise PermissionError('Only the report owner can revoke write access')
+    """Revoke active write access with owner/original-grantor/lead-manager authority."""
+    revoked_by_role = _resolve_grantor_role(report=report, actor_user=revoked_by)
 
-    grant = ReportWriteGrant.objects.filter(report=report, granted_user=granted_user, is_active=True).first()
-    if not grant:
-        return None
+    with transaction.atomic():
+        grant = get_active_report_write_grant_for_update(report=report, granted_user=granted_user)
+        if not grant:
+            return None
 
-    grant.is_active = False
-    grant.revoked_by = revoked_by
-    grant.revoked_at = dj_timezone.now()
-    grant.save(update_fields=['is_active', 'revoked_by', 'revoked_at'])
-    return grant
+        if not _can_revoke_report_grant(report=report, grant=grant, revoked_by=revoked_by):
+            raise PermissionError('Only report owner, original grantor, or same-organisation team lead/manager can revoke write access')
+
+        grant.is_active = False
+        grant.revoked_by = revoked_by
+        grant.revoked_by_role = revoked_by_role or ReportWriteGrant.ROLE_OWNER
+        grant.revoked_at = dj_timezone.now()
+        grant.save(update_fields=['is_active', 'revoked_by', 'revoked_by_role', 'revoked_at'])
+
+        _record_report_delegation_event(
+            report=report,
+            delegate_user=granted_user,
+            action=ReportWriteDelegationEvent.ACTION_REVOKE,
+            action_by_user=revoked_by,
+            action_by_role=grant.revoked_by_role,
+            resolution_basis=ReportWriteDelegationEvent.RESOLUTION_LAST_WRITE_WINS,
+        )
+
+        return grant
 
 
 def _is_user_assigned_to_scope(user, *, site: Site) -> bool:

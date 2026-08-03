@@ -1,8 +1,9 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
-from sitesync.models import AuditLogEntry
+from sitesync.models import AuditLogEntry, MonthlyReport, ReportWriteDelegationEvent, Site, Team, UserTeamAssignment
 
 
 class AuditLoggingEventsIntegrationTests(TestCase):
@@ -69,3 +70,47 @@ class AuditLoggingEventsIntegrationTests(TestCase):
         self.assertEqual(event.target_entity_type, 'user')
         self.assertEqual(event.target_entity_label, 'standard_user')
         self.assertIn('Deleted user standard_user', event.message)
+
+    def test_delegation_revoke_writes_conflict_resolution_metadata(self):
+        owner = get_user_model().objects.create_user(
+            username='owner_audit',
+            email='owner_audit@example.com',
+            password='StrongPass123!',
+        )
+        delegate = get_user_model().objects.create_user(
+            username='delegate_audit',
+            email='delegate_audit@example.com',
+            password='StrongPass123!',
+        )
+        team = Team.objects.create(name='Audit Team', level=1)
+        site = Site.objects.create(external_id='site-audit-1', name='Audit Site', team=team)
+        UserTeamAssignment.objects.create(user=owner, team=team)
+        UserTeamAssignment.objects.create(user=delegate, team=team)
+        report = MonthlyReport.objects.create(
+            site=site,
+            reporting_month='2026-07',
+            owner_user=owner,
+            created_by_user=owner,
+            last_modified_by_user=owner,
+            last_modified_at=timezone.now(),
+        )
+
+        self.client.force_login(owner)
+        self.client.post(
+            reverse('sitesync:report_delegation_grant', kwargs={'report_id': report.id}),
+            {'granted_user_id': str(delegate.id)},
+        )
+        revoke_response = self.client.post(
+            reverse('sitesync:report_delegation_revoke', kwargs={'report_id': report.id}),
+            {'granted_user_id': str(delegate.id)},
+        )
+        self.client.logout()
+
+        self.assertEqual(revoke_response.status_code, 200)
+        revoke_event = ReportWriteDelegationEvent.objects.filter(
+            report=report,
+            delegate_user=delegate,
+            action=ReportWriteDelegationEvent.ACTION_REVOKE,
+        ).first()
+        self.assertIsNotNone(revoke_event)
+        self.assertEqual(revoke_event.resolution_basis, ReportWriteDelegationEvent.RESOLUTION_LAST_WRITE_WINS)

@@ -16,9 +16,9 @@ description: "Task list for report write delegation feature"
 
 **Purpose**: Prepare feature-specific scaffolding and Docker test entry points
 
-- [ ] T001 Create delegation test module stubs in django_app/sitesync/tests/test_report_write_delegation_access.py, django_app/sitesync/tests/test_report_write_delegation_authority.py, django_app/sitesync/tests/test_report_write_delegation_visibility.py, and django_app/sitesync/tests/test_report_write_delegation_conflicts.py
-- [ ] T002 [P] Add delegation endpoint placeholders in django_app/sitesync/urls.py and handler stubs in django_app/sitesync/views.py
-- [ ] T003 [P] Add feature-level Docker validation command section in specs/011-report-write-delegation/quickstart.md
+- [X] T001 Create delegation test module stubs in django_app/sitesync/tests/test_report_write_delegation_access.py, django_app/sitesync/tests/test_report_write_delegation_authority.py, django_app/sitesync/tests/test_report_write_delegation_visibility.py, and django_app/sitesync/tests/test_report_write_delegation_conflicts.py
+- [X] T002 [P] Add delegation endpoint placeholders in django_app/sitesync/urls.py and handler stubs in django_app/sitesync/views.py
+- [X] T003 [P] Add feature-level Docker validation command section in specs/011-report-write-delegation/quickstart.md
 
 ---
 
@@ -28,13 +28,13 @@ description: "Task list for report write delegation feature"
 
 **CRITICAL**: No user story work starts until this phase is complete
 
-- [ ] T004 Implement ReportWriteDelegation and ReportWriteDelegationEvent models in django_app/sitesync/models.py
-- [ ] T005 Create the next sequential Django migration in django_app/sitesync/migrations/ to add delegation models, indexes, and constraints.
-- [ ] T006 [P] Register delegation models for operations and audit visibility in django_app/sitesync/admin.py
-- [ ] T007 [P] Add delegation payload validation and serialization fields in django_app/sitesync/forms.py and django_app/sitesync/serializers.py
-- [ ] T008 Implement delegation authority resolver and effective-write access resolver in django_app/sitesync/services.py
-- [ ] T009 Implement delegation audit event writer and history query helpers in django_app/sitesync/services.py
-- [ ] T010 Implement transaction-safe active delegation lookup helpers in django_app/sitesync/services.py
+- [X] T004 Implement ReportWriteDelegation and ReportWriteDelegationEvent models in django_app/sitesync/models.py
+- [X] T005 Create the next sequential Django migration in django_app/sitesync/migrations/ to add delegation models, indexes, and constraints.
+- [X] T006 [P] Register delegation models for operations and audit visibility in django_app/sitesync/admin.py
+- [X] T007 [P] Add delegation payload validation and serialization fields in django_app/sitesync/forms.py and django_app/sitesync/serializers.py
+- [X] T008 Implement delegation authority resolver and effective-write access resolver in django_app/sitesync/services.py
+- [X] T009 Implement delegation audit event writer and history query helpers in django_app/sitesync/services.py
+- [X] T010 Implement transaction-safe active delegation lookup helpers in django_app/sitesync/services.py
 
 **Checkpoint**: Delegation data model and shared authorization services are ready
 
@@ -48,17 +48,17 @@ description: "Task list for report write delegation feature"
 
 ### Tests for User Story 1
 
-- [ ] T011 [P] [US1] Add owner grant and owner revoke access-flow tests in django_app/sitesync/tests/test_report_write_delegation_access.py
-- [ ] T012 [P] [US1] Add same-team, inactive-user, and out-of-scope denial tests for owner grants in django_app/sitesync/tests/test_report_write_delegation_authority.py
-- [ ] T013 [US1] Add submit-time save denial test after revoke in django_app/sitesync/tests/test_report_write_delegation_access.py
+- [X] T011 [P] [US1] Add owner grant and owner revoke access-flow tests in django_app/sitesync/tests/test_report_write_delegation_access.py
+- [X] T012 [P] [US1] Add same-team, inactive-user, and out-of-scope denial tests for owner grants in django_app/sitesync/tests/test_report_write_delegation_authority.py
+- [X] T013 [US1] Add submit-time save denial test after revoke in django_app/sitesync/tests/test_report_write_delegation_access.py
 
 ### Implementation for User Story 1
 
-- [ ] T014 [US1] Implement owner grant endpoint behavior in django_app/sitesync/views.py
-- [ ] T015 [US1] Implement owner revoke endpoint behavior in django_app/sitesync/views.py
-- [ ] T016 [US1] Wire owner delegation grant and revoke routes in django_app/sitesync/urls.py
-- [ ] T017 [US1] Enforce submit-time write authorization in report save workflow in django_app/sitesync/views.py
-- [ ] T018 [US1] Render owner delegation controls and permission feedback in django_app/templates/sitesync/report.html
+- [X] T014 [US1] Implement owner grant endpoint behavior in django_app/sitesync/views.py
+- [X] T015 [US1] Implement owner revoke endpoint behavior in django_app/sitesync/views.py
+- [X] T016 [US1] Wire owner delegation grant and revoke routes in django_app/sitesync/urls.py
+- [X] T017 [US1] Enforce submit-time write authorization in report save workflow in django_app/sitesync/views.py
+- [X] T018 [US1] Render owner delegation controls and permission feedback in django_app/templates/sitesync/report.html
 
 **Checkpoint**: Owner-driven team collaboration works end-to-end and is independently testable
 
@@ -72,16 +72,16 @@ description: "Task list for report write delegation feature"
 
 ### Tests for User Story 2
 
-- [ ] T019 [P] [US2] Add team lead and manager organisation-scope grant tests in django_app/sitesync/tests/test_report_write_delegation_authority.py
-- [ ] T020 [P] [US2] Add self-grant success and cross-organisation denial tests in django_app/sitesync/tests/test_report_write_delegation_authority.py
-- [ ] T021 [US2] Add revoke authorization tests for original grantor and same-organisation lead or manager in django_app/sitesync/tests/test_report_write_delegation_authority.py
+- [X] T019 [P] [US2] Add team lead and manager organisation-scope grant tests in django_app/sitesync/tests/test_report_write_delegation_authority.py
+- [X] T020 [P] [US2] Add self-grant success and cross-organisation denial tests in django_app/sitesync/tests/test_report_write_delegation_authority.py
+- [X] T021 [US2] Add revoke authorization tests for original grantor and same-organisation lead or manager in django_app/sitesync/tests/test_report_write_delegation_authority.py
 
 ### Implementation for User Story 2
 
-- [ ] T022 [US2] Extend delegation grant authorization for team lead and manager roles in django_app/sitesync/services.py
-- [ ] T023 [US2] Extend delegation revoke authorization for original grantor and same-organisation lead or manager in django_app/sitesync/services.py
-- [ ] T024 [US2] Persist grantor role metadata for owner, team lead, and manager grants in django_app/sitesync/views.py and django_app/sitesync/models.py
-- [ ] T025 [US2] Update report editor delegation actions to support lead or manager self-delegation in django_app/templates/sitesync/report.html
+- [X] T022 [US2] Extend delegation grant authorization for team lead and manager roles in django_app/sitesync/services.py
+- [X] T023 [US2] Extend delegation revoke authorization for original grantor and same-organisation lead or manager in django_app/sitesync/services.py
+- [X] T024 [US2] Persist grantor role metadata for owner, team lead, and manager grants in django_app/sitesync/views.py and django_app/sitesync/models.py
+- [X] T025 [US2] Update report editor delegation actions to support lead or manager self-delegation in django_app/templates/sitesync/report.html
 
 **Checkpoint**: Organisation-level emergency and coverage delegation works independently of US1 ownership flow
 
@@ -95,16 +95,16 @@ description: "Task list for report write delegation feature"
 
 ### Tests for User Story 3
 
-- [ ] T026 [P] [US3] Add delegation visibility endpoint tests for read-access users in django_app/sitesync/tests/test_report_write_delegation_visibility.py
-- [ ] T027 [P] [US3] Add saved-report to editor mode-consistency tests in django_app/sitesync/tests/test_saved_reports_view.py
-- [ ] T028 [US3] Add revoked-between-open-and-save behavior test in django_app/sitesync/tests/test_report_write_delegation_access.py
+- [X] T026 [P] [US3] Add delegation visibility endpoint tests for read-access users in django_app/sitesync/tests/test_report_write_delegation_visibility.py
+- [X] T027 [P] [US3] Add saved-report to editor mode-consistency tests in django_app/sitesync/tests/test_saved_reports_view.py
+- [X] T028 [US3] Add revoked-between-open-and-save behavior test in django_app/sitesync/tests/test_report_write_delegation_access.py
 
 ### Implementation for User Story 3
 
-- [ ] T029 [US3] Implement active delegation visibility endpoint with grantor fields in django_app/sitesync/views.py
-- [ ] T030 [US3] Wire delegation visibility route in django_app/sitesync/urls.py
-- [ ] T031 [US3] Render active delegated writers and grantors in django_app/templates/sitesync/report.html
-- [ ] T032 [US3] Add saved reports delegation context and indicator rendering in django_app/sitesync/views.py and django_app/templates/sitesync/saved_reports.html
+- [X] T029 [US3] Implement active delegation visibility endpoint with grantor fields in django_app/sitesync/views.py
+- [X] T030 [US3] Wire delegation visibility route in django_app/sitesync/urls.py
+- [X] T031 [US3] Render active delegated writers and grantors in django_app/templates/sitesync/report.html
+- [X] T032 [US3] Add saved reports delegation context and indicator rendering in django_app/sitesync/views.py and django_app/templates/sitesync/saved_reports.html
 
 **Checkpoint**: Delegation accountability and read-mode transparency are independently functional
 
@@ -114,11 +114,11 @@ description: "Task list for report write delegation feature"
 
 **Purpose**: Complete deterministic conflict handling, audit completeness, and Docker verification
 
-- [ ] T033 [P] Add concurrent grant-revoke conflict tests with timestamp winner assertions in django_app/sitesync/tests/test_report_write_delegation_conflicts.py
-- [ ] T034 [P] Implement last-write-wins conflict resolution with transaction boundaries in django_app/sitesync/services.py
-- [ ] T035 [P] Add delegation event audit assertions for conflict metadata in django_app/sitesync/tests/test_audit_logging_events.py
-- [ ] T036 Update API and operator docs for delegation grant, revoke, and visibility flows in docs/API.md and django_app/README.md
-- [ ] T037 Run Docker-only delegation test bundle and capture execution log in specs/011-report-write-delegation/quickstart.md
+- [X] T033 [P] Add concurrent grant-revoke conflict tests with timestamp winner assertions in django_app/sitesync/tests/test_report_write_delegation_conflicts.py
+- [X] T034 [P] Implement last-write-wins conflict resolution with transaction boundaries in django_app/sitesync/services.py
+- [X] T035 [P] Add delegation event audit assertions for conflict metadata in django_app/sitesync/tests/test_audit_logging_events.py
+- [X] T036 Update API and operator docs for delegation grant, revoke, and visibility flows in docs/API.md and django_app/README.md
+- [X] T037 Run Docker-only delegation test bundle and capture execution log in specs/011-report-write-delegation/quickstart.md
 - [ ] T038 Run timed UAT for delegation visibility with a representative user sample, record completion times, and confirm SC-005 threshold in specs/011-report-write-delegation/quickstart.md
 
 ---

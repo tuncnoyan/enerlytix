@@ -631,6 +631,15 @@ class ReportComment(models.Model):
 class ReportWriteGrant(models.Model):
     """Owner-managed named-user report write delegation."""
 
+    ROLE_OWNER = 'owner'
+    ROLE_TEAM_LEAD = 'team_lead'
+    ROLE_MANAGER = 'manager'
+    ROLE_CHOICES = [
+        (ROLE_OWNER, 'Owner'),
+        (ROLE_TEAM_LEAD, 'Team Lead'),
+        (ROLE_MANAGER, 'Manager'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     report = models.ForeignKey(MonthlyReport, on_delete=models.CASCADE, related_name='write_grants')
     granted_user = models.ForeignKey(
@@ -645,6 +654,7 @@ class ReportWriteGrant(models.Model):
         null=True,
         blank=True,
     )
+    granted_by_role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=ROLE_OWNER)
     granted_at = models.DateTimeField(auto_now_add=True)
     revoked_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -653,6 +663,7 @@ class ReportWriteGrant(models.Model):
         null=True,
         blank=True,
     )
+    revoked_by_role = models.CharField(max_length=20, choices=ROLE_CHOICES, null=True, blank=True)
     revoked_at = models.DateTimeField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
 
@@ -673,6 +684,51 @@ class ReportWriteGrant(models.Model):
     def __str__(self):
         state = 'active' if self.is_active else 'revoked'
         return f"ReportWriteGrant {self.report_id} -> {self.granted_user_id} ({state})"
+
+
+class ReportWriteDelegationEvent(models.Model):
+    """Immutable grant/revoke event log for delegated write access."""
+
+    ACTION_GRANT = 'grant'
+    ACTION_REVOKE = 'revoke'
+    ACTION_CHOICES = [
+        (ACTION_GRANT, 'Grant'),
+        (ACTION_REVOKE, 'Revoke'),
+    ]
+
+    RESOLUTION_LAST_WRITE_WINS = 'last_write_wins_timestamp'
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    report = models.ForeignKey(MonthlyReport, on_delete=models.CASCADE, related_name='delegation_events')
+    delegate_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='report_delegation_events',
+    )
+    action = models.CharField(max_length=10, choices=ACTION_CHOICES)
+    action_by_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='report_delegation_events_by_actor',
+        null=True,
+        blank=True,
+    )
+    action_by_role = models.CharField(max_length=20, choices=ReportWriteGrant.ROLE_CHOICES)
+    action_at = models.DateTimeField(auto_now_add=True)
+    correlation_key = models.UUIDField(null=True, blank=True)
+    resolution_basis = models.CharField(max_length=64, null=True, blank=True)
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-action_at']
+        indexes = [
+            models.Index(fields=['report', 'action_at']),
+            models.Index(fields=['delegate_user', 'action_at']),
+            models.Index(fields=['correlation_key']),
+        ]
+
+    def __str__(self):
+        return f"ReportWriteDelegationEvent {self.report_id} {self.action} {self.delegate_user_id}"
 
 
 class ReportOwnershipUnavailabilityApproval(models.Model):

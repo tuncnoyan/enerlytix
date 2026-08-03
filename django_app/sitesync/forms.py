@@ -277,8 +277,8 @@ class AuditLogFilterForm(forms.Form):
         return cleaned
 
 
-class ReportWriteGrantForm(forms.Form):
-    """Owner-only grant form for report-level write permissions."""
+class ReportDelegationActionForm(forms.Form):
+    """Grant/revoke form for report-level delegated write permissions."""
 
     granted_user = forms.ModelChoiceField(
         queryset=get_user_model().objects.filter(is_active=True).order_by('username'),
@@ -286,13 +286,12 @@ class ReportWriteGrantForm(forms.Form):
     )
 
 
-class ReportWriteRevokeForm(forms.Form):
-    """Owner-only revoke form for report-level write permissions."""
+class ReportWriteGrantForm(ReportDelegationActionForm):
+    """Backward-compatible grant form wrapper."""
 
-    granted_user = forms.ModelChoiceField(
-        queryset=get_user_model().objects.filter(is_active=True).order_by('username'),
-        required=True,
-    )
+
+class ReportWriteRevokeForm(ReportDelegationActionForm):
+    """Backward-compatible revoke form wrapper."""
 
 
 class ReportOwnershipTransferForm(forms.Form):

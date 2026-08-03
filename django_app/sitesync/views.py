@@ -45,6 +45,7 @@ from .forms import (
     AuditLogFilterForm,
     CapacityUploadForm,
     InvitationForm,
+    ReportDelegationActionForm,
     ReportOwnerUnavailabilityApprovalForm,
     ReportOwnershipTransferForm,
     ReportWriteGrantForm,
@@ -94,11 +95,15 @@ from .services import (
     get_or_create_monthly_report,
     grant_report_write_access,
     get_consumption_display_records,
+    get_report_delegation_candidate_users,
+    get_report_delegation_role_hint,
+    get_report_delegation_visibility_rows,
     get_previous_month_final_version,
     import_capacity_upload,
     month_start,
     normalize_esight_meter_code,
     normalize_reporting_month,
+    can_user_manage_report_delegations,
     reporting_month_bounds,
     serialize_audit_entry_for_export,
     shift_months,
@@ -452,7 +457,19 @@ def _report_editor_context(raw_site_id, raw_end_month, raw_reporting_month, raw_
         # New unsaved report sessions should be editable so the first save can establish ownership.
         access_mode = 'owner'
 
+    active_delegations = []
+    delegation_candidates = []
+    can_manage_delegations = False
+    delegation_role_hint = ''
+    if monthly_report is not None and user is not None and getattr(user, 'is_authenticated', False):
+        active_delegations = get_report_delegation_visibility_rows(monthly_report)
+        can_manage_delegations = can_user_manage_report_delegations(monthly_report, user)
+        if can_manage_delegations:
+            delegation_candidates = get_report_delegation_candidate_users(monthly_report, user)
+            delegation_role_hint = get_report_delegation_role_hint(monthly_report, user)
+
     report_context = {
+        'reportId': str(monthly_report.id) if monthly_report else '',
         'siteId': site.id if site else site_id,
         'endMonth': end_month,
         'siteName': site.name if site else '',
@@ -460,6 +477,8 @@ def _report_editor_context(raw_site_id, raw_end_month, raw_reporting_month, raw_
         'initialComments': initial_comments,
         'referenceCommentKeys': reference_comment_keys,
         'accessMode': access_mode,
+        'activeDelegations': active_delegations,
+        'canManageDelegations': can_manage_delegations,
         'coverDefaults': build_report_cover_set(site.name if site else '', end_month),
     }
 
@@ -470,6 +489,10 @@ def _report_editor_context(raw_site_id, raw_end_month, raw_reporting_month, raw_
         'supply_ids': supply_ids,
         'monthly_report': monthly_report,
         'report_access_mode': access_mode,
+        'active_delegations': active_delegations,
+        'delegation_candidates': delegation_candidates,
+        'can_manage_delegations': can_manage_delegations,
+        'delegation_role_hint': delegation_role_hint,
         'initial_comments_json': json.dumps(initial_comments),
         'reference_comment_keys_json': json.dumps(reference_comment_keys),
         'report_context': report_context,
@@ -827,7 +850,7 @@ def saved_reports_view(request):
 
 @login_required(login_url='/login/')
 def report_grant_write_access_view(request, report_id):
-    """Owner-only endpoint to grant report write access to a named user."""
+    """Grant report write access to a named user."""
     if request.method != 'POST':
         return JsonResponse({'detail': 'Method not allowed'}, status=405)
 
@@ -836,7 +859,7 @@ def report_grant_write_access_view(request, report_id):
     if 'granted_user' not in payload and payload.get('granted_user_id'):
         payload['granted_user'] = payload.get('granted_user_id')
 
-    form = ReportWriteGrantForm(payload)
+    form = ReportDelegationActionForm(payload)
     if not form.is_valid():
         return JsonResponse({'errors': form.errors}, status=400)
 
@@ -851,7 +874,7 @@ def report_grant_write_access_view(request, report_id):
             target_entity_type='report',
             target_entity_id=str(report.id),
             target_entity_label=f"{report.site.name} {report.reporting_month}",
-            message='Denied report write grant attempt by non-owner.',
+            message='Denied report write grant attempt by unauthorized actor.',
             metadata={'granted_user_id': granted_user.id},
         )
         return JsonResponse({'detail': str(exc)}, status=403)
@@ -874,7 +897,7 @@ def report_grant_write_access_view(request, report_id):
 
 @login_required(login_url='/login/')
 def report_revoke_write_access_view(request, report_id):
-    """Owner-only endpoint to revoke report write access from a named user."""
+    """Revoke report write access from a named user."""
     if request.method != 'POST':
         return JsonResponse({'detail': 'Method not allowed'}, status=405)
 
@@ -883,7 +906,7 @@ def report_revoke_write_access_view(request, report_id):
     if 'granted_user' not in payload and payload.get('granted_user_id'):
         payload['granted_user'] = payload.get('granted_user_id')
 
-    form = ReportWriteRevokeForm(payload)
+    form = ReportDelegationActionForm(payload)
     if not form.is_valid():
         return JsonResponse({'errors': form.errors}, status=400)
 
@@ -898,7 +921,7 @@ def report_revoke_write_access_view(request, report_id):
             target_entity_type='report',
             target_entity_id=str(report.id),
             target_entity_label=f"{report.site.name} {report.reporting_month}",
-            message='Denied report write revoke attempt by non-owner.',
+            message='Denied report write revoke attempt by unauthorized actor.',
             metadata={'granted_user_id': granted_user.id},
         )
         return JsonResponse({'detail': str(exc)}, status=403)
@@ -918,6 +941,33 @@ def report_revoke_write_access_view(request, report_id):
     )
 
     return JsonResponse({'success': True, 'grant_id': str(grant.id), 'revoked_user': granted_user.get_username()})
+
+
+@login_required(login_url='/login/')
+def report_delegations_view(request, report_id):
+    """Read endpoint for active delegation rows on a report."""
+    if request.method != 'GET':
+        return JsonResponse({'detail': 'Method not allowed'}, status=405)
+
+    report = get_object_or_404(MonthlyReport, id=report_id)
+    from .services import get_accessible_reports
+
+    if not get_accessible_reports(request.user).filter(id=report.id).exists():
+        return JsonResponse({'detail': 'You do not have read access to this report.'}, status=403)
+
+    return JsonResponse({'delegations': get_report_delegation_visibility_rows(report)})
+
+
+@login_required(login_url='/login/')
+def report_delegation_grant_view(request, report_id):
+    """Route alias for delegation grant contract path."""
+    return report_grant_write_access_view(request, report_id)
+
+
+@login_required(login_url='/login/')
+def report_delegation_revoke_view(request, report_id):
+    """Route alias for delegation revoke contract path."""
+    return report_revoke_write_access_view(request, report_id)
 
 
 @login_required(login_url='/login/')
