@@ -324,6 +324,25 @@
         return mode !== 'owner' && mode !== 'collaborator' && mode !== 'admin';
     }
 
+    function setReadOnlyHeroLabel() {
+        const label = document.getElementById('report-readonly-label');
+        const help = document.getElementById('report-readonly-help');
+        if (!label) {
+            return;
+        }
+        if (isReportReadOnly()) {
+            label.style.display = 'inline-flex';
+            if (help) {
+                help.style.display = 'inline-flex';
+            }
+        } else {
+            label.style.display = 'none';
+            if (help) {
+                help.style.display = 'none';
+            }
+        }
+    }
+
     function setAccessBanner() {
         const banner = document.getElementById('report-access-banner');
         if (!banner) {
@@ -456,6 +475,7 @@
 
     const saveDraftButton = document.getElementById('save-draft-button');
     setAccessBanner();
+    setReadOnlyHeroLabel();
     applyReadOnlyToCoverEditor();
     if (saveDraftButton) {
         if (isReportReadOnly()) {

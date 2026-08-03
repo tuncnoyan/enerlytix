@@ -59,3 +59,21 @@ class ReportOwnershipAccessTests(TestCase):
         report.refresh_from_db()
         self.assertEqual(report.current_version_id, original_version_id)
         self.assertEqual(report.versions.count(), original_count)
+
+    def test_read_only_page_disables_save_actions_and_shows_top_label(self):
+        owner_response = self._save_report(self.owner)
+        self.assertEqual(owner_response.status_code, 200)
+
+        self.client.force_login(self.other)
+        response = self.client.get(
+            reverse('sitesync:report'),
+            {'site_id': str(self.site.id), 'end_month': '2026-07'},
+        )
+        self.client.logout()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Read Only')
+        self.assertContains(response, 'id="save-draft-button"', html=False)
+        self.assertContains(response, 'id="save-final-button"', html=False)
+        self.assertContains(response, 'id="save-draft-button" class="button button-primary" type="button" disabled', html=False)
+        self.assertContains(response, 'id="save-final-button" class="button button-secondary" type="button" disabled', html=False)

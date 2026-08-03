@@ -541,6 +541,44 @@
             display: none;
         }
 
+        .read-only-pill {
+            display: inline-flex;
+            align-items: center;
+            border: 1px solid #fecaca;
+            background: #fee2e2;
+            color: #991b1b;
+            border-radius: 999px;
+            padding: 0.35rem 0.7rem;
+            font-size: 0.78rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-right: 0.35rem;
+        }
+
+        .hero-actions .button:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .read-only-help {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.35rem;
+            height: 1.35rem;
+            border-radius: 50%;
+            border: 1px solid #d8e0e8;
+            color: #334155;
+            background: #f8fafc;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: help;
+            margin-right: 0.5rem;
+            user-select: none;
+        }
+
         @media print {
             .topbar, .hero-actions, .nav-panel { display: none !important; }
             body { background: #fff; }
@@ -559,8 +597,10 @@
                 <p id="report-subtitle">Generating report...</p>
             </div>
             <div class="hero-actions">
-                <button id="save-draft-button" class="button button-primary" type="button">Save Draft</button>
-                <button id="save-final-button" class="button button-secondary" type="button">Save Final</button>
+                <span id="report-readonly-label" class="read-only-pill" {% if report_access_mode != 'read_only' %}style="display:none;"{% endif %}>Read Only</span>
+                <span id="report-readonly-help" class="read-only-help" title="Only owner, collaborator, or admin access can save this report." aria-label="Read-only help" {% if report_access_mode != 'read_only' %}style="display:none;"{% endif %}>?</span>
+                <button id="save-draft-button" class="button button-primary" type="button" {% if report_access_mode == 'read_only' %}disabled aria-disabled="true" title="Read-only access"{% endif %}>Save Draft</button>
+                <button id="save-final-button" class="button button-secondary" type="button" {% if report_access_mode == 'read_only' %}disabled aria-disabled="true" title="Read-only access"{% endif %}>Save Final</button>
                 <button id="download-pdf-button" class="button button-secondary" type="button">Download as PDF</button>
                 <button id="download-pptx-button" class="button button-secondary" type="button">Download as PPTX</button>
             </div>
