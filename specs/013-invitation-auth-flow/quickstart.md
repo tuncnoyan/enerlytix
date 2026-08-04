@@ -60,3 +60,16 @@ Expected result: logout never completes without explicit confirmation.
 - Invitation emails may be manually copied from the admin panel if delivery is unavailable.
 - Password reset emails should send automatically when the email backend is configured.
 - If you are verifying live email sending, ensure the Docker web container has the updated dependencies and a valid Mailtrap token.
+
+## Latest Validation Evidence
+
+- Date: 2026-08-04
+- Command: `docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test sitesync.tests.test_auth_flow sitesync.tests.test_password_reset sitesync.tests.test_invitations sitesync.tests.test_user_admin`
+- Result: Passed (`Ran 20 tests ... OK`)
+- Command: `docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py check`
+- Result: Passed (`System check identified no issues`)
+
+## Manual Measurement Status
+
+- SC-002 (invite copy in under 30 seconds): pending manual stopwatch verification.
+- SC-004 (usable reset email within 2 minutes): pending environment-level mail delivery timing verification.

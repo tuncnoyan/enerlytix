@@ -1,8 +1,7 @@
-"""
-URL routing for the sitesync app.
-"""
+"""URL routing for the sitesync app."""
 
 from django.urls import path
+from django.views.generic import RedirectView
 from . import views
 
 app_name = 'sitesync'
@@ -27,7 +26,7 @@ urlpatterns = [
     path('reports/request-assignment/', views.request_team_assignment_view, name='request_team_assignment'),
     path('profile/', views.profile_view, name='profile'),
     path('password-reset/', views.password_reset_view, name='password_reset'),
-    path('users/', views.user_admin_view, name='user_admin'),
+    path('users/', RedirectView.as_view(pattern_name='sitesync:admin_users', permanent=True)),
     path('invitations/<uuid:invitation_id>/accept/', views.accept_invitation_view, name='accept_invitation'),
     path('consumption-display/', views.consumption_display_view, name='consumption_display'),
     path('api/consumption-import/', views.consumption_import_view, name='consumption_import'),
@@ -40,6 +39,7 @@ urlpatterns = [
     path('roles/assignments/', views.role_assignment_view, name='role_assignment'),
     # Admin Panel Routes (Phase 5)
     path('panel/', views.admin_panel_view, name='admin_panel'),
+    path('panel/users/', views.admin_users_view, name='user_admin'),
     path('panel/users/', views.admin_users_view, name='admin_users'),
     path('panel/teams/', views.admin_teams_view, name='admin_teams'),
     path('panel/hierarchy/', views.admin_hierarchy_view, name='admin_hierarchy'),

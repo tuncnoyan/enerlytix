@@ -1,25 +1,40 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Accept Invitation</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Accept Invitation - Enerlytix</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="{% static 'sitesync/cxg-base.css' %}" rel="stylesheet">
 </head>
 <body>
-    <h1>Accept Invitation</h1>
-    {% if error %}
-        <p>{{ error }}</p>
-    {% elif success %}
-        <p>Account created successfully for {{ user.username }}.</p>
-    {% else %}
-        <form method="post">
-            {% csrf_token %}
-            <p>Complete your account setup for {{ invitation.email }}.</p>
-            <label for="username">Username</label>
-            <input type="text" id="username" name="username" required>
-            <label for="password">Password</label>
-            <input type="password" id="password" name="password" required>
-            <button type="submit">Create account</button>
-        </form>
-    {% endif %}
+    <div class="content-wrap">
+        <div class="auth-card">
+            <h1>Accept Invitation</h1>
+            {% if error %}
+                <p class="auth-error">{{ error }}</p>
+            {% elif success %}
+                <p class="auth-success">Account created successfully for {{ user.username }}.</p>
+                <p><a href="{% url 'login' %}">Continue to sign in</a></p>
+            {% else %}
+                <p>Complete your account setup for {{ invitation.email }}.</p>
+                <form method="post">
+                    {% csrf_token %}
+                    <label for="first_name">First name</label>
+                    <input type="text" id="first_name" name="first_name" required>
+                    <label for="last_name">Last name</label>
+                    <input type="text" id="last_name" name="last_name" required>
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" required>
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required>
+                    <button type="submit" class="auth-primary-btn">Create account</button>
+                </form>
+            {% endif %}
+        </div>
+    </div>
 </body>
 </html>

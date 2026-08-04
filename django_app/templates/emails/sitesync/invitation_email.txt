@@ -1,0 +1,11 @@
+Hello,
+
+You have been invited to join {{ brand_name }}.
+
+Use this invitation link to complete your account setup:
+{{ action_url }}
+
+If you were not expecting this invitation, you can ignore this email.
+{% if support_reply_to %}
+Need help? Reply to {{ support_reply_to }}.
+{% endif %}

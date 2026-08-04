@@ -3,9 +3,7 @@ from django.conf import settings
 from django.contrib.messages import get_messages
 from django.test import TestCase
 from django.urls import reverse
-from django.utils import timezone
 from unittest.mock import patch
-from datetime import timedelta
 
 from sitesync.models import AuditLogEntry, Invitation
 
@@ -41,7 +39,7 @@ class UserAdminTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'standard_user')
 
-    @patch('sitesync.views.EmailMessage.send', return_value=1)
+    @patch('sitesync.auth_service.EmailMessage.send', return_value=1)
     def test_admin_can_create_invitation_from_user_admin_page(self, mocked_send):
         self.client.force_login(self.admin_user)
 
@@ -53,13 +51,14 @@ class UserAdminTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(Invitation.objects.filter(email='invitee@example.com').exists())
         mocked_send.assert_called_once()
+        invitation = Invitation.objects.get(email='invitee@example.com')
+        self.assertContains(response, str(invitation.id))
 
-    @patch('sitesync.views.EmailMessage.send', return_value=1)
+    @patch('sitesync.auth_service.EmailMessage.send', return_value=1)
     def test_duplicate_invitation_creation_falls_back_to_resend_with_warning(self, mocked_send):
         Invitation.objects.create(
             email='duplicate@example.com',
             invited_by=self.admin_user,
-            expires_at=timezone.now() + timedelta(days=7),
         )
 
         self.client.force_login(self.admin_user)
@@ -83,7 +82,7 @@ class UserAdminTests(TestCase):
         self.assertEqual(settings.CONFIGURED_EMAIL_BACKEND, 'anymail.backends.mailtrap.EmailBackend')
         self.assertEqual(settings.MAILTRAP_EMAIL_BACKEND, 'anymail.backends.mailtrap.EmailBackend')
 
-    @patch('sitesync.views.EmailMessage.send', return_value=1)
+    @patch('sitesync.auth_service.EmailMessage.send', return_value=1)
     def test_invitation_email_send_is_attempted_and_logged_successfully(self, mocked_send):
         self.client.force_login(self.admin_user)
 
@@ -99,12 +98,11 @@ class UserAdminTests(TestCase):
         self.assertEqual(email_event.action_outcome, AuditLogEntry.OUTCOME_SUCCESS)
         self.assertIn('mailtrap-success@example.com', email_event.message)
 
-    @patch('sitesync.views.EmailMessage.send', return_value=1)
+    @patch('sitesync.auth_service.EmailMessage.send', return_value=1)
     def test_pending_invitation_resend_button_sends_again_with_warning(self, mocked_send):
         invitation = Invitation.objects.create(
             email='resend@example.com',
             invited_by=self.admin_user,
-            expires_at=timezone.now() + timedelta(days=7),
         )
 
         self.client.force_login(self.admin_user)
@@ -125,7 +123,24 @@ class UserAdminTests(TestCase):
         )
         self.assertTrue(AuditLogEntry.objects.filter(action_type='ADMIN_RESEND_INVITATION_EMAIL').exists())
 
-    @patch('sitesync.views.EmailMessage.send', side_effect=Exception('simulated-mail-failure'))
+    def test_pending_invitation_can_be_revoked(self):
+        invitation = Invitation.objects.create(
+            email='revoke@example.com',
+            invited_by=self.admin_user,
+        )
+
+        self.client.force_login(self.admin_user)
+        response = self.client.post(
+            reverse('sitesync:user_admin'),
+            {'revoke_invitation': '1', 'invitation_id': str(invitation.id)},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        invitation.refresh_from_db()
+        self.assertEqual(invitation.status, Invitation.STATUS_REVOKED)
+        self.assertTrue(AuditLogEntry.objects.filter(action_type='ADMIN_REVOKE_INVITATION').exists())
+
+    @patch('sitesync.auth_service.EmailMessage.send', side_effect=Exception('simulated-mail-failure'))
     def test_invitation_email_send_failure_is_logged(self, mocked_send):
         self.client.force_login(self.admin_user)
 

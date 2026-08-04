@@ -6,7 +6,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.utils import timezone as dj_timezone
 
-from .models import AppSettings
+from .models import AppSettings, Invitation
 
 
 class SettingsForm(forms.ModelForm):
@@ -102,11 +102,19 @@ class InvitationForm(forms.Form):
 
     email = forms.EmailField(required=True)
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.existing_invitation = None
+
     def clean_email(self):
         email = self.cleaned_data['email'].strip().lower()
         if get_user_model().objects.filter(email__iexact=email).exists():
             raise forms.ValidationError('A user with this email already exists.')
+        self.existing_invitation = Invitation.objects.filter(email__iexact=email).first()
         return email
+
+    def get_existing_invitation(self):
+        return self.existing_invitation
 
 
 class AccountActionForm(forms.Form):

@@ -10,11 +10,11 @@
 
 **Purpose**: Establish shared auth/email scaffolding used by multiple stories.
 
-- [ ] T001 Create shared auth helper module in `django_app/sitesync/auth_service.py`
-- [ ] T002 [P] Create invitation email templates in `django_app/templates/emails/sitesync/invitation_email.txt`
-- [ ] T003 [P] Create invitation email HTML template in `django_app/templates/emails/sitesync/invitation_email.html`
-- [ ] T004 [P] Create password reset email templates in `django_app/templates/registration/password_reset_email.html`
-- [ ] T005 [P] Create password reset email text template in `django_app/templates/registration/password_reset_email.txt`
+- [X] T001 Create shared auth helper module in `django_app/sitesync/auth_service.py`
+- [X] T002 [P] Create invitation email templates in `django_app/templates/emails/sitesync/invitation_email.txt`
+- [X] T003 [P] Create invitation email HTML template in `django_app/templates/emails/sitesync/invitation_email.html`
+- [X] T004 [P] Create password reset email templates in `django_app/templates/registration/password_reset_email.html`
+- [X] T005 [P] Create password reset email text template in `django_app/templates/registration/password_reset_email.txt`
 
 ---
 
@@ -24,13 +24,13 @@
 
 **CRITICAL**: No user story work starts until this phase is complete.
 
-- [ ] T006 Update invitation lifecycle states and validation methods in `django_app/sitesync/models.py`
-- [ ] T007 Create invitation lifecycle migration in `django_app/sitesync/migrations/`
-- [ ] T008 Update invitation validation and duplicate handling form logic in `django_app/sitesync/forms.py`
-- [ ] T009 Refactor invitation email send/render helpers to use templates in `django_app/sitesync/views.py`
-- [ ] T010 Wire password reset and token routes in `django_app/config/urls.py`
-- [ ] T011 Configure password reset template usage and backend consistency in `django_app/config/settings.py`
-- [ ] T041 Add redirect from legacy `/users/` to `/panel/users/` in `django_app/sitesync/urls.py`
+- [X] T006 Update invitation lifecycle states and validation methods in `django_app/sitesync/models.py`
+- [X] T007 Create invitation lifecycle migration in `django_app/sitesync/migrations/`
+- [X] T008 Update invitation validation and duplicate handling form logic in `django_app/sitesync/forms.py`
+- [X] T009 Refactor invitation email send/render helpers to use templates in `django_app/sitesync/views.py`
+- [X] T010 Wire password reset and token routes in `django_app/config/urls.py`
+- [X] T011 Configure password reset template usage and backend consistency in `django_app/config/settings.py`
+- [X] T041 Add redirect from legacy `/users/` to `/panel/users/` in `django_app/sitesync/urls.py`
 
 **Checkpoint**: Foundation complete; user stories can be implemented independently.
 
@@ -44,12 +44,12 @@
 
 ### Implementation for User Story 1
 
-- [ ] T012 [US1] Implement pending invitation reuse/revoke action handling in `django_app/sitesync/views.py`
-- [ ] T013 [US1] Add revoke invitation audit action constants in `django_app/sitesync/services.py`
-- [ ] T014 [US1] Add revoke action and copy-link controls in `django_app/templates/sitesync/panel_users.html`
-- [ ] T015 [P] [US1] Add admin invitation action styles in `django_app/static/sitesync/panel.css`
-- [ ] T016 [P] [US1] Add copy invitation link behavior script in `django_app/static/sitesync/panel-users.js`
-- [ ] T017 [US1] Load invitation action script in the canonical admin users page in `django_app/templates/sitesync/panel_users.html`
+- [X] T012 [US1] Implement pending invitation reuse/revoke action handling in `django_app/sitesync/views.py`
+- [X] T013 [US1] Add revoke invitation audit action constants in `django_app/sitesync/services.py`
+- [X] T014 [US1] Add revoke action and copy-link controls in `django_app/templates/sitesync/panel_users.html`
+- [X] T015 [P] [US1] Add admin invitation action styles in `django_app/static/sitesync/panel.css`
+- [X] T016 [P] [US1] Add copy invitation link behavior script in `django_app/static/sitesync/panel-users.js`
+- [X] T017 [US1] Load invitation action script in the canonical admin users page in `django_app/templates/sitesync/panel_users.html`
 
 **Checkpoint**: User Story 1 is complete and independently demonstrable.
 
@@ -63,12 +63,12 @@
 
 ### Implementation for User Story 2
 
-- [ ] T018 [US2] Enforce pending-only invitation acceptance and clear invalid states in `django_app/sitesync/views.py`
-- [ ] T042 [US2] Add regression test that direct self-registration routes are unavailable in `django_app/sitesync/tests/test_auth_flow.py`
-- [ ] T043 [US2] Enforce no direct signup endpoint exposure in route configuration in `django_app/config/urls.py`
-- [ ] T019 [US2] Update invitation acceptance page branding and messaging in `django_app/templates/sitesync/invite_accept.html`
-- [ ] T020 [P] [US2] Update login page invitation-only guidance in `django_app/templates/registration/login.html`
-- [ ] T021 [P] [US2] Add invitation acceptance page styling updates in `django_app/static/sitesync/cxg-base.css`
+- [X] T018 [US2] Enforce pending-only invitation acceptance and clear invalid states in `django_app/sitesync/views.py`
+- [X] T042 [US2] Add regression test that direct self-registration routes are unavailable in `django_app/sitesync/tests/test_auth_flow.py`
+- [X] T043 [US2] Enforce no direct signup endpoint exposure in route configuration in `django_app/config/urls.py`
+- [X] T019 [US2] Update invitation acceptance page branding and messaging in `django_app/templates/sitesync/invite_accept.html`
+- [X] T020 [P] [US2] Update login page invitation-only guidance in `django_app/templates/registration/login.html`
+- [X] T021 [P] [US2] Add invitation acceptance page styling updates in `django_app/static/sitesync/cxg-base.css`
 
 **Checkpoint**: User Story 2 is complete and independently demonstrable.
 
@@ -82,14 +82,14 @@
 
 ### Implementation for User Story 3
 
-- [ ] T022 [US3] Define canonical Django password reset route set (request, done, confirm, complete) in `django_app/config/urls.py`
-- [ ] T023 [US3] Update app-level alias route and all internal links to the canonical reset flow in `django_app/sitesync/urls.py` and relevant templates under `django_app/templates/`
-- [ ] T024 [US3] Update reset request handling and fallback messaging in `django_app/sitesync/views.py`
-- [ ] T025 [US3] Create branded reset request template in `django_app/templates/registration/password_reset_form.html`
-- [ ] T026 [P] [US3] Create branded reset confirmation template in `django_app/templates/registration/password_reset_done.html`
-- [ ] T027 [P] [US3] Create branded reset token-entry template in `django_app/templates/registration/password_reset_confirm.html`
-- [ ] T028 [P] [US3] Create branded reset completion template in `django_app/templates/registration/password_reset_complete.html`
-- [ ] T029 [US3] Add password reset subject template in `django_app/templates/registration/password_reset_subject.txt`
+- [X] T022 [US3] Define canonical Django password reset route set (request, done, confirm, complete) in `django_app/config/urls.py`
+- [X] T023 [US3] Update app-level alias route and all internal links to the canonical reset flow in `django_app/sitesync/urls.py` and relevant templates under `django_app/templates/`
+- [X] T024 [US3] Update reset request handling and fallback messaging in `django_app/sitesync/views.py`
+- [X] T025 [US3] Create branded reset request template in `django_app/templates/registration/password_reset_form.html`
+- [X] T026 [P] [US3] Create branded reset confirmation template in `django_app/templates/registration/password_reset_done.html`
+- [X] T027 [P] [US3] Create branded reset token-entry template in `django_app/templates/registration/password_reset_confirm.html`
+- [X] T028 [P] [US3] Create branded reset completion template in `django_app/templates/registration/password_reset_complete.html`
+- [X] T029 [US3] Add password reset subject template in `django_app/templates/registration/password_reset_subject.txt`
 
 **Checkpoint**: User Story 3 is complete and independently demonstrable.
 
@@ -103,13 +103,13 @@
 
 ### Implementation for User Story 4
 
-- [ ] T030 [US4] Create reusable logout confirmation modal partial in `django_app/templates/sitesync/_logout_confirm_modal.html`
-- [ ] T031 [US4] Integrate modal trigger and form wiring in `django_app/templates/sitesync/_topbar.html`
-- [ ] T032 [US4] Integrate modal trigger and form wiring in `django_app/templates/sitesync/panel_base.html`
-- [ ] T033 [US4] Integrate modal trigger and form wiring in `django_app/templates/sitesync/profile.html`
-- [ ] T034 [P] [US4] Implement logout modal client behavior in `django_app/static/sitesync/logout-confirm.js`
-- [ ] T035 [P] [US4] Add modal styling for user pages in `django_app/static/sitesync/cxg-base.css`
-- [ ] T036 [P] [US4] Add modal styling for admin panel pages in `django_app/static/sitesync/panel.css`
+- [X] T030 [US4] Create reusable logout confirmation modal partial in `django_app/templates/sitesync/_logout_confirm_modal.html`
+- [X] T031 [US4] Integrate modal trigger and form wiring in `django_app/templates/sitesync/_topbar.html`
+- [X] T032 [US4] Integrate modal trigger and form wiring in `django_app/templates/sitesync/panel_base.html`
+- [X] T033 [US4] Integrate modal trigger and form wiring in `django_app/templates/sitesync/profile.html`
+- [X] T034 [P] [US4] Implement logout modal client behavior in `django_app/static/sitesync/logout-confirm.js`
+- [X] T035 [P] [US4] Add modal styling for user pages in `django_app/static/sitesync/cxg-base.css`
+- [X] T036 [P] [US4] Add modal styling for admin panel pages in `django_app/static/sitesync/panel.css`
 
 **Checkpoint**: User Story 4 is complete and independently demonstrable.
 
@@ -119,9 +119,9 @@
 
 **Purpose**: Cross-story hardening, verification, and documentation alignment.
 
-- [ ] T037 Update auth and invitation API behavior notes in `docs/API.md`
-- [ ] T038 Run auth-focused Docker test suite from `specs/013-invitation-auth-flow/quickstart.md`
-- [ ] T039 Run Django system checks in Docker using `django_app/manage.py check`
+- [X] T037 Update auth and invitation API behavior notes in `docs/API.md`
+- [X] T038 Run auth-focused Docker test suite from `specs/013-invitation-auth-flow/quickstart.md`
+- [X] T039 Run Django system checks in Docker using `django_app/manage.py check`
 - [ ] T040 [P] Validate manual quickstart scenarios and record outcomes in `specs/013-invitation-auth-flow/quickstart.md`
 - [ ] T044 Measure and record SC-002 invitation-copy completion times (target under 30 seconds) in `specs/013-invitation-auth-flow/quickstart.md`
 - [ ] T045 Measure and record SC-004 password-reset email usability timing (target within 2 minutes) in `specs/013-invitation-auth-flow/quickstart.md`

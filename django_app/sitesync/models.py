@@ -174,15 +174,15 @@ class Benchmark(models.Model):
 
 
 class Invitation(models.Model):
-    """Represents a time-limited invitation to join the platform."""
+    """Represents an invitation to join the platform."""
 
     STATUS_PENDING = 'pending'
     STATUS_ACCEPTED = 'accepted'
-    STATUS_EXPIRED = 'expired'
+    STATUS_REVOKED = 'revoked'
     STATUS_CHOICES = [
         (STATUS_PENDING, 'Pending'),
         (STATUS_ACCEPTED, 'Accepted'),
-        (STATUS_EXPIRED, 'Expired'),
+        (STATUS_REVOKED, 'Revoked'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -193,8 +193,9 @@ class Invitation(models.Model):
         related_name='sent_invitations',
     )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
-    expires_at = models.DateTimeField()
+    expires_at = models.DateTimeField(blank=True, null=True)
     accepted_at = models.DateTimeField(blank=True, null=True)
+    revoked_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -202,7 +203,7 @@ class Invitation(models.Model):
         ordering = ['-created_at']
 
     def is_valid(self):
-        return self.status == self.STATUS_PENDING and self.expires_at > timezone.now()
+        return self.status == self.STATUS_PENDING
 
     def accept(self):
         if not self.is_valid():
@@ -210,6 +211,14 @@ class Invitation(models.Model):
         self.status = self.STATUS_ACCEPTED
         self.accepted_at = timezone.now()
         self.save(update_fields=['status', 'accepted_at', 'updated_at'])
+        return True
+
+    def revoke(self):
+        if self.status != self.STATUS_PENDING:
+            return False
+        self.status = self.STATUS_REVOKED
+        self.revoked_at = timezone.now()
+        self.save(update_fields=['status', 'revoked_at', 'updated_at'])
         return True
 
     def __str__(self):

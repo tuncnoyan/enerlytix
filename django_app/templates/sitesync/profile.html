@@ -38,6 +38,33 @@
         .field-row:last-child { border-bottom: none; }
         .field-label { font-size: 0.74rem; font-weight: 700; color: var(--cxg-primary-430); text-transform: uppercase; letter-spacing: 0.07em; }
         .field-value { font-size: 0.88rem; font-weight: 600; color: var(--cxg-primary-432); }
+        .profile-input {
+            width: 100%; border: 1px solid var(--cxg-border); border-radius: 0.35rem;
+            padding: 0.5rem 0.65rem; font: inherit; font-size: 0.88rem; color: var(--cxg-primary-432);
+            background: var(--cxg-white);
+        }
+        .profile-input:focus {
+            border-color: var(--cxg-dark-green);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(0, 105, 60, 0.12);
+        }
+        .profile-message {
+            margin-bottom: 0.85rem;
+            padding: 0.55rem 0.7rem;
+            border-radius: 0.35rem;
+            font-size: 0.84rem;
+            font-weight: 600;
+        }
+        .profile-message-success {
+            background: #CDFFE9;
+            color: var(--cxg-dark-green);
+            border: 1px solid #9AFFD3;
+        }
+        .profile-message-error {
+            background: #FFF0F0;
+            color: #B70000;
+            border: 1px solid #FFBABA;
+        }
         /* Role badges */
         .role-badge {
             display: inline-block; font-size: 0.72rem; font-weight: 700;
@@ -81,20 +108,30 @@
                 </div>
             </div>
             <div class="card-body">
+                {% if profile_success %}
+                <div class="profile-message profile-message-success">{{ profile_success }}</div>
+                {% endif %}
+                {% if profile_error %}
+                <div class="profile-message profile-message-error">{{ profile_error }}</div>
+                {% endif %}
+                <form id="profile-edit-form" method="post">
+                    {% csrf_token %}
                 <div class="field-row">
-                    <span class="field-label">Username</span>
-                    <span class="field-value">{{ user.username }}</span>
+                    <label class="field-label" for="profile-username">Username</label>
+                    <input id="profile-username" class="profile-input" type="text" name="username" value="{{ user.username }}" required>
                 </div>
                 <div class="field-row">
                     <span class="field-label">Email</span>
                     <span class="field-value">{{ user.email }}</span>
                 </div>
-                {% if user.first_name or user.last_name %}
                 <div class="field-row">
-                    <span class="field-label">Name</span>
-                    <span class="field-value">{{ user.get_full_name }}</span>
+                    <label class="field-label" for="profile-first-name">First name</label>
+                    <input id="profile-first-name" class="profile-input" type="text" name="first_name" value="{{ user.first_name }}">
                 </div>
-                {% endif %}
+                <div class="field-row">
+                    <label class="field-label" for="profile-last-name">Last name</label>
+                    <input id="profile-last-name" class="profile-input" type="text" name="last_name" value="{{ user.last_name }}">
+                </div>
                 <div class="field-row">
                     <span class="field-label">Member since</span>
                     <span class="field-value">{{ user.date_joined|date:"j N Y" }}</span>
@@ -112,13 +149,12 @@
                         {% if not user.is_superuser and not user.is_staff and not user.roleassignment_set.exists %}<span class="role-badge">User</span>{% endif %}
                     </span>
                 </div>
+                </form>
             </div>
             <div class="card-actions">
+                <button type="submit" form="profile-edit-form" class="btn-outline">Save profile</button>
                 <a href="{% url 'sitesync:password_reset' %}" class="btn-outline">Change password</a>
-                <form method="post" action="{% url 'logout' %}" style="margin:0;">
-                    {% csrf_token %}
-                    <button type="submit" class="btn-signout">Sign out</button>
-                </form>
+                <button type="button" class="btn-signout js-open-logout-modal">Logout</button>
             </div>
         </div>
     </div>

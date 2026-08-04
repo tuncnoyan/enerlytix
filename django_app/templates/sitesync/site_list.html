@@ -168,6 +168,9 @@
             overflow: hidden;
             background: var(--cxg-white);
             box-shadow: 0 1px 2px rgba(51, 63, 72, 0.06);
+            display: flex;
+            flex-direction: column;
+            height: clamp(28rem, 62vh, 38rem);
         }
 
         .site-list-header {
@@ -214,7 +217,8 @@
         }
 
         .site-items {
-            max-height: 64vh;
+            flex: 1;
+            min-height: 0;
             overflow-y: auto;
             list-style: none;
             margin: 0;
@@ -270,8 +274,9 @@
             border-radius: 0.35rem;
             background: var(--cxg-white);
             padding: 0.8rem;
-            min-height: 20rem;
+            height: clamp(28rem, 62vh, 38rem);
             box-shadow: 0 1px 2px rgba(51, 63, 72, 0.06);
+            overflow-y: auto;
         }
 
         .supply-panel h3 {
@@ -646,10 +651,11 @@
                 </div>
             </div>
         </div>
+
+        <footer class="site-footer"><span>Copyright © 2026 CARBONXGEN Limited. All rights reserved</span></footer>
     </div>
 
     <script src="{% static 'sitesync/js/site_selection.js' %}"></script>
     <script src="{% static 'sitesync/js/site_search.js' %}"></script>
-    <footer class="site-footer"><span>Copyright © 2026 CARBONXGEN Limited. All rights reserved</span></footer>
 </body>
 </html>

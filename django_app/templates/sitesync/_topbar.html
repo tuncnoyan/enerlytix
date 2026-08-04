@@ -13,11 +13,10 @@
             <summary class="topbar-user-trigger"><span class="topbar-user-avatar">{{ user.get_full_name|default:user.username|slice:":1"|upper }}</span><span>{{ user.get_full_name|default:user.username }}</span></summary>
             <div class="topbar-user-dropdown">
                 <a href="{% url 'sitesync:profile' %}"{% if active_page == 'profile' %} class="is-active"{% endif %}>Profile</a>
-                <form method="post" action="{% url 'logout' %}" class="topbar-logout-form">
-                    {% csrf_token %}
-                    <button type="submit" class="topbar-logout-btn">Logout</button>
-                </form>
+                <button type="button" class="topbar-logout-btn js-open-logout-modal">Logout</button>
             </div>
         </details>
     </nav>
 </div>
+{% include 'sitesync/_logout_confirm_modal.html' %}
+<script src="{% static 'sitesync/logout-confirm.js' %}"></script>

@@ -5,6 +5,59 @@
 - `GET /`
 - Returns the searchable site dashboard.
 
+## Invitation-only authentication
+
+### Admin invitation management
+
+- `GET /panel/users/`
+- Shows pending invitations with visible full accept links and copy actions.
+- Supports invitation resend and revoke controls.
+
+- `POST /panel/users/` with `create_invitation=1`
+- Creates a new invitation for a unique email or reuses the existing pending invitation.
+- If the invitation email backend is configured, an invitation email send is attempted and logged.
+
+- `POST /panel/users/` with `resend_invitation=1`
+- Reuses the existing invitation and retries invitation delivery.
+
+- `POST /panel/users/` with `revoke_invitation=1`
+- Revokes a pending invitation so the accept link is immediately invalid.
+
+### Invitation acceptance
+
+- `GET /invitations/<invitation_id>/accept/`
+- Renders the invitation-only sign-up page for valid pending invitations.
+- Invalid, used, revoked, or unknown invitations return a generic invalid message.
+
+- `POST /invitations/<invitation_id>/accept/`
+- Creates the invited user account and marks the invitation as accepted.
+
+### Password reset flow
+
+- `GET /password-reset/`
+- Canonical request route using Django tokenized reset flow with branded templates.
+
+- `POST /password-reset/`
+- Submits reset requests and returns a neutral confirmation state.
+
+- `GET /password-reset/done/`
+- Branded confirmation page after request submission.
+
+- `GET|POST /password-reset/confirm/<uidb64>/<token>/`
+- Token validation and password update page.
+
+- `GET /password-reset/complete/`
+- Branded completion page after successful password update.
+
+- `GET /sitesync/password-reset/`
+- App-level alias that redirects to canonical `/password-reset/`.
+
+### Logout confirmation
+
+- Logout controls in user and panel navigation now open an in-place confirmation modal.
+- Session termination only occurs when the modal confirmation submits `POST /logout/`.
+- Cancelling the modal keeps the current authenticated session active.
+
 ## Report editor and cover pages
 
 - `GET /report/?site_id=<id>&end_month=YYYY-MM`

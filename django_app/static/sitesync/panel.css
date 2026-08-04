@@ -539,6 +539,156 @@ body {
     margin-top: auto;
 }
 
+/* Admin users invitation management */
+.panel-users-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.panel-card {
+    background: var(--cxg-white);
+    border: 1px solid var(--cxg-border);
+    border-radius: 0.45rem;
+    padding: 1rem;
+}
+
+.panel-card h2 {
+    margin: 0 0 0.75rem;
+    font-size: 1.1rem;
+}
+
+.panel-inline-form {
+    display: grid;
+    gap: 0.55rem;
+    max-width: 520px;
+}
+
+.panel-inline-form label {
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.panel-inline-form input {
+    border: 1px solid var(--cxg-border);
+    border-radius: 0.35rem;
+    padding: 0.55rem 0.65rem;
+    font: inherit;
+}
+
+.panel-invitations-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.6rem;
+}
+
+.panel-invitation-item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.8rem;
+    border: 1px solid var(--cxg-border);
+    border-radius: 0.4rem;
+    padding: 0.75rem;
+}
+
+.panel-invitation-details {
+    min-width: 0;
+}
+
+.panel-invitation-details strong {
+    display: block;
+    margin-bottom: 0.32rem;
+}
+
+.panel-invitation-path {
+    display: block;
+    white-space: nowrap;
+    overflow-x: auto;
+    background: var(--cxg-bg-10);
+    border: 1px solid var(--cxg-border);
+    border-radius: 0.35rem;
+    padding: 0.35rem 0.45rem;
+    font-size: 0.76rem;
+}
+
+.panel-invitation-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    justify-content: flex-end;
+}
+
+.panel-invitation-actions form {
+    margin: 0;
+}
+
+.panel-account-action-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 0.4rem;
+}
+
+.panel-empty {
+    color: var(--cxg-primary-430);
+    font-size: 0.84rem;
+}
+
+/* Logout confirmation modal on panel pages */
+.logout-modal-open {
+    overflow: hidden;
+}
+
+.logout-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    display: grid;
+    place-items: center;
+    z-index: 1000;
+}
+
+.logout-modal[hidden] {
+    display: none !important;
+}
+
+.logout-modal-dialog {
+    width: min(92vw, 360px);
+    background: var(--cxg-white);
+    border-radius: 0.6rem;
+    border: 1px solid var(--cxg-border);
+    padding: 1rem;
+}
+
+.logout-modal-dialog h2 {
+    margin: 0 0 0.45rem;
+    font-size: 1.1rem;
+}
+
+.logout-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.8rem;
+}
+
+.logout-cancel-btn,
+.logout-confirm-btn {
+    border: 1px solid var(--cxg-border);
+    border-radius: 0.35rem;
+    padding: 0.45rem 0.7rem;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.logout-confirm-btn {
+    background: var(--cxg-green);
+    color: var(--cxg-primary-432);
+    border-color: var(--cxg-green);
+}
+
 /* Responsive */
 @media (max-width: 860px) {
     .panel-topbar {
@@ -558,6 +708,12 @@ body {
     .sidebar-heading { display: none; }
     .sidebar-nav { flex-direction: row; flex-wrap: wrap; padding: 0; }
     .sidebar-link { padding: 0.4rem 0.65rem; font-size: 0.78rem; }
+    .panel-invitation-item {
+        flex-direction: column;
+    }
+    .panel-account-action-form {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {

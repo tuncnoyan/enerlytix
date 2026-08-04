@@ -16,6 +16,7 @@ class PasswordResetTests(TestCase):
         response = self.client.post(
             reverse('sitesync:password_reset'),
             {'email': 'reset@example.com'},
+            follow=True,
         )
 
         self.assertEqual(response.status_code, 200)

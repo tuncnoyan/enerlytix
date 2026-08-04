@@ -121,6 +121,7 @@
         {% csrf_token %}
         <h1>Enerlytix</h1>
         <p>Sign in to access dashboards, reports, and imports.</p>
+        <p>Accounts are invitation-only. Contact your administrator if you do not have an invitation.</p>
 
         {% if form.non_field_errors %}
             <div class="errornote">{{ form.non_field_errors }}</div>
@@ -142,6 +143,7 @@
 
         <div class="actions">
             <button type="submit">Sign in</button>
+            <a href="{% url 'password_reset' %}">Forgot password?</a>
         </div>
     </form>
 </body>
