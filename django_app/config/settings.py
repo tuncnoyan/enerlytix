@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'anymail',
     'rest_framework',
     'sitesync',
 ]
@@ -197,6 +198,20 @@ CONSUMPTION_IMPORT_RETRY_BACKOFF_SECONDS = int(os.getenv('CONSUMPTION_IMPORT_RET
 CONSUMPTION_HALFHOURLY_MONTHS = int(os.getenv('CONSUMPTION_HALFHOURLY_MONTHS', 2))
 CONSUMPTION_MONTHLY_MONTHS = int(os.getenv('CONSUMPTION_MONTHLY_MONTHS', 24))
 CONSUMPTION_INVOICE_MONTHS = int(os.getenv('CONSUMPTION_INVOICE_MONTHS', 12))
+
+# Email configuration
+MAILTRAP_API_TOKEN = (os.getenv('MAILTRAP_API_TOKEN') or '').strip()
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'hello@demomailtrap.co')
+MAIL_REPLY_TO = os.getenv('MAIL_REPLY_TO', '')
+
+if MAILTRAP_API_TOKEN:
+    ANYMAIL = {
+        'MAILTRAP_API_TOKEN': MAILTRAP_API_TOKEN,
+    }
+    EMAIL_BACKEND = 'anymail.backends.mailtrap.EmailBackend'
+else:
+    ANYMAIL = {}
+    EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
 
 # Security Settings
 SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'False') == 'True'

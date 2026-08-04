@@ -12,6 +12,8 @@ from decimal import Decimal, ROUND_HALF_UP
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
+from django.conf import settings
+from django.core.mail import EmailMessage
 from django.core.paginator import Paginator
 from django.db.models import Count, Q, Sum
 from django.http import JsonResponse, HttpResponse
@@ -205,6 +207,39 @@ def _log_audit_event(
         request_path=request.path,
         metadata_json=metadata or {},
     )
+
+
+def _send_invitation_email(request, invitation):
+    """Send invitation email through configured Django email backend."""
+
+    accept_url = request.build_absolute_uri(
+        reverse('sitesync:accept_invitation', kwargs={'invitation_id': invitation.id})
+    )
+    reply_to_address = (getattr(settings, 'MAIL_REPLY_TO', '') or '').strip()
+
+    message = EmailMessage(
+        subject='You are invited to Enerlytix',
+        body=(
+            'You have been invited to join Enerlytix.\n\n'
+            f'Accept your invitation here: {accept_url}\n\n'
+            'This invitation expires in 7 days.'
+        ),
+        from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'hello@demomailtrap.co'),
+        to=[invitation.email],
+        reply_to=[reply_to_address] if reply_to_address else None,
+    )
+    message.esp_extra = {
+        'category': 'User Invitation',
+        'custom_variables': {
+            'invitation_id': str(invitation.id),
+            'invited_by': request.user.get_username(),
+        },
+    }
+
+    try:
+        message.send(fail_silently=False)
+    except Exception:
+        logger.exception('Failed to send invitation email for %s', invitation.email)
 
 
 def _previous_complete_month_key():
@@ -1554,6 +1589,7 @@ def user_admin_view(request):
                     invited_by=request.user,
                     expires_at=dj_timezone.now() + dj_timezone.timedelta(days=7),
                 )
+                _send_invitation_email(request, invitation)
                 _log_audit_event(
                     request,
                     action_type=AUDIT_ACTION_ADMIN_CREATE_INVITATION,
