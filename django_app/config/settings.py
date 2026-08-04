@@ -203,15 +203,18 @@ CONSUMPTION_INVOICE_MONTHS = int(os.getenv('CONSUMPTION_INVOICE_MONTHS', 12))
 MAILTRAP_API_TOKEN = (os.getenv('MAILTRAP_API_TOKEN') or '').strip()
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'hello@demomailtrap.co')
 MAIL_REPLY_TO = os.getenv('MAIL_REPLY_TO', '')
+MAILTRAP_EMAIL_BACKEND = 'anymail.backends.mailtrap.EmailBackend'
 
 if MAILTRAP_API_TOKEN:
     ANYMAIL = {
         'MAILTRAP_API_TOKEN': MAILTRAP_API_TOKEN,
     }
-    EMAIL_BACKEND = 'anymail.backends.mailtrap.EmailBackend'
+    CONFIGURED_EMAIL_BACKEND = MAILTRAP_EMAIL_BACKEND
 else:
     ANYMAIL = {}
-    EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+    CONFIGURED_EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+
+EMAIL_BACKEND = CONFIGURED_EMAIL_BACKEND
 
 # Security Settings
 SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'False') == 'True'

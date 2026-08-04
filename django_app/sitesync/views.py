@@ -66,6 +66,7 @@ from .services import (
     AUDIT_ACTION_ADMIN_ASSIGN_ROLE,
     AUDIT_ACTION_ADMIN_ASSIGN_TEAM,
     AUDIT_ACTION_ADMIN_CREATE_INVITATION,
+    AUDIT_ACTION_ADMIN_SEND_INVITATION_EMAIL,
     AUDIT_ACTION_ADMIN_CREATE_TEAM,
     AUDIT_ACTION_ADMIN_DELETE_USER,
     AUDIT_ACTION_ADMIN_DISABLE_USER,
@@ -237,9 +238,11 @@ def _send_invitation_email(request, invitation):
     }
 
     try:
-        message.send(fail_silently=False)
-    except Exception:
+        sent_count = message.send(fail_silently=False)
+        return sent_count > 0, ''
+    except Exception as exc:
         logger.exception('Failed to send invitation email for %s', invitation.email)
+        return False, str(exc)
 
 
 def _previous_complete_month_key():
@@ -1589,7 +1592,7 @@ def user_admin_view(request):
                     invited_by=request.user,
                     expires_at=dj_timezone.now() + dj_timezone.timedelta(days=7),
                 )
-                _send_invitation_email(request, invitation)
+                email_sent, email_error = _send_invitation_email(request, invitation)
                 _log_audit_event(
                     request,
                     action_type=AUDIT_ACTION_ADMIN_CREATE_INVITATION,
@@ -1598,6 +1601,25 @@ def user_admin_view(request):
                     target_entity_id=str(invitation.id),
                     target_entity_label=invitation.email,
                     message=f"Created invitation for {invitation.email}.",
+                )
+                _log_audit_event(
+                    request,
+                    action_type=AUDIT_ACTION_ADMIN_SEND_INVITATION_EMAIL,
+                    action_outcome=AuditLogEntry.OUTCOME_SUCCESS if email_sent else AuditLogEntry.OUTCOME_FAILED,
+                    target_entity_type='invitation',
+                    target_entity_id=str(invitation.id),
+                    target_entity_label=invitation.email,
+                    message=(
+                        f"Sent invitation email to {invitation.email}."
+                        if email_sent
+                        else f"Failed to send invitation email to {invitation.email}: {email_error}"
+                    ),
+                    metadata={
+                        'email_backend': getattr(settings, 'EMAIL_BACKEND', ''),
+                        'send_attempted': True,
+                        'sent': email_sent,
+                        'error': email_error,
+                    },
                 )
                 invitation_form = InvitationForm()
         elif 'account_action' in request.POST:
