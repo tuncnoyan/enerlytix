@@ -23,7 +23,7 @@ docker compose -f django_app/docker/docker-compose.yml exec -T web python manage
 Run validation workflow test suite in Docker only:
 
 ```powershell
-docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test sitesync.tests.test_report_validation_assignment sitesync.tests.test_report_validation_page_status sitesync.tests.test_report_validation_final_gate sitesync.tests.test_report_validation_reassignment sitesync.tests.test_saved_reports_validation_metadata
+docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test sitesync.tests.test_report_validation_assignment sitesync.tests.test_report_validation_comments sitesync.tests.test_report_validation_page_status sitesync.tests.test_report_validation_final_gate sitesync.tests.test_report_validation_regrant_reopen sitesync.tests.test_saved_reports_validation_metadata
 ```
 
 ## Validation Scenarios
@@ -70,6 +70,7 @@ Steps:
 Expected:
 - Step 2 clears page validation and shows reset warning.
 - Step 4 does not clear page validation.
+- Validation comments remain saved and visible.
 
 ### SC-005 Full validation gate before final save
 
@@ -101,6 +102,16 @@ Steps:
 Expected:
 - Edit succeeds after authorized regrant.
 - Validation state reopens and previously validated state is cleared per reset rules.
+
+### SC-008 Validation comment collaboration
+
+Steps:
+1. Save page-level validation comments on an awaiting-validation report.
+2. Reload the report editor.
+
+Expected:
+- Validation comments persist per page.
+- Validation comments do not clear validated checkboxes.
 
 ## References
 

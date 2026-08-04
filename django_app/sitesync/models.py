@@ -488,10 +488,49 @@ class MonthlyReport(models.Model):
         (STATUS_FINAL, 'Final'),
     ]
 
+    VALIDATION_DRAFT = 'draft'
+    VALIDATION_AWAITING = 'awaiting_validation'
+    VALIDATION_VALIDATED = 'validated'
+    VALIDATION_STATUS_CHOICES = [
+        (VALIDATION_DRAFT, 'Draft'),
+        (VALIDATION_AWAITING, 'Awaiting Validation'),
+        (VALIDATION_VALIDATED, 'Validated'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name='monthly_reports')
     reporting_month = models.CharField(max_length=7, db_index=True)
     current_status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_DRAFT)
+    validation_status = models.CharField(
+        max_length=32,
+        choices=VALIDATION_STATUS_CHOICES,
+        default=VALIDATION_DRAFT,
+        db_index=True,
+    )
+    validator_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='validated_monthly_reports',
+        null=True,
+        blank=True,
+    )
+    validator_assigned_by_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='validation_assignments_made',
+        null=True,
+        blank=True,
+    )
+    validator_assigned_at = models.DateTimeField(null=True, blank=True)
+    validated_by_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='monthly_reports_validated',
+        null=True,
+        blank=True,
+    )
+    validated_at = models.DateTimeField(null=True, blank=True)
+    validation_reopened_at = models.DateTimeField(null=True, blank=True)
     current_version = models.ForeignKey(
         'MonthlyReportVersion',
         on_delete=models.SET_NULL,
@@ -542,6 +581,8 @@ class MonthlyReport(models.Model):
         indexes = [
             models.Index(fields=['site', 'reporting_month']),
             models.Index(fields=['current_status']),
+            models.Index(fields=['validation_status']),
+            models.Index(fields=['validator_user', 'validation_status']),
             models.Index(fields=['owner_user']),
             models.Index(fields=['site', 'owner_user', 'current_status']),
         ]
@@ -626,6 +667,116 @@ class ReportComment(models.Model):
 
     def __str__(self):
         return f"ReportComment {self.report_version_id} {self.visual_key}"
+
+
+class ReportPageValidationState(models.Model):
+    """Per-page validation state for a monthly report."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    report = models.ForeignKey(MonthlyReport, on_delete=models.CASCADE, related_name='page_validation_states')
+    page_key = models.CharField(max_length=255)
+    is_validated = models.BooleanField(default=False)
+    validated_by_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='validated_report_pages',
+        null=True,
+        blank=True,
+    )
+    validated_at = models.DateTimeField(null=True, blank=True)
+    reset_reason = models.CharField(max_length=32, blank=True, null=True)
+    reset_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['page_key']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['report', 'page_key'],
+                name='uniq_report_page_validation_state',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['report', 'is_validated']),
+            models.Index(fields=['report', 'page_key']),
+        ]
+
+    def __str__(self):
+        return f"ReportPageValidationState {self.report_id} {self.page_key}"
+
+
+class ReportValidationComment(models.Model):
+    """Validation commentary for a report page."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    report = models.ForeignKey(MonthlyReport, on_delete=models.CASCADE, related_name='validation_comments')
+    page_key = models.CharField(max_length=255)
+    comment_text = models.TextField(blank=True, default='')
+    authored_by_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='authored_report_validation_comments',
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['page_key', 'updated_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['report', 'page_key', 'authored_by_user'],
+                name='uniq_report_validation_comment_author_page',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['report', 'page_key']),
+        ]
+
+    def __str__(self):
+        return f"ReportValidationComment {self.report_id} {self.page_key}"
+
+
+class ReportValidationEvent(models.Model):
+    """Immutable audit event for report validation workflow actions."""
+
+    EVENT_VALIDATOR_ASSIGNED = 'validator_assigned'
+    EVENT_VALIDATOR_REASSIGNED = 'validator_reassigned'
+    EVENT_PAGE_VALIDATED = 'page_validated'
+    EVENT_PAGE_RESET = 'page_reset'
+    EVENT_REPORT_VALIDATED = 'report_validated'
+    EVENT_FINAL_BLOCKED = 'final_blocked'
+    EVENT_FINAL_REOPENED = 'final_reopened'
+    EVENT_CHOICES = [
+        (EVENT_VALIDATOR_ASSIGNED, 'Validator Assigned'),
+        (EVENT_VALIDATOR_REASSIGNED, 'Validator Reassigned'),
+        (EVENT_PAGE_VALIDATED, 'Page Validated'),
+        (EVENT_PAGE_RESET, 'Page Reset'),
+        (EVENT_REPORT_VALIDATED, 'Report Validated'),
+        (EVENT_FINAL_BLOCKED, 'Final Blocked'),
+        (EVENT_FINAL_REOPENED, 'Final Reopened'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    report = models.ForeignKey(MonthlyReport, on_delete=models.CASCADE, related_name='validation_events')
+    page_key = models.CharField(max_length=255, blank=True, null=True)
+    event_type = models.CharField(max_length=32, choices=EVENT_CHOICES)
+    event_by_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='report_validation_events',
+        null=True,
+        blank=True,
+    )
+    event_at = models.DateTimeField(auto_now_add=True)
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        ordering = ['-event_at']
+        indexes = [
+            models.Index(fields=['report', 'event_at']),
+            models.Index(fields=['event_type', 'event_at']),
+        ]
+
+    def __str__(self):
+        return f"ReportValidationEvent {self.report_id} {self.event_type}"
 
 
 class ReportWriteGrant(models.Model):

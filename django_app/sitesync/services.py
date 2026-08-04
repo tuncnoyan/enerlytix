@@ -31,6 +31,9 @@ from .models import (
     MonthlyReport,
     MonthlyReportVersion,
     ReportComment,
+    ReportPageValidationState,
+    ReportValidationComment,
+    ReportValidationEvent,
     ReportWriteGrant,
     ReportWriteDelegationEvent,
     Team,
@@ -1272,6 +1275,467 @@ def get_or_create_monthly_report(site: Site, reporting_month: str, actor_user=No
     return report
 
 
+def get_report_validation_page_keys(report: MonthlyReport) -> List[str]:
+    """Return canonical page keys for validation state tracking."""
+    version = report.current_version
+    if version is None and report.current_final_version is not None:
+        version = report.current_final_version
+    if version is None:
+        return []
+    return list(version.comments.order_by('visual_key').values_list('visual_key', flat=True))
+
+
+def ensure_report_validation_rows(report: MonthlyReport) -> List[ReportPageValidationState]:
+    """Ensure every canonical page key has a validation state row."""
+    existing_qs = ReportPageValidationState.objects.filter(report=report)
+    page_keys = get_report_validation_page_keys(report)
+    if not page_keys:
+        return list(existing_qs.order_by('page_key'))
+
+    existing_rows = {
+        row.page_key: row
+        for row in existing_qs.filter(page_key__in=page_keys)
+    }
+    rows = []
+    for page_key in page_keys:
+        row = existing_rows.get(page_key)
+        if row is None:
+            row = ReportPageValidationState.objects.create(report=report, page_key=page_key)
+        rows.append(row)
+    return rows
+
+
+def ensure_report_validation_rows_for_keys(report: MonthlyReport, page_keys: List[str]) -> List[ReportPageValidationState]:
+    """Ensure validation rows exist for the provided page keys."""
+    normalized_keys = []
+    for key in page_keys or []:
+        normalized = str(key or '').strip()
+        if normalized:
+            normalized_keys.append(normalized)
+
+    if not normalized_keys:
+        return ensure_report_validation_rows(report)
+
+    unique_keys = list(dict.fromkeys(normalized_keys))
+    existing_rows = {
+        row.page_key: row
+        for row in ReportPageValidationState.objects.filter(report=report, page_key__in=unique_keys)
+    }
+    rows = []
+    for page_key in unique_keys:
+        row = existing_rows.get(page_key)
+        if row is None:
+            row = ReportPageValidationState.objects.create(report=report, page_key=page_key)
+        rows.append(row)
+    return rows
+
+
+def get_report_validation_summary(report: MonthlyReport) -> Dict[str, object]:
+    """Return a report-level validation summary for editor and listing views."""
+    rows = ensure_report_validation_rows(report)
+    total_page_count = len(rows)
+    validated_page_count = sum(1 for row in rows if row.is_validated)
+    can_finalize = (
+        report.validation_status == MonthlyReport.VALIDATION_VALIDATED
+        and total_page_count > 0
+        and validated_page_count == total_page_count
+    )
+    pages_validation = {
+        row.page_key: {
+            'page_key': row.page_key,
+            'is_validated': row.is_validated,
+            'validated_by_user_id': row.validated_by_user_id,
+            'validated_by_user_name': row.validated_by_user.get_username() if row.validated_by_user else None,
+            'validated_at': row.validated_at,
+            'reset_reason': row.reset_reason,
+            'reset_at': row.reset_at,
+        }
+        for row in rows
+    }
+    return {
+        'validation_status': report.validation_status,
+        'validator_user_id': report.validator_user_id,
+        'validator_user': report.validator_user,
+        'validator_assigned_by_user_id': report.validator_assigned_by_user_id,
+        'validator_assigned_at': report.validator_assigned_at,
+        'validated_by_user_id': report.validated_by_user_id,
+        'validated_by_user': report.validated_by_user,
+        'validated_at': report.validated_at,
+        'validated_page_count': validated_page_count,
+        'total_page_count': total_page_count,
+        'can_finalize': can_finalize,
+        'pages_validation': pages_validation,
+    }
+
+
+def get_report_validation_comment_snapshot(report: MonthlyReport) -> Dict[str, object]:
+    """Return the latest validation comments and comment thread rows for a report."""
+    comments = ReportValidationComment.objects.select_related('authored_by_user').filter(report=report).order_by(
+        'page_key', '-updated_at', '-id'
+    )
+    latest_comments = {}
+    threads = {}
+    for comment in comments:
+        thread_rows = threads.setdefault(comment.page_key, [])
+        thread_rows.append({
+            'page_key': comment.page_key,
+            'comment_text': comment.comment_text,
+            'authored_by_user_id': comment.authored_by_user_id,
+            'authored_by_user_name': comment.authored_by_user.get_username() if comment.authored_by_user else None,
+            'updated_at': comment.updated_at,
+        })
+        if comment.page_key not in latest_comments:
+            latest_comments[comment.page_key] = comment.comment_text
+    return {
+        'validation_comments': latest_comments,
+        'validation_comment_threads': threads,
+    }
+
+
+def upsert_report_validation_comments(*, report: MonthlyReport, comments_by_page: Dict[str, str], actor_user) -> None:
+    """Persist validation comments without affecting business-content validation state."""
+    if not comments_by_page:
+        return
+
+    allowed_page_keys = set(get_report_validation_page_keys(report))
+    if allowed_page_keys:
+        unknown_keys = sorted(set(comments_by_page).difference(allowed_page_keys))
+        if unknown_keys:
+            raise ValueError(f'Unknown report page key: {unknown_keys[0]}')
+
+    now = dj_timezone.now()
+    for page_key, text in comments_by_page.items():
+        normalized_text = str(text or '')
+        comment, _created = ReportValidationComment.objects.get_or_create(
+            report=report,
+            page_key=page_key,
+            authored_by_user=actor_user,
+            defaults={'comment_text': normalized_text},
+        )
+        if comment.comment_text != normalized_text:
+            comment.comment_text = normalized_text
+            comment.updated_at = now
+            comment.save(update_fields=['comment_text', 'updated_at'])
+
+
+def _resolve_validator_assigner_role(*, report: MonthlyReport, actor_user) -> Optional[str]:
+    """Resolve effective assigner role for validator-selection and assignment."""
+    role = _resolve_grantor_role(report=report, actor_user=actor_user)
+    if role is not None:
+        return role
+
+    if not actor_user or not getattr(actor_user, 'is_authenticated', False):
+        return None
+    if not _is_user_in_report_scope(actor_user, report=report):
+        return None
+
+    from .models import has_user_role
+
+    if Team.objects.filter(team_lead=actor_user).exists():
+        return ReportWriteGrant.ROLE_TEAM_LEAD
+
+    if (
+        Team.objects.filter(manager=actor_user).exists()
+        or has_user_role(actor_user, 'manager')
+        or has_user_role(actor_user, 'admin')
+    ):
+        return ReportWriteGrant.ROLE_MANAGER
+
+    return None
+
+
+def _validation_superior_candidate_user_ids(report: MonthlyReport, actor_user) -> Set:
+    """Return validator candidate user IDs for team-lead/manager assigners."""
+    from .models import UserTeamAssignment
+
+    candidate_ids: Set = set()
+
+    actor_role = _resolve_validator_assigner_role(report=report, actor_user=actor_user)
+    if actor_role == ReportWriteGrant.ROLE_TEAM_LEAD:
+        actor_team_ids = set(_team_ids_led_by_user(actor_user))
+    elif actor_role == ReportWriteGrant.ROLE_MANAGER:
+        actor_team_ids = set(Team.objects.filter(manager=actor_user).values_list('id', flat=True))
+    else:
+        return candidate_ids
+
+    if actor_team_ids:
+        actor_scope_team_ids = set(actor_team_ids)
+        for team in Team.objects.filter(id__in=actor_team_ids):
+            actor_scope_team_ids.update(sub_team.id for sub_team in team.get_sub_teams())
+
+        candidate_ids.update(
+            UserTeamAssignment.objects.filter(team_id__in=actor_scope_team_ids).values_list('user_id', flat=True)
+        )
+
+    owner_team_ids = set(
+        UserTeamAssignment.objects.filter(user_id=report.owner_user_id).values_list('team_id', flat=True)
+    )
+    supervisory_team_ids = set(owner_team_ids)
+    for team in Team.objects.filter(id__in=owner_team_ids):
+        supervisory_team_ids.update(parent_team.id for parent_team in team.get_parent_teams())
+
+    if supervisory_team_ids:
+        candidate_ids.update(
+            Team.objects.filter(id__in=supervisory_team_ids)
+            .exclude(team_lead_id=None)
+            .values_list('team_lead_id', flat=True)
+        )
+        candidate_ids.update(
+            Team.objects.filter(id__in=supervisory_team_ids)
+            .exclude(manager_id=None)
+            .values_list('manager_id', flat=True)
+        )
+
+    return candidate_ids
+
+
+def _is_validation_eligible_user(report: MonthlyReport, user, actor_user=None) -> bool:
+    """Return True when user is a valid validator for the report."""
+    from .models import UserTeamAssignment
+
+    if not user or not getattr(user, 'is_authenticated', False) or not getattr(user, 'is_active', False):
+        return False
+    if report.owner_user_id == getattr(user, 'id', None):
+        return False
+    if report.site is None:
+        return False
+
+    actor_role = _resolve_validator_assigner_role(report=report, actor_user=actor_user) if actor_user is not None else None
+    if actor_role in {ReportWriteGrant.ROLE_TEAM_LEAD, ReportWriteGrant.ROLE_MANAGER}:
+        return getattr(user, 'id', None) in _validation_superior_candidate_user_ids(report, actor_user)
+
+    base_teams = []
+    if report.site.team is not None:
+        base_teams = [report.site.team]
+    else:
+        owner_team_ids = list(
+            UserTeamAssignment.objects.filter(user_id=report.owner_user_id).values_list('team_id', flat=True)
+        )
+        if owner_team_ids:
+            base_teams = list(Team.objects.filter(id__in=owner_team_ids))
+
+    if not base_teams:
+        return False
+
+    base_team_ids = [team.id for team in base_teams]
+    if UserTeamAssignment.objects.filter(user=user, team_id__in=base_team_ids).exists():
+        return True
+
+    supervisory_team_ids = set(base_team_ids)
+    for team in base_teams:
+        for parent_team in team.get_parent_teams():
+            supervisory_team_ids.add(parent_team.id)
+
+    return Team.objects.filter(id__in=supervisory_team_ids).filter(Q(team_lead=user) | Q(manager=user)).exists()
+
+
+def assign_report_validator(*, report: MonthlyReport, validator_user, assigned_by_user) -> MonthlyReport:
+    """Assign or reassign a validator for a report and reset validation state."""
+    if not _is_validation_eligible_user(report, validator_user, actor_user=assigned_by_user):
+        raise ValueError('Validator must be active, not the owner, and in the same team or supervisory chain')
+
+    now = dj_timezone.now()
+    reassignment = report.validator_user_id is not None and report.validator_user_id != getattr(validator_user, 'id', None)
+
+    with transaction.atomic():
+        report.validator_user = validator_user
+        report.validator_assigned_by_user = assigned_by_user
+        report.validator_assigned_at = now
+        report.validation_status = MonthlyReport.VALIDATION_AWAITING
+        if reassignment:
+            report.validation_reopened_at = now
+            report.validated_by_user = None
+            report.validated_at = None
+        report.save(
+            update_fields=[
+                'validator_user',
+                'validator_assigned_by_user',
+                'validator_assigned_at',
+                'validation_status',
+                'validation_reopened_at',
+                'validated_by_user',
+                'validated_at',
+            ]
+        )
+
+        for row in ensure_report_validation_rows(report):
+            if row.is_validated:
+                row.is_validated = False
+                row.validated_by_user = None
+                row.validated_at = None
+                row.reset_reason = 'validator_reassigned' if reassignment else 'validator_assigned'
+                row.reset_at = now
+                row.save(update_fields=['is_validated', 'validated_by_user', 'validated_at', 'reset_reason', 'reset_at'])
+
+        ReportValidationEvent.objects.create(
+            report=report,
+            event_type=(
+                ReportValidationEvent.EVENT_VALIDATOR_REASSIGNED
+                if reassignment
+                else ReportValidationEvent.EVENT_VALIDATOR_ASSIGNED
+            ),
+            event_by_user=assigned_by_user,
+            metadata={
+                'validator_user_id': getattr(validator_user, 'id', None),
+                'reassignment': reassignment,
+            },
+        )
+
+    return report
+
+
+def _validation_page_rows(report: MonthlyReport) -> List[ReportPageValidationState]:
+    """Return all validation rows for the report, ensuring canonical rows exist first."""
+    return ensure_report_validation_rows(report)
+
+
+def reset_report_page_validation_state(
+    *,
+    report: MonthlyReport,
+    page_keys: Optional[List[str]] = None,
+    reason: str = 'content_changed',
+    actor_user=None,
+) -> List[ReportPageValidationState]:
+    """Reset validation state for one or more pages."""
+    rows = _validation_page_rows(report)
+    if page_keys:
+        target_rows = [row for row in rows if row.page_key in set(page_keys)]
+    else:
+        target_rows = rows
+
+    now = dj_timezone.now()
+    for row in target_rows:
+        if row.is_validated or row.validated_by_user_id or row.validated_at is not None:
+            row.is_validated = False
+            row.validated_by_user = None
+            row.validated_at = None
+            row.reset_reason = reason
+            row.reset_at = now
+            row.save(update_fields=['is_validated', 'validated_by_user', 'validated_at', 'reset_reason', 'reset_at'])
+            ReportValidationEvent.objects.create(
+                report=report,
+                page_key=row.page_key,
+                event_type=ReportValidationEvent.EVENT_PAGE_RESET,
+                event_by_user=actor_user,
+                metadata={'reason': reason},
+            )
+
+    if reason in {'content_changed', 'validator_reassigned', 'final_reopened'}:
+        report.validation_status = MonthlyReport.VALIDATION_AWAITING
+        report.validated_by_user = None
+        report.validated_at = None
+        if reason == 'final_reopened':
+            report.validation_reopened_at = now
+        report.save(update_fields=['validation_status', 'validated_by_user', 'validated_at', 'validation_reopened_at'])
+
+    return target_rows
+
+
+def mark_report_page_validation_state(
+    *,
+    report: MonthlyReport,
+    page_key: str,
+    is_validated: bool,
+    actor_user,
+    known_page_keys: Optional[List[str]] = None,
+) -> ReportPageValidationState:
+    """Mark a report page validated or unvalidated by the assigned validator."""
+    if report.validator_user_id != getattr(actor_user, 'id', None):
+        raise PermissionError('Only the assigned validator can mark report pages validated')
+
+    page_keys = set(get_report_validation_page_keys(report))
+    if page_keys and page_key not in page_keys:
+        raise ValueError('Unknown report page key')
+
+    if known_page_keys:
+        ensure_report_validation_rows_for_keys(report, known_page_keys)
+
+    row_map = {row.page_key: row for row in _validation_page_rows(report)}
+    row = row_map.get(page_key)
+    if row is None:
+        row = ReportPageValidationState.objects.create(report=report, page_key=page_key)
+    now = dj_timezone.now()
+
+    if is_validated:
+        row.is_validated = True
+        row.validated_by_user = actor_user
+        row.validated_at = now
+        row.reset_reason = None
+        row.reset_at = None
+        row.save(update_fields=['is_validated', 'validated_by_user', 'validated_at', 'reset_reason', 'reset_at'])
+        ReportValidationEvent.objects.create(
+            report=report,
+            page_key=page_key,
+            event_type=ReportValidationEvent.EVENT_PAGE_VALIDATED,
+            event_by_user=actor_user,
+            metadata={'validated': True},
+        )
+    else:
+        row.is_validated = False
+        row.validated_by_user = None
+        row.validated_at = None
+        row.reset_reason = 'content_changed'
+        row.reset_at = now
+        row.save(update_fields=['is_validated', 'validated_by_user', 'validated_at', 'reset_reason', 'reset_at'])
+        ReportValidationEvent.objects.create(
+            report=report,
+            page_key=page_key,
+            event_type=ReportValidationEvent.EVENT_PAGE_RESET,
+            event_by_user=actor_user,
+            metadata={'reason': 'manual_unvalidate'},
+        )
+
+    rows = _validation_page_rows(report)
+    if rows and all(row.is_validated for row in rows):
+        report.validation_status = MonthlyReport.VALIDATION_VALIDATED
+        report.validated_by_user = actor_user
+        report.validated_at = now
+        report.save(update_fields=['validation_status', 'validated_by_user', 'validated_at'])
+        ReportValidationEvent.objects.create(
+            report=report,
+            event_type=ReportValidationEvent.EVENT_REPORT_VALIDATED,
+            event_by_user=actor_user,
+            metadata={'validated_page_count': len(rows), 'total_page_count': len(rows)},
+        )
+    else:
+        report.validation_status = MonthlyReport.VALIDATION_AWAITING
+        report.validated_by_user = None
+        report.validated_at = None
+        report.save(update_fields=['validation_status', 'validated_by_user', 'validated_at'])
+
+    return row
+
+
+def can_user_assign_report_validator(report: MonthlyReport, user) -> bool:
+    """Return True when the user may assign a validator for this report."""
+    return _resolve_validator_assigner_role(report=report, actor_user=user) is not None
+
+
+def get_report_validation_candidate_users(report: MonthlyReport, actor_user=None) -> List[Dict[str, object]]:
+    """Return active users eligible to be assigned as report validators."""
+    from django.contrib.auth import get_user_model
+
+    user_model = get_user_model()
+    users_qs = user_model.objects.filter(is_active=True).exclude(id=report.owner_user_id)
+
+    actor_role = _resolve_validator_assigner_role(report=report, actor_user=actor_user) if actor_user is not None else None
+
+    if actor_role in {ReportWriteGrant.ROLE_TEAM_LEAD, ReportWriteGrant.ROLE_MANAGER}:
+        candidate_ids = _validation_superior_candidate_user_ids(report, actor_user)
+        users_qs = users_qs.filter(id__in=candidate_ids)
+
+    users = users_qs.order_by('username')
+
+    candidates = []
+    for user in users:
+        if _is_validation_eligible_user(report, user, actor_user=actor_user):
+            candidates.append({
+                'id': str(user.id),
+                'username': user.get_username(),
+            })
+    return candidates
+
+
 def _next_report_version_number(report: MonthlyReport) -> int:
     latest = report.versions.order_by('-version_number').first()
     return 1 if latest is None else latest.version_number + 1
@@ -1647,11 +2111,19 @@ def get_report_delegation_candidate_users(report: MonthlyReport, actor_user) -> 
     if role is None:
         return []
 
+    include_owner_for_final_regrant = (
+        report.current_status == MonthlyReport.STATUS_FINAL
+        and report.validation_status == MonthlyReport.VALIDATION_VALIDATED
+        and role in {ReportWriteGrant.ROLE_TEAM_LEAD, ReportWriteGrant.ROLE_MANAGER}
+    )
+
     user_model = get_user_model()
     base_qs = user_model.objects.filter(is_active=True)
 
     if has_user_role(actor_user, 'admin'):
-        users = base_qs.distinct().exclude(id=report.owner_user_id).order_by('username')
+        users = base_qs.distinct().order_by('username')
+        if not include_owner_for_final_regrant:
+            users = users.exclude(id=report.owner_user_id)
         return [{'id': str(user.id), 'username': user.get_username()} for user in users]
 
     if role == ReportWriteGrant.ROLE_OWNER:
@@ -1668,21 +2140,34 @@ def get_report_delegation_candidate_users(report: MonthlyReport, actor_user) -> 
         scoped_user_ids.add(actor_user.id)
         base_qs = base_qs.filter(id__in=scoped_user_ids)
 
-    users = (
-        base_qs.distinct()
-        .exclude(id=report.owner_user_id)
-        .order_by('username')
-    )
+    users = base_qs.distinct().order_by('username')
+    if not include_owner_for_final_regrant:
+        users = users.exclude(id=report.owner_user_id)
 
     return [{'id': str(user.id), 'username': user.get_username()} for user in users]
 
 
 def get_report_access_mode(report: MonthlyReport, user) -> str:
-    """Return one of owner, collaborator, admin, or read_only for report access."""
+    """Return one of owner, collaborator, validator, admin, or read_only for report access."""
     if not user or not getattr(user, 'is_authenticated', False):
         return 'read_only'
+
+    # Finalized validated reports are locked until a superior re-grants write access.
+    if (
+        report.current_status == MonthlyReport.STATUS_FINAL
+        and report.validation_status == MonthlyReport.VALIDATION_VALIDATED
+    ):
+        final_write_grant = get_report_write_grant(report, user)
+        if (
+            final_write_grant is None
+            or final_write_grant.granted_by_role not in {ReportWriteGrant.ROLE_TEAM_LEAD, ReportWriteGrant.ROLE_MANAGER}
+        ):
+            return 'read_only'
+
     if report.owner_user_id == user.id:
         return 'owner'
+    if report.validator_user_id == user.id:
+        return 'validator'
     if get_report_write_grant(report, user) is not None:
         return 'collaborator'
     if user.is_staff or user.is_superuser:
@@ -1692,7 +2177,7 @@ def get_report_access_mode(report: MonthlyReport, user) -> str:
 
 def user_can_write_report(report: MonthlyReport, user) -> bool:
     """Return True if user is authorized to edit report content."""
-    return get_report_access_mode(report, user) in {'owner', 'collaborator', 'admin'}
+    return get_report_access_mode(report, user) in {'owner', 'collaborator', 'validator', 'admin'}
 
 
 def grant_report_write_access(*, report: MonthlyReport, granted_user, granted_by) -> ReportWriteGrant:

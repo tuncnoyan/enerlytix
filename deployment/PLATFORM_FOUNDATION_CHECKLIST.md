@@ -30,6 +30,7 @@ Verify each phase has passing tests:
 - [ ] Phase 5 (Admin Panel): `tests.integration.test_admin_panel_full` ✓
 - [ ] Phase 6 (Report Access): `tests.integration.test_report_access_team` ✓
 - [ ] Phase 7 (E2E): `tests.integration.test_load_hierarchy` ✓
+- [ ] Validation workflow: `sitesync.tests.test_report_validation_end_to_end` ✓
 
 ---
 

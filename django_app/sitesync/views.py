@@ -39,6 +39,7 @@ from .models import (
     ReportWriteGrant,
     Invitation,
     AuditLogEntry,
+        ReportValidationEvent,
 )
 from .forms import (
     AccountActionForm,
@@ -48,6 +49,8 @@ from .forms import (
     ReportDelegationActionForm,
     ReportOwnerUnavailabilityApprovalForm,
     ReportOwnershipTransferForm,
+    ReportValidationAssignForm,
+    ReportValidationPageToggleForm,
     ReportWriteGrantForm,
     ReportWriteRevokeForm,
     SettingsForm,
@@ -93,10 +96,13 @@ from .services import (
     get_capacity_lookup_by_meter_codes,
     get_report_access_mode,
     get_or_create_monthly_report,
+    get_report_write_grant,
     grant_report_write_access,
     get_consumption_display_records,
     get_report_delegation_candidate_users,
     get_report_delegation_role_hint,
+    get_report_validation_summary,
+    get_report_validation_candidate_users,
     get_report_delegation_visibility_rows,
     get_previous_month_final_version,
     import_capacity_upload,
@@ -104,10 +110,17 @@ from .services import (
     normalize_esight_meter_code,
     normalize_reporting_month,
     can_user_manage_report_delegations,
+    can_user_assign_report_validator,
+    _resolve_grantor_role,
     reporting_month_bounds,
     serialize_audit_entry_for_export,
     shift_months,
     transfer_report_ownership,
+    assign_report_validator,
+    get_report_validation_comment_snapshot,
+    mark_report_page_validation_state,
+    reset_report_page_validation_state,
+    upsert_report_validation_comments,
     user_can_write_report,
     revoke_report_write_access,
 )
@@ -418,7 +431,7 @@ def _weekday_weekend_for_supply(supply, end_month, hh_series):
 
 
 
-def _report_editor_context(raw_site_id, raw_end_month, raw_reporting_month, raw_supply_ids, user=None):
+def _report_editor_context(raw_site_id, raw_end_month, raw_reporting_month, raw_supply_ids, user=None, request=None):
     """Build common context for the report editor view."""
     site_id = (raw_site_id or '').strip()
     supply_ids = (raw_supply_ids or '').strip()
@@ -450,6 +463,27 @@ def _report_editor_context(raw_site_id, raw_end_month, raw_reporting_month, raw_
                     initial_comments[comment.visual_key] = comment.text
                     reference_comment_keys.append(comment.visual_key)
 
+    validation_summary = get_report_validation_summary(monthly_report) if monthly_report is not None else {
+        'validation_status': MonthlyReport.VALIDATION_DRAFT,
+        'validator_user_id': None,
+        'validator_user': None,
+        'validator_assigned_by_user_id': None,
+        'validator_assigned_at': None,
+        'validated_by_user_id': None,
+        'validated_by_user': None,
+        'validated_at': None,
+        'validated_page_count': 0,
+        'total_page_count': 0,
+        'can_finalize': False,
+        'pages_validation': {},
+    }
+    validation_comment_snapshot = get_report_validation_comment_snapshot(monthly_report) if monthly_report is not None else {
+        'validation_comments': {},
+        'validation_comment_threads': {},
+    }
+    validation_candidates = get_report_validation_candidate_users(monthly_report, actor_user=user) if monthly_report is not None else []
+    can_assign_validator = bool(monthly_report is not None and user is not None and getattr(user, 'is_authenticated', False) and can_user_assign_report_validator(monthly_report, user))
+
     access_mode = 'read_only'
     if monthly_report is not None:
         access_mode = get_report_access_mode(monthly_report, user)
@@ -468,15 +502,37 @@ def _report_editor_context(raw_site_id, raw_end_month, raw_reporting_month, raw_
             delegation_candidates = get_report_delegation_candidate_users(monthly_report, user)
             delegation_role_hint = get_report_delegation_role_hint(monthly_report, user)
 
+    validation_summary_client = {
+        'validation_status': validation_summary['validation_status'],
+        'validator_user_id': validation_summary['validator_user_id'],
+        'validator_user_name': validation_summary['validator_user'].get_username() if validation_summary['validator_user'] else None,
+        'validator_assigned_by_user_id': validation_summary['validator_assigned_by_user_id'],
+        'validator_assigned_at': validation_summary['validator_assigned_at'],
+        'validated_by_user_id': validation_summary['validated_by_user_id'],
+        'validated_by_user_name': validation_summary['validated_by_user'].get_username() if validation_summary['validated_by_user'] else None,
+        'validated_at': validation_summary['validated_at'],
+        'validated_page_count': validation_summary['validated_page_count'],
+        'total_page_count': validation_summary['total_page_count'],
+        'can_finalize': validation_summary['can_finalize'],
+        'pages_validation': validation_summary['pages_validation'],
+    }
+
     report_context = {
         'reportId': str(monthly_report.id) if monthly_report else '',
+        'reportStatus': monthly_report.current_status if monthly_report else '',
         'siteId': site.id if site else site_id,
         'endMonth': end_month,
         'siteName': site.name if site else '',
         'supplyIds': supply_ids,
         'initialComments': initial_comments,
         'referenceCommentKeys': reference_comment_keys,
+        'validationComments': validation_comment_snapshot['validation_comments'],
+        'validationCommentThreads': validation_comment_snapshot['validation_comment_threads'],
+        'validationCandidates': validation_candidates,
+        'canAssignValidator': can_assign_validator,
         'accessMode': access_mode,
+        'validationSummary': validation_summary_client,
+        'currentUserId': request.user.id if request is not None and getattr(request.user, 'is_authenticated', False) else None,
         'activeDelegations': active_delegations,
         'canManageDelegations': can_manage_delegations,
         'coverDefaults': build_report_cover_set(site.name if site else '', end_month),
@@ -489,6 +545,10 @@ def _report_editor_context(raw_site_id, raw_end_month, raw_reporting_month, raw_
         'supply_ids': supply_ids,
         'monthly_report': monthly_report,
         'report_access_mode': access_mode,
+        'validation_summary': validation_summary,
+        'validation_comment_snapshot': validation_comment_snapshot,
+        'validation_candidates': validation_candidates,
+        'can_assign_validator': can_assign_validator,
         'active_delegations': active_delegations,
         'delegation_candidates': delegation_candidates,
         'can_manage_delegations': can_manage_delegations,
@@ -655,7 +715,21 @@ def report_view(request):
             except json.JSONDecodeError:
                 return JsonResponse({'detail': 'comments must be valid JSON object'}, status=400)
 
+        validation_comments_payload = {}
+        validation_comments_raw = (request.POST.get('validation_comments') or '').strip()
+        if validation_comments_raw:
+            try:
+                parsed_validation_comments = json.loads(validation_comments_raw)
+                if isinstance(parsed_validation_comments, dict):
+                    validation_comments_payload = {
+                        str(k): str(v or '') for k, v in parsed_validation_comments.items()
+                    }
+            except json.JSONDecodeError:
+                return JsonResponse({'detail': 'validation_comments must be valid JSON object'}, status=400)
+
         report = get_or_create_monthly_report(site, end_month, actor_user=request.user)
+        previous_version = report.current_version
+        previous_status = report.current_status
         access_mode = get_report_access_mode(report, request.user)
         if not user_can_write_report(report, request.user):
             _log_audit_event(
@@ -687,6 +761,50 @@ def report_view(request):
                     'detail': 'This report is already final. Confirm before editing.',
                     'warning_required': True,
                 }, status=409)
+
+            validation_summary = get_report_validation_summary(report)
+            if not validation_summary['can_finalize']:
+                action_type = (
+                    AUDIT_ACTION_REPORT_REPLACE_FINAL
+                    if report.current_status == MonthlyReport.STATUS_FINAL
+                    else AUDIT_ACTION_REPORT_SAVE_FINAL
+                )
+                _log_audit_event(
+                    request,
+                    action_type=action_type,
+                    action_outcome=AuditLogEntry.OUTCOME_DENIED,
+                    target_entity_type='report',
+                    target_entity_id=str(report.id),
+                    target_entity_label=f"{site.name} {end_month}",
+                    message='Denied final report save until all pages are validated.',
+                    metadata={
+                        'site_id': site.id,
+                        'reporting_month': end_month,
+                        'validation_status': validation_summary['validation_status'],
+                        'validated_page_count': validation_summary['validated_page_count'],
+                        'total_page_count': validation_summary['total_page_count'],
+                    },
+                )
+                ReportValidationEvent.objects.create(
+                    report=report,
+                    event_type=ReportValidationEvent.EVENT_FINAL_BLOCKED,
+                    event_by_user=request.user,
+                    metadata={
+                        'site_id': site.id,
+                        'reporting_month': end_month,
+                        'validation_status': validation_summary['validation_status'],
+                        'validated_page_count': validation_summary['validated_page_count'],
+                        'total_page_count': validation_summary['total_page_count'],
+                    },
+                )
+                return JsonResponse({
+                    'detail': 'All report pages must be validated before saving final.',
+                    'can_save_final': False,
+                    'validation_status': validation_summary['validation_status'],
+                    'validated_page_count': validation_summary['validated_page_count'],
+                    'total_page_count': validation_summary['total_page_count'],
+                }, status=409)
+
             version_kind = (
                 MonthlyReportVersion.KIND_REPLACEMENT_FINAL
                 if report.current_status == MonthlyReport.STATUS_FINAL
@@ -703,9 +821,44 @@ def report_view(request):
             actor_user=request.user,
         )
 
+        changed_page_keys = []
+        if previous_version is not None:
+            previous_comments = {comment.visual_key: comment.text for comment in previous_version.comments.all()}
+            new_comments = {comment.visual_key: comment.text for comment in version.comments.all()}
+            all_keys = set(previous_comments) | set(new_comments)
+            changed_page_keys = [
+                key for key in sorted(all_keys)
+                if previous_comments.get(key, '') != new_comments.get(key, '')
+            ]
+
+        if changed_page_keys:
+            reset_reason = 'final_reopened' if previous_status == MonthlyReport.STATUS_FINAL else 'content_changed'
+            reset_report_page_validation_state(
+                report=report,
+                page_keys=changed_page_keys,
+                reason=reset_reason,
+                actor_user=request.user,
+            )
+
+        if validation_comments_payload:
+            upsert_report_validation_comments(
+                report=report,
+                comments_by_page=validation_comments_payload,
+                actor_user=request.user,
+            )
+
         copied_reference_comments = 0
         if save_mode == 'draft' and created_first_version:
             copied_reference_comments = carry_forward_comments_from_previous_final(report, version)
+
+        if version_kind in {MonthlyReportVersion.KIND_FINAL, MonthlyReportVersion.KIND_REPLACEMENT_FINAL}:
+            # Finalized reports must reopen as read-only until a fresh superior regrant is issued.
+            ReportWriteGrant.objects.filter(report=report, is_active=True).update(
+                is_active=False,
+                revoked_by=request.user,
+                revoked_by_role=None,
+                revoked_at=dj_timezone.now(),
+            )
 
         if version_kind == MonthlyReportVersion.KIND_DRAFT:
             action_type = AUDIT_ACTION_REPORT_SAVE_DRAFT
@@ -748,6 +901,7 @@ def report_view(request):
         request.GET.get('reporting_month', ''),
         request.GET.get('supply_ids', ''),
         user=request.user,
+        request=request,
     )
     context['is_admin'] = _user_is_admin(getattr(request, 'user', None))
     return render(request, 'sitesync/report.html', context)
@@ -798,8 +952,10 @@ def saved_reports_view(request):
     # Order reports
     accessible_reports = accessible_reports.select_related('site', 'owner_user', 'created_by_user', 'last_modified_by_user').order_by('-reporting_month', 'site__name')
 
-    reports_payload = [
-        {
+    reports_payload = []
+    for report in accessible_reports:
+        validation_summary = get_report_validation_summary(report)
+        reports_payload.append({
             'id': str(report.id),
             'site_id': report.site_id,
             'site_name': report.site.name,
@@ -812,10 +968,13 @@ def saved_reports_view(request):
             'status': report.current_status,
             'updated_at': report.updated_at.isoformat(),
             'access_mode': get_report_access_mode(report, request.user),
+            'validation_status': validation_summary['validation_status'],
+            'validator_name': validation_summary['validator_user'].get_username() if validation_summary['validator_user'] else None,
+            'validated_by_name': validation_summary['validated_by_user'].get_username() if validation_summary['validated_by_user'] else None,
+            'validation_date': validation_summary['validated_at'].isoformat() if validation_summary['validated_at'] else None,
+            'can_save_final': validation_summary['can_finalize'],
             'open_url': f"{reverse('sitesync:report')}?site_id={report.site_id}&end_month={report.reporting_month}",
-        }
-        for report in accessible_reports
-    ]
+        })
     
     wants_json = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.GET.get('format') == 'json'
     if wants_json:
@@ -858,6 +1017,8 @@ def report_grant_write_access_view(request, report_id):
     payload = request.POST.copy()
     if 'granted_user' not in payload and payload.get('granted_user_id'):
         payload['granted_user'] = payload.get('granted_user_id')
+    if 'granted_user' not in payload and payload.get('target_user_id'):
+        payload['granted_user'] = payload.get('target_user_id')
 
     form = ReportDelegationActionForm(payload)
     if not form.is_valid():
@@ -879,7 +1040,21 @@ def report_grant_write_access_view(request, report_id):
         )
         return JsonResponse({'detail': str(exc)}, status=403)
     except ValueError as exc:
-        return JsonResponse({'detail': str(exc)}, status=400)
+        # A final validated report may already carry an owner-issued grant.
+        # Regrant upgrades authority source to superior-issued access.
+        if (
+            str(exc) == 'Write access already granted to this user'
+            and report.current_status == MonthlyReport.STATUS_FINAL
+            and report.validation_status == MonthlyReport.VALIDATION_VALIDATED
+        ):
+            existing_grant = get_report_write_grant(report, granted_user)
+            if existing_grant is not None and existing_grant.granted_by_role == ReportWriteGrant.ROLE_OWNER:
+                revoke_report_write_access(report=report, granted_user=granted_user, revoked_by=request.user)
+                grant = grant_report_write_access(report=report, granted_user=granted_user, granted_by=request.user)
+            else:
+                return JsonResponse({'detail': str(exc)}, status=400)
+        else:
+            return JsonResponse({'detail': str(exc)}, status=400)
 
     _log_audit_event(
         request,
@@ -893,6 +1068,225 @@ def report_grant_write_access_view(request, report_id):
     )
 
     return JsonResponse({'success': True, 'grant_id': str(grant.id), 'granted_user': granted_user.get_username()})
+
+
+@login_required(login_url='/login/')
+def report_validation_regrant_write_view(request, report_id):
+    """Route alias for reopening write access through the validation workflow."""
+    if request.method != 'POST':
+        return JsonResponse({'detail': 'Method not allowed'}, status=405)
+
+    report = get_object_or_404(MonthlyReport, id=report_id)
+    if report.current_status != MonthlyReport.STATUS_FINAL:
+        return JsonResponse({'detail': 'Validation regrant is only available for final reports.'}, status=409)
+
+    grantor_role = _resolve_grantor_role(report=report, actor_user=request.user)
+    if grantor_role not in {ReportWriteGrant.ROLE_TEAM_LEAD, ReportWriteGrant.ROLE_MANAGER}:
+        _log_audit_event(
+            request,
+            action_type=AUDIT_ACTION_ACCESS_DENIED,
+            action_outcome=AuditLogEntry.OUTCOME_DENIED,
+            target_entity_type='report',
+            target_entity_id=str(report.id),
+            target_entity_label=f"{report.site.name} {report.reporting_month}",
+            message='Denied validation regrant by unauthorized actor.',
+        )
+        return JsonResponse({'detail': 'Only a team lead, manager, or admin in the owner\'s supervisory chain can regrant final report write access.'}, status=403)
+
+    payload = request.POST.copy()
+    if 'granted_user' not in payload and payload.get('granted_user_id'):
+        payload['granted_user'] = payload.get('granted_user_id')
+    if 'granted_user' not in payload and payload.get('target_user_id'):
+        payload['granted_user'] = payload.get('target_user_id')
+
+    form = ReportDelegationActionForm(payload)
+    if not form.is_valid():
+        return JsonResponse({'errors': form.errors}, status=400)
+
+    granted_user = form.cleaned_data['granted_user']
+    try:
+        grant = grant_report_write_access(report=report, granted_user=granted_user, granted_by=request.user)
+    except PermissionError as exc:
+        _log_audit_event(
+            request,
+            action_type=AUDIT_ACTION_ACCESS_DENIED,
+            action_outcome=AuditLogEntry.OUTCOME_DENIED,
+            target_entity_type='report',
+            target_entity_id=str(report.id),
+            target_entity_label=f"{report.site.name} {report.reporting_month}",
+            message='Denied validation regrant attempt by unauthorized actor.',
+            metadata={'granted_user_id': granted_user.id},
+        )
+        return JsonResponse({'detail': str(exc)}, status=403)
+    except ValueError as exc:
+        if (
+            str(exc) == 'Write access already granted to this user'
+            and report.validation_status == MonthlyReport.VALIDATION_VALIDATED
+        ):
+            existing_grant = get_report_write_grant(report, granted_user)
+            if existing_grant is not None and existing_grant.granted_by_role == ReportWriteGrant.ROLE_OWNER:
+                revoke_report_write_access(report=report, granted_user=granted_user, revoked_by=request.user)
+                grant = grant_report_write_access(report=report, granted_user=granted_user, granted_by=request.user)
+            else:
+                return JsonResponse({'detail': str(exc)}, status=400)
+        else:
+            return JsonResponse({'detail': str(exc)}, status=400)
+
+    validation_summary = get_report_validation_summary(report)
+    return JsonResponse({
+        'success': True,
+        'grant_id': str(grant.id),
+        'granted_user': granted_user.get_username(),
+        'validation_summary': {
+            'validation_status': validation_summary['validation_status'],
+            'validated_page_count': validation_summary['validated_page_count'],
+            'total_page_count': validation_summary['total_page_count'],
+            'can_finalize': validation_summary['can_finalize'],
+        },
+    })
+
+
+@login_required(login_url='/login/')
+def report_validation_assign_view(request, report_id):
+    """Assign or reassign a validator for report validation."""
+    if request.method != 'POST':
+        return JsonResponse({'detail': 'Method not allowed'}, status=405)
+
+    report = get_object_or_404(MonthlyReport, id=report_id)
+    if not can_user_assign_report_validator(report, request.user):
+        _log_audit_event(
+            request,
+            action_type='REPORT_VALIDATION_ASSIGN_DENIED',
+            action_outcome=AuditLogEntry.OUTCOME_DENIED,
+            target_entity_type='report',
+            target_entity_id=str(report.id),
+            target_entity_label=f"{report.site.name} {report.reporting_month}",
+            message='Denied validator assignment by unauthorized actor.',
+            metadata={'report_id': str(report.id)},
+        )
+        return JsonResponse({'detail': 'You do not have permission to assign a validator for this report.'}, status=403)
+
+    payload = request.POST.copy()
+    if 'validator_user' not in payload and payload.get('validator_user_id'):
+        payload['validator_user'] = payload.get('validator_user_id')
+
+    form = ReportValidationAssignForm(payload)
+    if not form.is_valid():
+        return JsonResponse({'errors': form.errors}, status=400)
+
+    validator_user = form.cleaned_data['validator_user']
+    try:
+        assign_report_validator(report=report, validator_user=validator_user, assigned_by_user=request.user)
+    except ValueError as exc:
+        _log_audit_event(
+            request,
+            action_type='REPORT_VALIDATION_ASSIGN_DENIED',
+            action_outcome=AuditLogEntry.OUTCOME_DENIED,
+            target_entity_type='report',
+            target_entity_id=str(report.id),
+            target_entity_label=f"{report.site.name} {report.reporting_month}",
+            message='Denied validator assignment due to invalid validator selection.',
+            metadata={'validator_user_id': validator_user.id, 'error': str(exc)},
+        )
+        return JsonResponse({'detail': str(exc)}, status=400)
+
+    _log_audit_event(
+        request,
+        action_type='REPORT_VALIDATION_ASSIGN',
+        action_outcome=AuditLogEntry.OUTCOME_SUCCESS,
+        target_entity_type='report_validation_assignment',
+        target_entity_id=str(report.id),
+        target_entity_label=f"{report.site.name} {report.reporting_month}",
+        message=f"Assigned report validator to {validator_user.get_username()}.",
+        metadata={'report_id': str(report.id), 'validator_user_id': validator_user.id},
+    )
+
+    validation_summary = get_report_validation_summary(report)
+
+    return JsonResponse({
+        'success': True,
+        'report_id': str(report.id),
+        'validator_user': validator_user.get_username(),
+        'validation_summary': {
+            'validation_status': validation_summary['validation_status'],
+            'validator_user_id': validation_summary['validator_user_id'],
+            'validator_user_name': validation_summary['validator_user'].get_username() if validation_summary['validator_user'] else None,
+            'validated_by_user_id': validation_summary['validated_by_user_id'],
+            'validated_by_user_name': validation_summary['validated_by_user'].get_username() if validation_summary['validated_by_user'] else None,
+            'validated_at': validation_summary['validated_at'].isoformat() if validation_summary['validated_at'] else None,
+            'validated_page_count': validation_summary['validated_page_count'],
+            'total_page_count': validation_summary['total_page_count'],
+            'can_finalize': validation_summary['can_finalize'],
+        },
+    })
+
+
+@login_required(login_url='/login/')
+def report_validation_page_toggle_view(request, report_id, page_key):
+    """Mark or unmark a report page as validated."""
+    if request.method != 'POST':
+        return JsonResponse({'detail': 'Method not allowed'}, status=405)
+
+    report = get_object_or_404(MonthlyReport, id=report_id)
+    payload = request.POST.copy()
+    if 'is_validated' not in payload:
+        payload['is_validated'] = payload.get('validated', 'true')
+
+    form = ReportValidationPageToggleForm(payload)
+    if not form.is_valid():
+        return JsonResponse({'errors': form.errors}, status=400)
+
+    known_page_keys = []
+    known_page_keys_raw = (request.POST.get('known_page_keys') or '').strip()
+    if known_page_keys_raw:
+        try:
+            parsed_keys = json.loads(known_page_keys_raw)
+            if isinstance(parsed_keys, list):
+                known_page_keys = [str(item or '').strip() for item in parsed_keys if str(item or '').strip()]
+        except json.JSONDecodeError:
+            return JsonResponse({'detail': 'known_page_keys must be a valid JSON array'}, status=400)
+
+    try:
+        row = mark_report_page_validation_state(
+            report=report,
+            page_key=page_key,
+            is_validated=form.cleaned_data['is_validated'],
+            actor_user=request.user,
+            known_page_keys=known_page_keys,
+        )
+    except PermissionError as exc:
+        _log_audit_event(
+            request,
+            action_type='REPORT_VALIDATION_PAGE_TOGGLE_DENIED',
+            action_outcome=AuditLogEntry.OUTCOME_DENIED,
+            target_entity_type='report',
+            target_entity_id=str(report.id),
+            target_entity_label=f"{report.site.name} {report.reporting_month}",
+            message='Denied page validation toggle by unauthorized actor.',
+            metadata={'page_key': page_key},
+        )
+        return JsonResponse({'detail': str(exc)}, status=403)
+    except ValueError as exc:
+        return JsonResponse({'detail': str(exc)}, status=400)
+
+    summary = get_report_validation_summary(report)
+    return JsonResponse({
+        'success': True,
+        'page_key': row.page_key,
+        'is_validated': row.is_validated,
+        'validated_by_user': row.validated_by_user.get_username() if row.validated_by_user else None,
+        'validated_at': row.validated_at.isoformat() if row.validated_at else None,
+        'validation_summary': {
+            'validation_status': summary['validation_status'],
+            'validator_user_name': summary['validator_user'].get_username() if summary['validator_user'] else None,
+            'validated_by_user_name': summary['validated_by_user'].get_username() if summary['validated_by_user'] else None,
+            'validated_at': summary['validated_at'].isoformat() if summary['validated_at'] else None,
+            'validated_page_count': summary['validated_page_count'],
+            'total_page_count': summary['total_page_count'],
+            'can_finalize': summary['can_finalize'],
+            'pages_validation': summary['pages_validation'],
+        },
+    })
 
 
 @login_required(login_url='/login/')

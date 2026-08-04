@@ -23,6 +23,9 @@
     const state = {
         reportData: null,
         comments: new Map(),
+        validationComments: new Map(),
+        validationCommentThreads: new Map(),
+        validationPages: new Map(),
         referenceCommentKeys: new Set(),
         charts: new Map(),
         cover: null,
@@ -52,6 +55,66 @@
             return parts.pop().split(';').shift();
         }
         return '';
+    }
+
+    function getScrollRestoreKey() {
+        const ctx = getContext();
+        return `enerlytix-report-scroll::${ctx.reportId || ''}::${ctx.siteId || ''}::${ctx.endMonth || ''}`;
+    }
+
+    function getValidationCommentsRestoreKey() {
+        const ctx = getContext();
+        return `enerlytix-validation-comments::${ctx.reportId || ''}::${ctx.siteId || ''}::${ctx.endMonth || ''}`;
+    }
+
+    function persistScrollForReload() {
+        try {
+            const y = window.scrollY || window.pageYOffset || 0;
+            window.sessionStorage.setItem(getScrollRestoreKey(), String(y));
+        } catch (_e) {
+            // Ignore storage failures and continue.
+        }
+    }
+
+    function restoreScrollAfterReload() {
+        try {
+            const key = getScrollRestoreKey();
+            const raw = window.sessionStorage.getItem(key);
+            if (!raw) { return; }
+            window.sessionStorage.removeItem(key);
+            const y = Number(raw);
+            if (!Number.isFinite(y)) { return; }
+            window.requestAnimationFrame(() => window.scrollTo(0, y));
+            // Some browsers need a second pass after async layout work.
+            window.setTimeout(() => window.scrollTo(0, y), 80);
+        } catch (_e) {
+            // Ignore storage failures and continue.
+        }
+    }
+
+    function persistValidationCommentsForReload() {
+        try {
+            const snapshot = Object.fromEntries(state.validationComments.entries());
+            window.sessionStorage.setItem(getValidationCommentsRestoreKey(), JSON.stringify(snapshot));
+        } catch (_e) {
+            // Ignore storage failures and continue.
+        }
+    }
+
+    function restoreValidationCommentsAfterReload() {
+        try {
+            const key = getValidationCommentsRestoreKey();
+            const raw = window.sessionStorage.getItem(key);
+            if (!raw) { return; }
+            window.sessionStorage.removeItem(key);
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed !== 'object') { return; }
+            Object.entries(parsed).forEach(([pageKey, text]) => {
+                state.validationComments.set(String(pageKey), String(text || ''));
+            });
+        } catch (_e) {
+            // Ignore storage failures and continue.
+        }
     }
 
     // ─── Formatters ──────────────────────────────────────────────────────────
@@ -319,9 +382,73 @@
 
     function getContext() { return window.ENERLYTIX_REPORT_CONTEXT || {}; }
 
+    function getPageValidationState(pageKey) {
+        const pages = getContext().validationSummary?.pages_validation || {};
+        return pages[pageKey] || {};
+    }
+
+    function isCurrentValidator() {
+        const ctx = getContext();
+        const validatorId = ctx.validationSummary?.validator_user_id;
+        const currentUserId = ctx.currentUserId;
+        if (!validatorId || !currentUserId) {
+            return false;
+        }
+        return String(validatorId) === String(currentUserId);
+    }
+
+    function canAssignValidator() {
+        return Boolean(getContext().canAssignValidator);
+    }
+
+    function updateValidationSummaryPanel() {
+        const ctx = getContext();
+        const summary = ctx.validationSummary || {};
+        const panel = document.querySelector('.validation-summary-panel');
+        if (!panel) { return; }
+
+        const statusPill = panel.querySelector('.validation-summary-item:nth-child(1) .validation-status-pill');
+        if (statusPill) {
+            const status = String(summary.validation_status || 'draft');
+            statusPill.className = `validation-status-pill validation-status-${status}`;
+            statusPill.textContent = status;
+        }
+
+        const validatorText = panel.querySelector('.validation-summary-item:nth-child(2) span');
+        if (validatorText) {
+            validatorText.textContent = summary.validator_user_name || '\u2014';
+        }
+
+        const validatedByText = panel.querySelector('.validation-summary-item:nth-child(3) span');
+        if (validatedByText) {
+            validatedByText.textContent = summary.validated_by_user_name || '\u2014';
+        }
+
+        const pagesText = panel.querySelector('.validation-summary-item:nth-child(4) span');
+        if (pagesText) {
+            pagesText.textContent = `${Number(summary.validated_page_count || 0)} / ${Number(summary.total_page_count || 0)}`;
+        }
+    }
+
+    function updateValidationPillsAcrossSections() {
+        const ctx = getContext();
+        const summaryStatus = String(ctx.validationSummary?.validation_status || 'draft');
+        const uncheckedStatus = summaryStatus === 'validated' ? 'awaiting_validation' : summaryStatus;
+        document.querySelectorAll('.validation-panel').forEach((panel) => {
+            const checkbox = panel.querySelector('.validation-toggle');
+            const pill = panel.querySelector('.validation-status-pill');
+            if (!checkbox || !pill) { return; }
+            const pageKey = checkbox.dataset.pageKey;
+            const pageState = getPageValidationState(pageKey);
+            const status = pageState.is_validated ? 'validated' : uncheckedStatus;
+            pill.className = `validation-status-pill validation-status-${status}`;
+            pill.textContent = status;
+        });
+    }
+
     function isReportReadOnly() {
         const mode = String(getContext().accessMode || 'read_only').toLowerCase();
-        return mode !== 'owner' && mode !== 'collaborator' && mode !== 'admin';
+        return mode !== 'owner' && mode !== 'collaborator' && mode !== 'validator' && mode !== 'admin';
     }
 
     function setReadOnlyHeroLabel() {
@@ -349,10 +476,22 @@
             return;
         }
 
-        const mode = String(getContext().accessMode || 'read_only').toLowerCase();
-        if (mode === 'owner' || mode === 'collaborator' || mode === 'admin') {
+        const ctx = getContext();
+        const mode = String(ctx.accessMode || 'read_only').toLowerCase();
+        if (mode === 'owner' || mode === 'collaborator' || mode === 'validator' || mode === 'admin') {
             banner.style.display = 'block';
             banner.textContent = `Access mode: ${mode.replaceAll('_', ' ')} (editable)`;
+            return;
+        }
+
+        const isFinalValidatedLocked = (
+            String(ctx.reportStatus || '').toLowerCase() === 'final'
+            && String(ctx.validationSummary?.validation_status || '').toLowerCase() === 'validated'
+        );
+
+        if (isFinalValidatedLocked) {
+            banner.style.display = 'block';
+            banner.textContent = 'Access mode: read only. This report is final and validated. Owner/contributor edits require superior-chain regrant (team lead, manager, or admin).';
             return;
         }
 
@@ -380,6 +519,19 @@
         Object.entries(initial).forEach(([key, value]) => {
             state.comments.set(String(key), String(value || ''));
         });
+        const validationComments = ctx.validationComments || {};
+        Object.entries(validationComments).forEach(([key, value]) => {
+            state.validationComments.set(String(key), String(value || ''));
+        });
+        const validationThreads = ctx.validationCommentThreads || {};
+        Object.entries(validationThreads).forEach(([key, value]) => {
+            state.validationCommentThreads.set(String(key), Array.isArray(value) ? value : []);
+        });
+        const validationPages = ctx.validationSummary?.pages_validation || {};
+        Object.entries(validationPages).forEach(([key, value]) => {
+            state.validationPages.set(String(key), value || {});
+        });
+        restoreValidationCommentsAfterReload();
         const refKeys = Array.isArray(ctx.referenceCommentKeys) ? ctx.referenceCommentKeys : [];
         refKeys.forEach((key) => state.referenceCommentKeys.add(String(key)));
     }());
@@ -400,6 +552,7 @@
         payload.set('end_month', String(ctx.endMonth));
         payload.set('save_mode', 'draft');
         payload.set('comments', JSON.stringify(Object.fromEntries(state.comments.entries())));
+        payload.set('validation_comments', JSON.stringify(Object.fromEntries(state.validationComments.entries())));
 
         const response = await fetch('/report/', {
             method: 'POST',
@@ -425,6 +578,15 @@
             return;
         }
         const ctx = getContext();
+
+        if (!confirmFinalEdit && Boolean(ctx.validationSummary?.can_finalize)) {
+            const accepted = window.confirm(
+                'Saving as final will lock this report as read-only. Further edits require superior-chain regrant (team lead, manager, or admin). Continue?'
+            );
+            if (!accepted) {
+                return;
+            }
+        }
         if (!ctx.siteId || !ctx.endMonth) {
             window.alert('Site and reporting month are required before saving final.');
             return;
@@ -436,6 +598,7 @@
         payload.set('save_mode', 'final');
         payload.set('confirm_final_edit', confirmFinalEdit ? 'true' : 'false');
         payload.set('comments', JSON.stringify(Object.fromEntries(state.comments.entries())));
+        payload.set('validation_comments', JSON.stringify(Object.fromEntries(state.validationComments.entries())));
 
         const response = await fetch('/report/', {
             method: 'POST',
@@ -460,7 +623,7 @@
             return;
         }
 
-        window.alert('Final report saved.');
+        window.alert('Final report saved. The report is now read-only until re-granted by a superior.');
     }
 
     async function updateDelegation(action) {
@@ -634,7 +797,40 @@
         const warning = state.referenceCommentKeys.has(id)
             ? `<div class="comment-reference-warning" style="margin-top:0.6rem;color:#7c878e;font-size:0.78rem;font-weight:700;">Reference comment from previous month. Review and update as needed.</div>`
             : '';
-        return `${warning}<textarea class="comment-box" data-section-id="${escapeHtml(id)}" placeholder="Add a comment..." style="margin-top:0.6rem;"></textarea>`;
+        const validationState = getPageValidationState(id);
+        const validationThreads = state.validationCommentThreads.get(id) || [];
+        const threadHtml = validationThreads.length
+            ? `<div class="validation-comment-thread" style="display:grid;gap:0.35rem;margin-top:0.55rem;">${validationThreads.map((entry) => `
+                    <div style="border-left:3px solid #cbd5e1;padding-left:0.6rem;font-size:0.78rem;color:#475569;">
+                        <div style="font-weight:700;">Note by ${escapeHtml(entry.authored_by_user_name || 'Unknown')} · ${escapeHtml(ddMmYyyy(entry.updated_at))}</div>
+                        <div>${escapeHtml(entry.comment_text || '')}</div>
+                    </div>
+                `).join('')}</div>`
+            : `<div class="validation-comment-thread" style="margin-top:0.55rem;color:#64748b;font-size:0.78rem;">No validation notes yet.</div>`;
+        const canToggle = isCurrentValidator() && !isReportReadOnly();
+        const toggleChecked = validationState.is_validated ? 'checked' : '';
+        const toggleDisabled = canToggle ? '' : 'disabled aria-disabled="true"';
+        const toggleHint = isCurrentValidator()
+            ? 'You can mark this page as validated.'
+            : 'Only the assigned validator can toggle this page.';
+        const summaryStatus = String(getContext().validationSummary?.validation_status || 'draft');
+        const uncheckedStatus = summaryStatus === 'validated' ? 'awaiting_validation' : summaryStatus;
+        const panelStatus = validationState.is_validated ? 'validated' : uncheckedStatus;
+        return `${warning}
+            <textarea class="comment-box" data-section-id="${escapeHtml(id)}" placeholder="Add a comment..." style="margin-top:0.6rem;"></textarea>
+            <div class="validation-panel" style="margin-top:0.55rem;padding:0.65rem;border:1px solid #d9e7d5;border-radius:0.5rem;background:#f8fbf6;">
+                <div style="display:flex;justify-content:space-between;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+                    <label style="display:inline-flex;align-items:center;gap:0.45rem;font-size:0.8rem;font-weight:700;color:#334155;">
+                        <input class="validation-toggle" data-page-key="${escapeHtml(id)}" type="checkbox" ${toggleChecked} ${toggleDisabled} />
+                        Page validated
+                    </label>
+                    <span class="validation-status-pill validation-status-${escapeHtml(panelStatus)}">${escapeHtml(panelStatus)}</span>
+                </div>
+                <div style="margin-top:0.35rem;font-size:0.76rem;color:#64748b;">${escapeHtml(toggleHint)}</div>
+                <div style="margin-top:0.35rem;font-size:0.76rem;color:#64748b;">Notes here are informational only and do not count as validation approval.</div>
+                <textarea class="validation-comment-box" data-validation-page-key="${escapeHtml(id)}" placeholder="Add a validation note..." style="margin-top:0.55rem;width:100%;min-height:4rem;border-radius:0.45rem;border:1px solid var(--cxg-border);padding:0.65rem;font:inherit;resize:vertical;"></textarea>
+                ${threadHtml}
+            </div>`;
     }
 
     function registerCommentBoxes(root) {
@@ -648,6 +844,142 @@
             }
             ta.addEventListener('input', () => state.comments.set(sid, ta.value));
         });
+        root.querySelectorAll('.validation-comment-box').forEach((ta) => {
+            const sid = ta.dataset.validationPageKey;
+            if (sid && state.validationComments.has(sid)) { ta.value = state.validationComments.get(sid); }
+            if (isReportReadOnly()) {
+                ta.readOnly = true;
+                ta.setAttribute('aria-readonly', 'true');
+                ta.title = 'Read-only validation comment';
+            }
+            ta.addEventListener('input', () => state.validationComments.set(sid, ta.value));
+        });
+        root.querySelectorAll('.validation-toggle').forEach((cb) => {
+            const pageKey = cb.dataset.pageKey;
+            const stateRow = getPageValidationState(pageKey);
+            cb.checked = Boolean(stateRow.is_validated);
+            if (!isCurrentValidator() || isReportReadOnly()) {
+                cb.disabled = true;
+                cb.setAttribute('aria-disabled', 'true');
+                return;
+            }
+            cb.addEventListener('change', () => {
+                togglePageValidation(pageKey, cb.checked, cb).catch((error) => {
+                    window.alert(error?.message || 'Unable to update page validation right now.');
+                    cb.checked = !cb.checked;
+                });
+            });
+        });
+        const assignButton = document.querySelector('#validation-assign-button');
+        const assignSelect = document.querySelector('#validation-validator-select');
+        if (assignButton && assignSelect && canAssignValidator()) {
+            if (assignButton.dataset.validationAssignBound === 'true') {
+                return;
+            }
+            assignButton.dataset.validationAssignBound = 'true';
+            assignButton.addEventListener('click', async () => {
+                const validatorId = assignSelect.value;
+                if (!validatorId) {
+                    window.alert('Choose a validator first.');
+                    return;
+                }
+                const feedback = document.querySelector('#validation-assign-feedback');
+                try {
+                    assignButton.disabled = true;
+                    if (feedback) {
+                        feedback.textContent = 'Assigning validator...';
+                    }
+                    const ctx = getContext();
+                    if (!ctx.reportId) {
+                        throw new Error('Save the report draft first, then assign a validator.');
+                    }
+                    const payload = new URLSearchParams();
+                    payload.set('validator_user_id', validatorId);
+                    const response = await fetch(`/reports/${encodeURIComponent(ctx.reportId)}/validation/assign/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRFToken': getCookie('csrftoken'),
+                        },
+                        body: payload.toString(),
+                    });
+                    const body = await response.json().catch(() => ({}));
+                    if (!response.ok) {
+                        throw new Error(body.detail || 'Unable to assign validator');
+                    }
+                    if (feedback) {
+                        feedback.textContent = `Validator assigned to ${body.validator_user || 'selected user'}. Refreshing...`;
+                    }
+                    persistScrollForReload();
+                    window.location.reload();
+                } catch (error) {
+                    if (feedback) {
+                        feedback.textContent = error.message || 'Unable to assign validator right now.';
+                    }
+                    assignButton.disabled = false;
+                }
+            });
+        }
+    }
+
+    async function togglePageValidation(pageKey, isValidated, checkboxEl) {
+        const ctx = getContext();
+        if (!ctx.reportId) {
+            return;
+        }
+
+        const payload = new URLSearchParams();
+        payload.set('is_validated', isValidated ? 'true' : 'false');
+        const knownPageKeys = Array.from(document.querySelectorAll('.validation-toggle'))
+            .map((el) => String(el.dataset.pageKey || '').trim())
+            .filter((key) => key.length > 0);
+        payload.set('known_page_keys', JSON.stringify(knownPageKeys));
+
+        const response = await fetch(`/reports/${encodeURIComponent(ctx.reportId)}/validation/pages/${encodeURIComponent(pageKey)}/mark/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: payload.toString(),
+        });
+
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(body.detail || 'Unable to update validation');
+        }
+
+        const summary = body.validation_summary || {};
+        ctx.validationSummary = {
+            ...(ctx.validationSummary || {}),
+            ...summary,
+            validator_user_name: summary.validator_user_name ?? ctx.validationSummary?.validator_user_name,
+            validated_by_user_name: summary.validated_by_user_name ?? ctx.validationSummary?.validated_by_user_name,
+        };
+
+        if (summary.pages_validation && typeof summary.pages_validation === 'object') {
+            ctx.validationSummary.pages_validation = summary.pages_validation;
+        } else {
+            if (!ctx.validationSummary.pages_validation) {
+                ctx.validationSummary.pages_validation = {};
+            }
+            ctx.validationSummary.pages_validation[pageKey] = {
+                ...(ctx.validationSummary.pages_validation[pageKey] || {}),
+                page_key: pageKey,
+                is_validated: Boolean(body.is_validated),
+                validated_by_user_name: body.validated_by_user || null,
+                validated_at: body.validated_at || null,
+            };
+        }
+
+        if (checkboxEl) {
+            checkboxEl.checked = Boolean(body.is_validated);
+        }
+
+        updateValidationSummaryPanel();
+        updateValidationPillsAcrossSections();
     }
 
     function renderNavEntry(label, targetId) {
@@ -1504,6 +1836,7 @@
             setSubtitle(`${reportData.site.name} \u00b7 ${reportData.reporting_period.end_month}`);
             setMeta(reportData);
             buildPage(reportData);
+            restoreScrollAfterReload();
         } catch (error) {
             console.error(error);
             renderEmptyState('Unable to load report data.');
@@ -1633,6 +1966,21 @@
         });
     }
 
+    function hideValidationPanelsForExport(section) {
+        const hidden = [];
+        section.querySelectorAll('.validation-panel').forEach((panel) => {
+            hidden.push({ el: panel, display: panel.style.display });
+            panel.style.display = 'none';
+        });
+        return hidden;
+    }
+
+    function restoreValidationPanelsForExport(hiddenPanels) {
+        hiddenPanels.forEach(({ el, display }) => {
+            el.style.display = display || '';
+        });
+    }
+
     function addPptxTextBlock(slide, block, sectionRect, imagePlacement, imageScale) {
         const relativeLeft = block.rect.left - sectionRect.left;
         const relativeTop = block.rect.top - sectionRect.top;
@@ -1741,6 +2089,7 @@
             for (let index = 0; index < sections.length; index += 1) {
                 const section = sections[index];
                 const sectionRect = section.getBoundingClientRect();
+                const hiddenValidationPanels = hideValidationPanelsForExport(section);
                 const textBlocks = collectPptxTextBlocks(section);
                 hidePptxTextBlocks(textBlocks);
 
@@ -1755,6 +2104,7 @@
                     });
                 } finally {
                     restorePptxTextBlocks(textBlocks);
+                    restoreValidationPanelsForExport(hiddenValidationPanels);
                 }
 
                 const slide = pptx.addSlide();
@@ -1844,6 +2194,7 @@
             for (let i = 0; i < sections.length; i += 1) {
                 const section = sections[i];
                 const coverSection = isCoverSection(section);
+                const hiddenValidationPanels = hideValidationPanelsForExport(section);
 
                 // Hide empty comment boxes so blank textareas don't waste space,
                 // and swap non-empty ones for full-text blocks (see note above)
@@ -1863,24 +2214,28 @@
                     }
                 });
 
-                const canvas = await window.html2canvas(section, {
-                    scale: 1.5,
-                    backgroundColor: '#ffffff',
-                    useCORS: true,
-                    allowTaint: false,
-                    logging: false,
-                });
-
-                // Restore hidden comment boxes
-                hiddenComments.forEach((ta) => {
-                    ta.style.visibility = '';
-                    ta.style.height = '';
-                    ta.style.minHeight = '';
-                    ta.style.margin = '';
-                    ta.style.padding = '';
-                });
-                // Restore swapped comment boxes
-                swappedComments.forEach(({ ta, div }) => restoreCommentBox(ta, div));
+                let canvas;
+                try {
+                    canvas = await window.html2canvas(section, {
+                        scale: 1.5,
+                        backgroundColor: '#ffffff',
+                        useCORS: true,
+                        allowTaint: false,
+                        logging: false,
+                    });
+                } finally {
+                    // Restore hidden comment boxes
+                    hiddenComments.forEach((ta) => {
+                        ta.style.visibility = '';
+                        ta.style.height = '';
+                        ta.style.minHeight = '';
+                        ta.style.margin = '';
+                        ta.style.padding = '';
+                    });
+                    // Restore swapped comment boxes
+                    swappedComments.forEach(({ ta, div }) => restoreCommentBox(ta, div));
+                    restoreValidationPanelsForExport(hiddenValidationPanels);
+                }
 
                 // JPEG at 0.85 quality keeps charts legible while cutting file
                 // size by an order of magnitude versus lossless PNG output.

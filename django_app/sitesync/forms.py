@@ -286,6 +286,21 @@ class ReportDelegationActionForm(forms.Form):
     )
 
 
+class ReportValidationAssignForm(forms.Form):
+    """Assign validator form for report validation workflow."""
+
+    validator_user = forms.ModelChoiceField(
+        queryset=get_user_model().objects.filter(is_active=True).order_by('username'),
+        required=True,
+    )
+
+
+class ReportValidationPageToggleForm(forms.Form):
+    """Mark/unmark page validation form for a report page."""
+
+    is_validated = forms.BooleanField(required=True)
+
+
 class ReportWriteGrantForm(ReportDelegationActionForm):
     """Backward-compatible grant form wrapper."""
 

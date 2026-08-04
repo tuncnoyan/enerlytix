@@ -7,7 +7,8 @@ from django.contrib.auth import get_user_model
 from django.test import Client, RequestFactory, TestCase
 from django.urls import reverse
 
-from sitesync.models import AppSettings, CapacityReference, HalfHourlyConsumption, ImportRun, MonthlyReport, MonthlyReportVersion, MonthlyConsumption, Site, Supply
+from sitesync.models import AppSettings, CapacityReference, HalfHourlyConsumption, ImportRun, MonthlyReport, MonthlyReportVersion, MonthlyConsumption, Site, Supply, Team, UserTeamAssignment
+from sitesync.services import assign_report_validator
 from sitesync.views import report_view
 
 
@@ -91,6 +92,108 @@ class ReportDraftWorkflowTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn('"endMonth": "2026-05"', response.content.decode('utf-8'))
+
+    def test_get_report_renders_validator_assignment_control_for_owner(self):
+        team = Team.objects.create(name='Validator Control Team', level=1)
+        owner = get_user_model().objects.create_user(username='validator_owner', password='pass123')
+        candidate = get_user_model().objects.create_user(username='validator_candidate', password='pass123')
+        UserTeamAssignment.objects.create(user=owner, team=team)
+        UserTeamAssignment.objects.create(user=candidate, team=team)
+        site = Site.objects.create(
+            external_id='site-validator-control-1',
+            name='Validator Control Site',
+            team=team,
+        )
+        MonthlyReport.objects.create(
+            site=site,
+            reporting_month='2026-05',
+            owner_user=owner,
+            created_by_user=owner,
+            last_modified_by_user=owner,
+        )
+
+        request = self.factory.get(
+            '/report/',
+            data={
+                'site_id': str(site.id),
+                'end_month': '2026-05',
+            },
+        )
+        request.user = owner
+        response = report_view(request)
+
+        self.assertEqual(response.status_code, 200)
+        body = response.content.decode('utf-8')
+        self.assertIn('Assign validator', body)
+        self.assertIn('validation-validator-select', body)
+        self.assertLess(body.index('Validation Summary'), body.index('Cover Page Editor'))
+
+    def test_get_report_shows_validator_candidates_when_site_team_is_missing(self):
+        team = Team.objects.create(name='Owner Fallback Team', level=1)
+        owner = get_user_model().objects.create_user(username='validator_owner_fallback', password='pass123')
+        candidate = get_user_model().objects.create_user(username='validator_candidate_fallback', password='pass123')
+        UserTeamAssignment.objects.create(user=owner, team=team)
+        UserTeamAssignment.objects.create(user=candidate, team=team)
+
+        site = Site.objects.create(
+            external_id='site-validator-fallback-1',
+            name='Validator Fallback Site',
+            team=None,
+        )
+        MonthlyReport.objects.create(
+            site=site,
+            reporting_month='2026-04',
+            owner_user=owner,
+            created_by_user=owner,
+            last_modified_by_user=owner,
+        )
+
+        request = self.factory.get(
+            '/report/',
+            data={
+                'site_id': str(site.id),
+                'end_month': '2026-04',
+            },
+        )
+        request.user = owner
+        response = report_view(request)
+
+        self.assertEqual(response.status_code, 200)
+        body = response.content.decode('utf-8')
+        self.assertIn('validator_candidate_fallback', body)
+
+    def test_get_report_renders_when_validator_is_assigned(self):
+        team = Team.objects.create(name='Validator Assigned Team', level=1)
+        owner = get_user_model().objects.create_user(username='validator_owner_assigned', password='pass123')
+        candidate = get_user_model().objects.create_user(username='validator_candidate_assigned', password='pass123')
+        UserTeamAssignment.objects.create(user=owner, team=team)
+        UserTeamAssignment.objects.create(user=candidate, team=team)
+        site = Site.objects.create(
+            external_id='site-validator-assigned-1',
+            name='Validator Assigned Site',
+            team=team,
+        )
+        report = MonthlyReport.objects.create(
+            site=site,
+            reporting_month='2026-04',
+            owner_user=owner,
+            created_by_user=owner,
+            last_modified_by_user=owner,
+        )
+        assign_report_validator(report=report, validator_user=candidate, assigned_by_user=owner)
+
+        request = self.factory.get(
+            '/report/',
+            data={
+                'site_id': str(site.id),
+                'end_month': '2026-04',
+            },
+        )
+        request.user = owner
+        response = report_view(request)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('validator_candidate_assigned', response.content.decode('utf-8'))
 
     def test_report_data_uses_latest_capacity_reference_value(self):
         supply = Supply.objects.create(

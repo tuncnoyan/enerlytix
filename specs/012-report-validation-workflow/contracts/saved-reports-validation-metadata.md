@@ -53,6 +53,10 @@ Required report row fields (minimum):
 - can_save_final
 - open_url
 
+Additional consistency fields exposed by the implemented payload:
+- validated_by_name
+- validator_name
+
 Field semantics:
 - `validation_status`: `draft`, `awaiting_validation`, or `validated`.
 - `validation_date`: set when report status reaches `validated`; null otherwise.

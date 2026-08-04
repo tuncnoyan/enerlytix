@@ -230,6 +230,90 @@
             color: #334155;
         }
 
+        .validation-summary-panel {
+            border: 1px solid var(--cxg-border);
+            border-radius: 0.65rem;
+            background: #f8fbf6;
+            padding: 0.85rem;
+            margin-bottom: 0.9rem;
+        }
+
+        .validation-summary-panel h3 {
+            margin: 0 0 0.55rem;
+            font-size: 0.9rem;
+        }
+
+        .validation-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.55rem;
+        }
+
+        .validation-summary-item {
+            background: #ffffff;
+            border: 1px solid #d9e7d5;
+            border-radius: 0.5rem;
+            padding: 0.55rem 0.7rem;
+            font-size: 0.82rem;
+        }
+
+        .validation-summary-item strong {
+            display: block;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #5f7180;
+            margin-bottom: 0.18rem;
+        }
+
+        .validation-assign-row {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-top: 0.75rem;
+        }
+
+        .validation-assign-row select {
+            min-width: 16rem;
+            border-radius: 0.45rem;
+            border: 1px solid var(--cxg-border);
+            padding: 0.45rem 0.6rem;
+            font: inherit;
+            background: #fff;
+        }
+
+        .validation-assign-feedback {
+            margin-top: 0.45rem;
+            font-size: 0.8rem;
+            color: #475569;
+        }
+
+        .validation-assign-helper {
+            margin-top: 0.4rem;
+            font-size: 0.77rem;
+            color: #64748b;
+        }
+
+        .validation-status-pill {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: 0.28rem 0.55rem;
+            font-size: 0.72rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .validation-status-draft { background: #dbeafe; color: #1d4ed8; }
+        .validation-status-awaiting_validation { background: #fef3c7; color: #92400e; }
+        .validation-status-validated { background: #dcfce7; color: #166534; }
+
+        @media (max-width: 1100px) {
+            .validation-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+
         .delegation-hint {
             margin: 0.15rem 0 0.55rem;
             color: #475569;
@@ -690,50 +774,6 @@
 
             <main class="content-panel">
                 <div id="report-access-banner" class="report-access-banner" aria-live="polite"></div>
-                <section id="cover-editor" class="cover-editor" aria-label="Report cover editor">
-                    <h3>Cover Page Editor</h3>
-                    <div class="cover-editor-grid">
-                        <div class="cover-editor-field">
-                            <label for="cover-site-title-input">Front Cover Site Title</label>
-                            <input id="cover-site-title-input" type="text" />
-                        </div>
-                        <div class="cover-editor-field">
-                            <label for="cover-month-title-input">Front Cover Report Title</label>
-                            <input id="cover-month-title-input" type="text" />
-                        </div>
-                        <div class="cover-editor-field">
-                            <label for="cover-date-input">Front Cover Date</label>
-                            <input id="cover-date-input" type="text" />
-                        </div>
-                        <div class="cover-editor-field cover-editor-field-file">
-                            <label for="cover-logo-upload-input">Client Logo (PNG/JPG/SVG, up to 2 MB)</label>
-                            <input id="cover-logo-upload-input" type="file" accept=".png,.jpg,.jpeg,.svg,image/png,image/jpeg,image/svg+xml" />
-                            <div id="cover-logo-validation" class="cover-validation-message" aria-live="polite"></div>
-                        </div>
-                        <div class="cover-editor-field" style="grid-column: 1 / -1;">
-                            <label for="cover-background-upload-input">Front Cover Background (JPG/JPEG/PNG/WebP, up to 10 MB)</label>
-                            <input id="cover-background-upload-input" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" />
-                            <div id="cover-background-validation" class="cover-validation-message" aria-live="polite"></div>
-                        </div>
-                        <div class="cover-editor-field">
-                            <label for="cover-scope-title-input">Second Cover Scope Title</label>
-                            <input id="cover-scope-title-input" type="text" />
-                        </div>
-                        <div class="cover-editor-field" style="grid-column: 1 / -1;">
-                            <label for="cover-scope-body-input">Second Cover Scope Body</label>
-                            <textarea id="cover-scope-body-input"></textarea>
-                        </div>
-                        <div class="cover-editor-field">
-                            <label for="cover-contents-title-input">Second Cover Contents Title</label>
-                            <input id="cover-contents-title-input" type="text" />
-                        </div>
-                        <div class="cover-editor-field" style="grid-column: 1 / -1;">
-                            <label for="cover-contents-body-input">Second Cover Contents Lines (one per line)</label>
-                            <textarea id="cover-contents-body-input"></textarea>
-                        </div>
-                    </div>
-                </section>
-                <div class="report-meta" id="report-meta"></div>
                 <section class="delegation-panel" aria-label="Delegated writers">
                     <h3>Active Delegated Writers</h3>
                     {% if can_manage_delegations and monthly_report %}
@@ -778,6 +818,84 @@
                         <p class="delegation-empty">No active delegated writers. Owner-only write access applies.</p>
                     {% endif %}
                 </section>
+                <section class="validation-summary-panel" aria-label="Validation summary">
+                    <h3>Validation Summary</h3>
+                    <div class="validation-summary-grid">
+                        <div class="validation-summary-item">
+                            <strong>Status</strong>
+                            <span class="validation-status-pill validation-status-{{ validation_summary.validation_status|default:'draft' }}">{{ validation_summary.validation_status|default:'draft' }}</span>
+                        </div>
+                        <div class="validation-summary-item">
+                            <strong>Validator</strong>
+                            <span>{{ validation_summary.validator_user.get_username|default:'—' }}</span>
+                        </div>
+                        <div class="validation-summary-item">
+                            <strong>Validated By</strong>
+                            <span>{{ validation_summary.validated_by_user.get_username|default:'—' }}</span>
+                        </div>
+                        <div class="validation-summary-item">
+                            <strong>Pages Validated</strong>
+                            <span>{{ validation_summary.validated_page_count|default:0 }} / {{ validation_summary.total_page_count|default:0 }}</span>
+                        </div>
+                    </div>
+                    {% if can_assign_validator %}
+                        <div class="validation-assign-row">
+                            <select id="validation-validator-select" aria-label="Validator assignment">
+                                <option value="">Select validator</option>
+                                {% for candidate in validation_candidates %}
+                                    <option value="{{ candidate.id }}" {% if validation_summary.validator_user_id|stringformat:'s' == candidate.id %}selected{% endif %}>{{ candidate.username }}</option>
+                                {% endfor %}
+                            </select>
+                            <button id="validation-assign-button" class="button button-primary" type="button">Assign validator</button>
+                        </div>
+                        <p class="validation-assign-helper">Validator options are limited to your allowed team scope and the report owner&apos;s supervisory chain. The report owner cannot be selected as validator.</p>
+                        <p id="validation-assign-feedback" class="validation-assign-feedback" aria-live="polite"></p>
+                    {% endif %}
+                </section>
+                <section id="cover-editor" class="cover-editor" aria-label="Report cover editor">
+                    <h3>Cover Page Editor</h3>
+                    <div class="cover-editor-grid">
+                        <div class="cover-editor-field">
+                            <label for="cover-site-title-input">Front Cover Site Title</label>
+                            <input id="cover-site-title-input" type="text" />
+                        </div>
+                        <div class="cover-editor-field">
+                            <label for="cover-month-title-input">Front Cover Report Title</label>
+                            <input id="cover-month-title-input" type="text" />
+                        </div>
+                        <div class="cover-editor-field">
+                            <label for="cover-date-input">Front Cover Date</label>
+                            <input id="cover-date-input" type="text" />
+                        </div>
+                        <div class="cover-editor-field cover-editor-field-file">
+                            <label for="cover-logo-upload-input">Client Logo (PNG/JPG/SVG, up to 2 MB)</label>
+                            <input id="cover-logo-upload-input" type="file" accept=".png,.jpg,.jpeg,.svg,image/png,image/jpeg,image/svg+xml" />
+                            <div id="cover-logo-validation" class="cover-validation-message" aria-live="polite"></div>
+                        </div>
+                        <div class="cover-editor-field" style="grid-column: 1 / -1;">
+                            <label for="cover-background-upload-input">Front Cover Background (JPG/JPEG/PNG/WebP, up to 10 MB)</label>
+                            <input id="cover-background-upload-input" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" />
+                            <div id="cover-background-validation" class="cover-validation-message" aria-live="polite"></div>
+                        </div>
+                        <div class="cover-editor-field">
+                            <label for="cover-scope-title-input">Second Cover Scope Title</label>
+                            <input id="cover-scope-title-input" type="text" />
+                        </div>
+                        <div class="cover-editor-field" style="grid-column: 1 / -1;">
+                            <label for="cover-scope-body-input">Second Cover Scope Body</label>
+                            <textarea id="cover-scope-body-input"></textarea>
+                        </div>
+                        <div class="cover-editor-field">
+                            <label for="cover-contents-title-input">Second Cover Contents Title</label>
+                            <input id="cover-contents-title-input" type="text" />
+                        </div>
+                        <div class="cover-editor-field" style="grid-column: 1 / -1;">
+                            <label for="cover-contents-body-input">Second Cover Contents Lines (one per line)</label>
+                            <textarea id="cover-contents-body-input"></textarea>
+                        </div>
+                    </div>
+                </section>
+                <div class="report-meta" id="report-meta"></div>
                 <div id="report-empty" class="empty-state">Loading report...</div>
                 <div id="report-sections" class="section-grid" aria-live="polite"></div>
             </main>

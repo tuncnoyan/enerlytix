@@ -24,6 +24,8 @@ Response context fields (minimum):
 - validated_by_user
 - validated_at
 - pages_validation (page_key -> is_validated, validated_by, validated_at)
+- validation_comments (page_key -> latest validation comment text)
+- validation_comment_threads (page_key -> ordered comment thread entries)
 - can_save_final
 
 ## Assign Validator
@@ -114,6 +116,10 @@ Authorization behavior:
 State behavior:
 - Regrant alone enables write per existing access model.
 - Upon subsequent business-content edit, validation status reopens from `validated` to `awaiting_validation` and affected page validations reset.
+
+Notes:
+- This route is an alias for the existing write-grant workflow and accepts `target_user_id` or `granted_user_id`.
+- A blocked final save emits a `final_blocked` validation event and returns `can_save_final=false`.
 
 ## Validation Audit Requirements
 

@@ -14,6 +14,16 @@
         return status === 'final' ? 'status-final' : 'status-draft';
     }
 
+    function validationStatusClass(status) {
+        if (status === 'validated') {
+            return 'status-final';
+        }
+        if (status === 'awaiting_validation') {
+            return 'status-awaiting';
+        }
+        return 'status-draft';
+    }
+
     function accessClass(mode) {
         if (mode === 'owner') {
             return 'access-owner';
@@ -75,7 +85,9 @@
                 <td>${escapeHtml(report.last_edited_by_name || '')}</td>
                 <td>${escapeHtml(formatIso(report.last_edited_at))}</td>
                 <td><span class="access-pill ${accessClass(report.access_mode)}">${escapeHtml(accessLabel(report.access_mode || 'read_only'))}</span></td>
-                <td>${escapeHtml(report.updated_at || '')}</td>
+                <td>${escapeHtml(report.validator_name || '—')}</td>
+                <td>${escapeHtml(formatIso(report.validation_date))}</td>
+                <td><span class="status-pill ${validationStatusClass(report.validation_status)}">${escapeHtml(report.validation_status || 'draft')}</span></td>
                 <td><a class="open-link" href="${escapeHtml(report.open_url || '#')}">Open</a></td>
             </tr>
         `).join('');
