@@ -102,9 +102,9 @@ Users confirm logout before their session ends so accidental clicks do not immed
 - **FR-004**: When an invitation already exists and is still pending, the system MUST preserve the existing invitation and make its link available for copying instead of failing.
 - **FR-005**: When an invitation already exists and has been accepted, the system MUST block a duplicate invitation and show a clear explanation.
 - **FR-006**: The admin panel MUST allow a pending invitation to be revoked.
-- **FR-007**: A revoked invitation link MUST stop working immediately and show a clear user-facing message.
+- **FR-007**: When an invitation transitions to revoked, any previously issued invitation link MUST become unusable immediately.
 - **FR-008**: The system MUST provide a sign-up page for invited users that allows them to create credentials only when the invitation is valid.
-- **FR-009**: The system MUST reject invalid, already-used, or revoked invitation links with a clear user-facing message.
+- **FR-009**: For any invitation link that is not pending (invalid, already-used, revoked, or unknown), the system MUST present a clear generic invalid-invitation message.
 - **FR-010**: The system MUST mark an invitation as used after a successful sign-up.
 - **FR-011**: The system MUST provide a password reset request page for existing users.
 - **FR-012**: The system MUST provide a password reset completion page reached from a valid reset link.
