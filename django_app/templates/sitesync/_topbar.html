@@ -1,5 +1,9 @@
 {% comment %}Standard CXG topbar. Caller sets active_page = 'home'|'reports'|'profile'|'admin'.{% endcomment %}
+{% load static %}
 <div class="topbar">
+    <a class="topbar-logo-link" href="{% url 'sitesync:site_list' %}" aria-label="Carbonxgen Home">
+        <img class="topbar-logo" src="{% static 'sitesync/images/logo.png' %}" alt="Carbonxgen logo">
+    </a>
     <span class="brand">Enerlytix</span>
     <nav class="topbar-links">
         <a href="{% url 'sitesync:site_list' %}"{% if active_page == 'home' %} class="is-active"{% endif %}>Home</a>

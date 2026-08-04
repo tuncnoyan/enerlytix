@@ -1,396 +1,321 @@
+{% extends 'sitesync/panel_base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Settings</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link href="{% static 'sitesync/cxg-base.css' %}" rel="stylesheet">
-    <style>
-            --cxg-highlight-376: #7AB800;
-            --cxg-highlight-349: #00693C;
-            --cxg-border: #C6D0D7;
-            --cxg-white: #FFFFFF;
+
+{% block title %}Settings{% endblock %}
+{% block nav_settings %}is-active{% endblock %}
+{% block breadcrumb_label %}Settings{% endblock %}
+
+{% block content %}
+<style>
+    .settings-shell {
+        max-width: 58rem;
+    }
+
+    .settings-page {
+        background: var(--cxg-white);
+        border: 1px solid var(--cxg-border);
+        border-radius: 0.45rem;
+        padding: 1rem;
+        box-shadow: 0 1px 2px rgba(51, 63, 72, 0.08);
+    }
+
+    .settings-page h1 {
+        margin: 0;
+        font-size: 1.42rem;
+        font-weight: 800;
+        color: var(--cxg-primary-432);
+    }
+
+    .settings-page p {
+        margin: 0.25rem 0 0;
+        color: #5b7080;
+        font-size: 0.86rem;
+    }
+
+    .notice {
+        padding: 0.6rem 0.8rem;
+        border-radius: 0.35rem;
+        margin-bottom: 1rem;
+        background: #cdffe9;
+        color: var(--cxg-dark-green);
+        border: 1px solid #9affd3;
+        font-size: 0.83rem;
+        font-weight: 600;
+    }
+
+    .notice-warning {
+        background: #fff5d7;
+        color: #92400e;
+        border-color: #f5d18f;
+    }
+
+    .notice-error {
+        background: #fee2e2;
+        color: #991b1b;
+        border-color: #fca5a5;
+    }
+
+    .summary {
+        padding: 0.75rem 0.8rem;
+        background: #f7f8f9;
+        border: 1px solid var(--cxg-border);
+        border-top: 2px solid var(--cxg-green);
+        border-radius: 0.35rem;
+        margin-bottom: 1rem;
+        font-size: 0.8rem;
+        color: #5b7080;
+        line-height: 1.6;
+    }
+
+    .section-divider {
+        margin: 1.2rem 0 0.9rem;
+        border: none;
+        border-top: 1px solid var(--cxg-border);
+    }
+
+    .subheading {
+        margin: 0 0 0.3rem;
+        font-size: 1.02rem;
+        font-weight: 700;
+        color: var(--cxg-primary-432);
+    }
+
+    .field {
+        margin-bottom: 0.9rem;
+    }
+
+    label {
+        display: block;
+        margin-bottom: 0.28rem;
+        font-weight: 600;
+        font-size: 0.8rem;
+        color: #5b7080;
+    }
+
+    .settings-page input,
+    .settings-page select {
+        width: 100%;
+        padding: 0.55rem 0.7rem;
+        border: 1px solid var(--cxg-border);
+        border-radius: 0.3rem;
+        font-size: 0.86rem;
+        color: var(--cxg-primary-432);
+        background: var(--cxg-white);
+    }
+
+    .help {
+        color: var(--cxg-primary-430);
+        font-size: 0.76rem;
+        margin-top: 0.22rem;
+    }
+
+    .errors {
+        color: #b91c1c;
+        font-size: 0.78rem;
+        margin-top: 0.22rem;
+    }
+
+    .actions {
+        display: flex;
+        gap: 0.55rem;
+        align-items: center;
+    }
+
+    .settings-page button {
+        background: var(--cxg-green);
+        color: var(--cxg-primary-432);
+        border: none;
+        border-radius: 0.3rem;
+        padding: 0.55rem 0.85rem;
+        font-weight: 600;
+        font-size: 0.82rem;
+        cursor: pointer;
+    }
+
+    .settings-page button:hover {
+        background: #96e000;
+    }
+
+    .upload-errors {
+        margin: 0.55rem 0 0;
+        padding-left: 1rem;
+        color: #991b1b;
+        font-size: 0.8rem;
+    }
+
+    @media (max-width: 760px) {
+        .settings-page {
+            padding: 0.8rem;
         }
+    }
+</style>
 
-        * {
-            box-sizing: border-box;
-        }
+<div class="settings-shell">
+    <div class="settings-page">
+        <div>
+            <h1>Settings</h1>
+            <p>Update Etainabl connection settings and runtime defaults.</p>
+        </div>
 
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: 'Manrope', 'Segoe UI', sans-serif;
-            background: var(--cxg-bg-10);
-            color: var(--cxg-primary-432);
-        }
+        {% if save_success %}
+            <div class="notice">Settings saved successfully.</div>
+        {% endif %}
 
-        .topbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 1rem;
-            padding: 0.85rem 1.4rem;
-            border-bottom: 1px solid var(--cxg-border);
-            background: var(--cxg-white);
-            box-shadow: 0 1px 0 rgba(51, 63, 72, 0.06);
-        }
+        <div class="summary">
+            <strong>Electricity benchmark:</strong> {{ settings.electricity_benchmark_intensity }} kWh/sq m/year<br />
+            <strong>Gas benchmark:</strong> {{ settings.gas_benchmark_intensity }} kWh/sq m/year<br />
+            <strong>Water benchmark:</strong> {{ settings.water_benchmark_intensity }} m3/sq m/year<br />
+            <strong>Current base URL:</strong> {{ settings.etainabl_api_url }}<br />
+            <strong>Current page size:</strong> {{ settings.page_size }}<br />
+            <strong>Current timeout:</strong> {{ settings.api_timeout }} seconds<br />
+            <strong>Invoice data page limit:</strong> {{ settings.invoice_page_limit }}<br />
+            <strong>Invoice data start page number:</strong> {{ settings.invoice_start_page }}
+        </div>
 
-        .brand {
-            font-size: 1.15rem;
-            font-weight: 800;
-            color: var(--cxg-primary-432);
-            letter-spacing: 0.02em;
-        }
-
-        .topbar-links {
-            display: flex;
-            align-items: center;
-            gap: 1.1rem;
-        }
-
-        .topbar-links a {
-            color: var(--cxg-primary-430);
-            text-decoration: none;
-            font-size: 0.78rem;
-            font-weight: 600;
-            padding: 0.3rem 0.15rem;
-            border-bottom: 2px solid transparent;
-            transition: color 0.2s ease, border-color 0.2s ease;
-        }
-
-        .topbar-links a:hover {
-            color: var(--cxg-highlight-349);
-        }
-
-        .topbar-links a.is-active {
-            color: var(--cxg-primary-432);
-            border-bottom-color: var(--cxg-primary-430);
-        }
-
-        .content-wrap {
-            max-width: 58rem;
-            margin: 0 auto;
-            padding: 1rem;
-        }
-
-        .page {
-            background: var(--cxg-white);
-            border: 1px solid var(--cxg-border);
-            border-radius: 0.45rem;
-            padding: 1rem;
-            box-shadow: 0 1px 2px rgba(51, 63, 72, 0.08);
-        }
-
-        .page h1 {
-            margin: 0;
-            font-size: 1.42rem;
-            font-weight: 800;
-            color: var(--cxg-primary-432);
-        }
-
-        .page p {
-            margin: 0.25rem 0 0;
-            color: #5b7080;
-            font-size: 0.86rem;
-        }
-
-        .notice {
-            padding: 0.6rem 0.8rem;
-            border-radius: 0.35rem;
-            margin-bottom: 1rem;
-            background: #cdffe9;
-            color: var(--cxg-highlight-349);
-            border: 1px solid #9affd3;
-            font-size: 0.83rem;
-            font-weight: 600;
-        }
-
-        .notice-warning {
-            background: #fff5d7;
-            color: #92400e;
-            border: 1px solid #f5d18f;
-        }
-
-        .notice-error {
-            background: #fee2e2;
-            color: #991b1b;
-            border: 1px solid #fca5a5;
-        }
-
-        .field {
-            margin-bottom: 0.9rem;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 0.28rem;
-            font-weight: 600;
-            font-size: 0.8rem;
-            color: #5b7080;
-        }
-
-        input {
-            width: 100%;
-            padding: 0.55rem 0.7rem;
-            border: 1px solid var(--cxg-border);
-            border-radius: 0.3rem;
-            font-size: 0.86rem;
-            color: var(--cxg-primary-432);
-            background: var(--cxg-white);
-        }
-
-        .help {
-            color: var(--cxg-primary-430);
-            font-size: 0.76rem;
-            margin-top: 0.22rem;
-        }
-
-        .errors {
-            color: #b91c1c;
-            font-size: 0.78rem;
-            margin-top: 0.22rem;
-        }
-
-        .actions {
-            display: flex;
-            gap: 0.55rem;
-            align-items: center;
-        }
-
-        button {
-            background: var(--cxg-highlight-376);
-            color: var(--cxg-primary-432);
-            border: none;
-            border-radius: 0.3rem;
-            padding: 0.55rem 0.85rem;
-            font-weight: 600;
-            font-size: 0.82rem;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background: #96e000;
-        }
-
-        .summary {
-            padding: 0.75rem 0.8rem;
-            background: #f7f8f9;
-            border: 1px solid var(--cxg-border);
-            border-top: 2px solid var(--cxg-highlight-376);
-            border-radius: 0.35rem;
-            margin-bottom: 1rem;
-            font-size: 0.8rem;
-            color: #5b7080;
-            line-height: 1.6;
-        }
-
-        .section-divider {
-            margin: 1.2rem 0 0.9rem;
-            border: none;
-            border-top: 1px solid var(--cxg-border);
-        }
-
-        .subheading {
-            margin: 0 0 0.3rem;
-            font-size: 1.02rem;
-            font-weight: 700;
-        }
-
-        .upload-errors {
-            margin: 0.55rem 0 0;
-            padding-left: 1rem;
-            color: #991b1b;
-            font-size: 0.8rem;
-        }
-
-        @media (max-width: 760px) {
-            .topbar {
-                padding: 0.8rem 0.95rem;
-            }
-
-            .content-wrap {
-                padding: 0.8rem;
-            }
-
-            .page {
-                padding: 0.8rem;
-            }
-        }
-    </style>
-</head>
-<body>
-    {% include 'sitesync/_topbar.html' with active_page='settings' %}
-
-    <div class="content-wrap">
-        <div class="page">
+        <form id="settings-form" method="post" novalidate>
+            {% csrf_token %}
             <div>
-                <h1>Settings</h1>
-                <p>Update Etainabl connection settings and runtime defaults.</p>
+                <h2 class="subheading">Benchmark Parameters</h2>
+                <p>Annual utility benchmark intensity values used for report reference lines.</p>
             </div>
-
-            {% if save_success %}
-                <div class="notice">Settings saved successfully.</div>
-            {% endif %}
-
-            <div class="summary">
-                <strong>Electricity benchmark:</strong> {{ settings.electricity_benchmark_intensity }} kWh/sq m/year<br />
-                <strong>Gas benchmark:</strong> {{ settings.gas_benchmark_intensity }} kWh/sq m/year<br />
-                <strong>Water benchmark:</strong> {{ settings.water_benchmark_intensity }} m3/sq m/year<br />
-                <strong>Current base URL:</strong> {{ settings.etainabl_api_url }}<br />
-                <strong>Current page size:</strong> {{ settings.page_size }}<br />
-                <strong>Current timeout:</strong> {{ settings.api_timeout }} seconds<br />
-                <strong>Invoice data page limit:</strong> {{ settings.invoice_page_limit }}<br />
-                <strong>Invoice data start page number:</strong> {{ settings.invoice_start_page }}
+            <div class="field">
+                <label for="id_electricity_benchmark_intensity">Electricity benchmark (kWh/sq m/year)</label>
+                {{ form.electricity_benchmark_intensity }}
+                {% if form.electricity_benchmark_intensity.errors %}
+                    <div class="errors">{{ form.electricity_benchmark_intensity.errors|striptags }}</div>
+                {% else %}
+                    <div class="help">Annual electricity benchmark intensity used for report calculations.</div>
+                {% endif %}
             </div>
-
-            <form id="settings-form" method="post" novalidate>
-                {% csrf_token %}
-                <div>
-                    <h2 class="subheading">Benchmark Parameters</h2>
-                    <p>Annual utility benchmark intensity values used for report reference lines.</p>
-                </div>
-                <div class="field">
-                    <label for="id_electricity_benchmark_intensity">Electricity benchmark (kWh/sq m/year)</label>
-                    {{ form.electricity_benchmark_intensity }}
-                    {% if form.electricity_benchmark_intensity.errors %}
-                        <div class="errors">{{ form.electricity_benchmark_intensity.errors|striptags }}</div>
-                    {% else %}
-                        <div class="help">Annual electricity benchmark intensity used for report calculations.</div>
-                    {% endif %}
-                </div>
-                <div class="field">
-                    <label for="id_gas_benchmark_intensity">Gas benchmark (kWh/sq m/year)</label>
-                    {{ form.gas_benchmark_intensity }}
-                    {% if form.gas_benchmark_intensity.errors %}
-                        <div class="errors">{{ form.gas_benchmark_intensity.errors|striptags }}</div>
-                    {% else %}
-                        <div class="help">Annual gas benchmark intensity used for report calculations.</div>
-                    {% endif %}
-                </div>
-                <div class="field">
-                    <label for="id_water_benchmark_intensity">Water benchmark (m3/sq m/year)</label>
-                    {{ form.water_benchmark_intensity }}
-                    {% if form.water_benchmark_intensity.errors %}
-                        <div class="errors">{{ form.water_benchmark_intensity.errors|striptags }}</div>
-                    {% else %}
-                        <div class="help">Annual water benchmark intensity used for report calculations.</div>
-                    {% endif %}
-                </div>
-                <hr class="section-divider" />
-                <div>
-                    <h2 class="subheading">Connection Settings</h2>
-                    <p>Etainabl connection settings and runtime defaults.</p>
-                </div>
-                <div class="field">
-                    <label for="id_etainabl_api_url">Etainabl API URL</label>
-                    {{ form.etainabl_api_url }}
-                    {% if form.etainabl_api_url.errors %}
-                        <div class="errors">{{ form.etainabl_api_url.errors|striptags }}</div>
-                    {% else %}
-                        <div class="help">Base URL used by the sync service.</div>
-                    {% endif %}
-                </div>
-                <div class="field">
-                    <label for="id_page_size">Page size</label>
-                    {{ form.page_size }}
-                    {% if form.page_size.errors %}
-                        <div class="errors">{{ form.page_size.errors|striptags }}</div>
-                    {% else %}
-                        <div class="help">Number of records fetched per request.</div>
-                    {% endif %}
-                </div>
-                <div class="field">
-                    <label for="id_api_timeout">API timeout</label>
-                    {{ form.api_timeout }}
-                    {% if form.api_timeout.errors %}
-                        <div class="errors">{{ form.api_timeout.errors|striptags }}</div>
-                    {% else %}
-                        <div class="help">Timeout in seconds for Etainabl requests.</div>
-                    {% endif %}
-                </div>
-                <hr class="section-divider" />
-                <div>
-                    <h2 class="subheading">Invoice Data Settings</h2>
-                    <p>Pagination settings used when downloading invoice data from Etainabl.</p>
-                </div>
-                <div class="field">
-                    <label for="id_invoice_page_limit">Invoice Data Page Limit</label>
-                    {{ form.invoice_page_limit }}
-                    {% if form.invoice_page_limit.errors %}
-                        <div class="errors">{{ form.invoice_page_limit.errors|striptags }}</div>
-                    {% else %}
-                        <div class="help">Number of invoice records fetched per API page.</div>
-                    {% endif %}
-                </div>
-                <div class="field">
-                    <label for="id_invoice_start_page">Invoice Data Start Page Number</label>
-                    {{ form.invoice_start_page }}
-                    {% if form.invoice_start_page.errors %}
-                        <div class="errors">{{ form.invoice_start_page.errors|striptags }}</div>
-                    {% else %}
-                        <div class="help">Page number invoice downloads start from on every import.</div>
-                    {% endif %}
-                </div>
-                <div class="actions">
-                    <button type="submit">Save settings</button>
-                </div>
-            </form>
-
+            <div class="field">
+                <label for="id_gas_benchmark_intensity">Gas benchmark (kWh/sq m/year)</label>
+                {{ form.gas_benchmark_intensity }}
+                {% if form.gas_benchmark_intensity.errors %}
+                    <div class="errors">{{ form.gas_benchmark_intensity.errors|striptags }}</div>
+                {% else %}
+                    <div class="help">Annual gas benchmark intensity used for report calculations.</div>
+                {% endif %}
+            </div>
+            <div class="field">
+                <label for="id_water_benchmark_intensity">Water benchmark (m3/sq m/year)</label>
+                {{ form.water_benchmark_intensity }}
+                {% if form.water_benchmark_intensity.errors %}
+                    <div class="errors">{{ form.water_benchmark_intensity.errors|striptags }}</div>
+                {% else %}
+                    <div class="help">Annual water benchmark intensity used for report calculations.</div>
+                {% endif %}
+            </div>
             <hr class="section-divider" />
             <div>
-                <h2 class="subheading">Available Capacity Upload</h2>
-                <p>Upload a `.xlsx` file with columns Name, eSight Meter Code, and Av Cap (kVA).</p>
+                <h2 class="subheading">Connection Settings</h2>
+                <p>Etainabl connection settings and runtime defaults.</p>
             </div>
+            <div class="field">
+                <label for="id_etainabl_api_url">Etainabl API URL</label>
+                {{ form.etainabl_api_url }}
+                {% if form.etainabl_api_url.errors %}
+                    <div class="errors">{{ form.etainabl_api_url.errors|striptags }}</div>
+                {% else %}
+                    <div class="help">Base URL used by the sync service.</div>
+                {% endif %}
+            </div>
+            <div class="field">
+                <label for="id_page_size">Page size</label>
+                {{ form.page_size }}
+                {% if form.page_size.errors %}
+                    <div class="errors">{{ form.page_size.errors|striptags }}</div>
+                {% else %}
+                    <div class="help">Number of records fetched per request.</div>
+                {% endif %}
+            </div>
+            <div class="field">
+                <label for="id_api_timeout">API timeout</label>
+                {{ form.api_timeout }}
+                {% if form.api_timeout.errors %}
+                    <div class="errors">{{ form.api_timeout.errors|striptags }}</div>
+                {% else %}
+                    <div class="help">Timeout in seconds for Etainabl requests.</div>
+                {% endif %}
+            </div>
+            <hr class="section-divider" />
+            <div>
+                <h2 class="subheading">Invoice Data Settings</h2>
+                <p>Pagination settings used when downloading invoice data from Etainabl.</p>
+            </div>
+            <div class="field">
+                <label for="id_invoice_page_limit">Invoice Data Page Limit</label>
+                {{ form.invoice_page_limit }}
+                {% if form.invoice_page_limit.errors %}
+                    <div class="errors">{{ form.invoice_page_limit.errors|striptags }}</div>
+                {% else %}
+                    <div class="help">Number of invoice records fetched per API page.</div>
+                {% endif %}
+            </div>
+            <div class="field">
+                <label for="id_invoice_start_page">Invoice Data Start Page Number</label>
+                {{ form.invoice_start_page }}
+                {% if form.invoice_start_page.errors %}
+                    <div class="errors">{{ form.invoice_start_page.errors|striptags }}</div>
+                {% else %}
+                    <div class="help">Page number invoice downloads start from on every import.</div>
+                {% endif %}
+            </div>
+            <div class="actions">
+                <button type="submit">Save settings</button>
+            </div>
+        </form>
 
-            {% if capacity_upload_status == 'success' %}
-                <div class="notice">
-                    Capacity upload completed. Accepted {{ capacity_upload_accepted_rows }} of {{ capacity_upload_total_rows }} row(s).
-                </div>
-            {% elif capacity_upload_status == 'partial_success' %}
-                <div class="notice notice-warning">
-                    Capacity upload completed with warnings. Accepted {{ capacity_upload_accepted_rows }} and rejected {{ capacity_upload_rejected_rows }} row(s).
-                </div>
-            {% elif capacity_upload_status == 'failed' %}
-                <div class="notice notice-error">
-                    Capacity upload failed. No valid rows were imported.
-                </div>
-            {% endif %}
-
-            {% if capacity_upload_errors %}
-                <ul class="upload-errors">
-                    {% for upload_error in capacity_upload_errors %}
-                        <li>{{ upload_error }}</li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
-
-            {% if latest_capacity_run %}
-                <div class="summary">
-                    <strong>Latest file:</strong> {{ latest_capacity_run.uploaded_filename|default:'Unknown' }}<br />
-                    <strong>Latest upload:</strong> {{ latest_capacity_run.uploaded_at }}<br />
-                    <strong>Status:</strong> {{ latest_capacity_run.status }}<br />
-                    <strong>Rows:</strong> {{ latest_capacity_run.total_rows }} total, {{ latest_capacity_run.accepted_rows }} accepted, {{ latest_capacity_run.rejected_rows }} rejected
-                </div>
-            {% endif %}
-
-            <form id="capacity-upload-form" method="post" enctype="multipart/form-data" novalidate>
-                {% csrf_token %}
-                <input type="hidden" name="capacity_upload_submit" value="1" />
-                <div class="field">
-                    <label for="id_capacity_upload_file">Capacity Workbook (.xlsx)</label>
-                    {{ capacity_form.capacity_upload_file }}
-                    <div class="help">Only `.xlsx` files are accepted. Header matching is trim + case-insensitive.</div>
-                </div>
-                <div class="actions">
-                    <button type="submit">Upload Capacity File</button>
-                </div>
-            </form>
+        <hr class="section-divider" />
+        <div>
+            <h2 class="subheading">Available Capacity Upload</h2>
+            <p>Upload a `.xlsx` file with columns Name, eSight Meter Code, and Av Cap (kVA).</p>
         </div>
-    </div>
 
-    <script src="{% static 'sitesync/js/settings.js' %}"></script>
-</body>
-</html>
+        {% if capacity_upload_status == 'success' %}
+            <div class="notice">
+                Capacity upload completed. Accepted {{ capacity_upload_accepted_rows }} of {{ capacity_upload_total_rows }} row(s).
+            </div>
+        {% elif capacity_upload_status == 'partial_success' %}
+            <div class="notice notice-warning">
+                Capacity upload completed with warnings. Accepted {{ capacity_upload_accepted_rows }} and rejected {{ capacity_upload_rejected_rows }} row(s).
+            </div>
+        {% elif capacity_upload_status == 'failed' %}
+            <div class="notice notice-error">
+                Capacity upload failed. No valid rows were imported.
+            </div>
+        {% endif %}
+
+        {% if capacity_upload_errors %}
+            <ul class="upload-errors">
+                {% for upload_error in capacity_upload_errors %}
+                    <li>{{ upload_error }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        {% if latest_capacity_run %}
+            <div class="summary">
+                <strong>Latest file:</strong> {{ latest_capacity_run.uploaded_filename|default:'Unknown' }}<br />
+                <strong>Latest upload:</strong> {{ latest_capacity_run.uploaded_at }}<br />
+                <strong>Status:</strong> {{ latest_capacity_run.status }}<br />
+                <strong>Rows:</strong> {{ latest_capacity_run.total_rows }} total, {{ latest_capacity_run.accepted_rows }} accepted, {{ latest_capacity_run.rejected_rows }} rejected
+            </div>
+        {% endif %}
+
+        <form id="capacity-upload-form" method="post" enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="capacity_upload_submit" value="1" />
+            <div class="field">
+                <label for="id_capacity_upload_file">Capacity Workbook (.xlsx)</label>
+                {{ capacity_form.capacity_upload_file }}
+                <div class="help">Only `.xlsx` files are accepted. Header matching is trim + case-insensitive.</div>
+            </div>
+            <div class="actions">
+                <button type="submit">Upload Capacity File</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="{% static 'sitesync/js/settings.js' %}"></script>
+{% endblock %}

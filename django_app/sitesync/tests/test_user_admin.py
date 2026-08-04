@@ -1,8 +1,11 @@
 from django.contrib.auth import get_user_model
 from django.conf import settings
+from django.contrib.messages import get_messages
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 from unittest.mock import patch
+from datetime import timedelta
 
 from sitesync.models import AuditLogEntry, Invitation
 
@@ -51,6 +54,31 @@ class UserAdminTests(TestCase):
         self.assertTrue(Invitation.objects.filter(email='invitee@example.com').exists())
         mocked_send.assert_called_once()
 
+    @patch('sitesync.views.EmailMessage.send', return_value=1)
+    def test_duplicate_invitation_creation_falls_back_to_resend_with_warning(self, mocked_send):
+        Invitation.objects.create(
+            email='duplicate@example.com',
+            invited_by=self.admin_user,
+            expires_at=timezone.now() + timedelta(days=7),
+        )
+
+        self.client.force_login(self.admin_user)
+        response = self.client.post(
+            reverse('sitesync:user_admin'),
+            {'create_invitation': '1', 'email': 'duplicate@example.com'},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        mocked_send.assert_called_once()
+        self.assertEqual(Invitation.objects.filter(email='duplicate@example.com').count(), 1)
+        self.assertTrue(
+            any(
+                message.level_tag == 'warning' and 'already exists' in str(message)
+                for message in get_messages(response.wsgi_request)
+            )
+        )
+        self.assertTrue(AuditLogEntry.objects.filter(action_type='ADMIN_RESEND_INVITATION_EMAIL').exists())
+
     def test_mailtrap_backend_class_is_configured(self):
         self.assertEqual(settings.CONFIGURED_EMAIL_BACKEND, 'anymail.backends.mailtrap.EmailBackend')
         self.assertEqual(settings.MAILTRAP_EMAIL_BACKEND, 'anymail.backends.mailtrap.EmailBackend')
@@ -70,6 +98,32 @@ class UserAdminTests(TestCase):
         self.assertIsNotNone(email_event)
         self.assertEqual(email_event.action_outcome, AuditLogEntry.OUTCOME_SUCCESS)
         self.assertIn('mailtrap-success@example.com', email_event.message)
+
+    @patch('sitesync.views.EmailMessage.send', return_value=1)
+    def test_pending_invitation_resend_button_sends_again_with_warning(self, mocked_send):
+        invitation = Invitation.objects.create(
+            email='resend@example.com',
+            invited_by=self.admin_user,
+            expires_at=timezone.now() + timedelta(days=7),
+        )
+
+        self.client.force_login(self.admin_user)
+        response = self.client.post(
+            reverse('sitesync:user_admin'),
+            {'resend_invitation': '1', 'invitation_id': str(invitation.id)},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        mocked_send.assert_called_once()
+        invitation.refresh_from_db()
+        self.assertEqual(invitation.status, Invitation.STATUS_PENDING)
+        self.assertTrue(
+            any(
+                message.level_tag == 'warning' and 'resent' in str(message).lower()
+                for message in get_messages(response.wsgi_request)
+            )
+        )
+        self.assertTrue(AuditLogEntry.objects.filter(action_type='ADMIN_RESEND_INVITATION_EMAIL').exists())
 
     @patch('sitesync.views.EmailMessage.send', side_effect=Exception('simulated-mail-failure'))
     def test_invitation_email_send_failure_is_logged(self, mocked_send):

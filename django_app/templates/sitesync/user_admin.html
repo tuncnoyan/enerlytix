@@ -35,6 +35,7 @@
         padding: 0.6rem 0; border-bottom: 1px solid var(--cxg-bg-25); font-size: 0.86rem;
     }
     .inv-list li:last-child { border-bottom: none; }
+    .inv-actions { display: flex; gap: 0.45rem; flex-wrap: wrap; align-items: center; }
     .inv-email { font-weight: 600; }
     .inv-badge {
         font-size: 0.72rem; font-weight: 700; padding: 0.22rem 0.5rem;
@@ -94,13 +95,20 @@
 <div class="ua-card">
     <p class="ua-card-title">Pending Invitations</p>
     <ul class="inv-list">
-        {% for invitation in invitations %}
+        {% for invitation in pending_invitations %}
             <li>
                 <div>
                     <span class="inv-email">{{ invitation.email }}</span>
                     <span class="inv-badge pending">{{ invitation.status }}</span>
                 </div>
-                <a href="{% url 'sitesync:accept_invitation' invitation.id %}" class="btn btn-outline-secondary btn-sm">Accept link</a>
+                <div class="inv-actions">
+                    <form method="post" style="margin:0;">
+                        {% csrf_token %}
+                        <input type="hidden" name="resend_invitation" value="1">
+                        <input type="hidden" name="invitation_id" value="{{ invitation.id }}">
+                        <button type="submit" class="btn btn-warning btn-sm">Resend invitation</button>
+                    </form>
+                </div>
             </li>
         {% empty %}
             <li><span class="empty-msg">No pending invitations.</span></li>
@@ -397,7 +405,6 @@
                             <span class="inv-email">{{ invitation.email }}</span>
                             <span class="inv-badge pending">{{ invitation.status }}</span>
                         </div>
-                        <a href="{% url 'sitesync:accept_invitation' invitation.id %}" class="btn-ghost">Accept link</a>
                     </li>
                 {% empty %}
                     <li><span class="empty-msg">No pending invitations.</span></li>
@@ -454,6 +461,8 @@
                 </table>
             </div>
         </div>
+
+        <footer class="site-footer"><span>Copyright © 2026 CARBONXGEN Limited. All rights reserved</span></footer>
 
     </div>
 </body>

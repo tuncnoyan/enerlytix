@@ -15,6 +15,7 @@ from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.core.mail import EmailMessage
 from django.core.paginator import Paginator
+from django.db import IntegrityError
 from django.db.models import Count, Q, Sum
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404, render, redirect
@@ -67,6 +68,7 @@ from .services import (
     AUDIT_ACTION_ADMIN_ASSIGN_TEAM,
     AUDIT_ACTION_ADMIN_CREATE_INVITATION,
     AUDIT_ACTION_ADMIN_SEND_INVITATION_EMAIL,
+    AUDIT_ACTION_ADMIN_RESEND_INVITATION_EMAIL,
     AUDIT_ACTION_ADMIN_CREATE_TEAM,
     AUDIT_ACTION_ADMIN_DELETE_USER,
     AUDIT_ACTION_ADMIN_DISABLE_USER,
@@ -243,6 +245,37 @@ def _send_invitation_email(request, invitation):
     except Exception as exc:
         logger.exception('Failed to send invitation email for %s', invitation.email)
         return False, str(exc)
+
+
+def _send_and_log_invitation_email(request, invitation, *, action_type, success_message, failure_message):
+    """Send invitation email and persist a corresponding audit row."""
+
+    email_sent, email_error = _send_invitation_email(request, invitation)
+    _log_audit_event(
+        request,
+        action_type=action_type,
+        action_outcome=AuditLogEntry.OUTCOME_SUCCESS if email_sent else AuditLogEntry.OUTCOME_FAILED,
+        target_entity_type='invitation',
+        target_entity_id=str(invitation.id),
+        target_entity_label=invitation.email,
+        message=success_message if email_sent else failure_message.format(error=email_error),
+        metadata={
+            'email_backend': getattr(settings, 'EMAIL_BACKEND', ''),
+            'send_attempted': True,
+            'sent': email_sent,
+            'error': email_error,
+        },
+    )
+    return email_sent, email_error
+
+
+def _activate_and_resend_invitation(request, invitation):
+    """Reset an invitation to pending and resend it."""
+
+    invitation.status = Invitation.STATUS_PENDING
+    invitation.expires_at = dj_timezone.now() + dj_timezone.timedelta(days=7)
+    invitation.save(update_fields=['status', 'expires_at', 'updated_at'])
+    return invitation
 
 
 def _previous_complete_month_key():
@@ -1582,45 +1615,113 @@ def user_admin_view(request):
     action_form = AccountActionForm()
     users = get_user_model().objects.order_by('username')
     invitations = Invitation.objects.order_by('-created_at')
+    pending_invitations = invitations.filter(status=Invitation.STATUS_PENDING)
 
     if request.method == 'POST':
-        if 'create_invitation' in request.POST:
-            invitation_form = InvitationForm(request.POST)
-            if invitation_form.is_valid():
-                invitation = Invitation.objects.create(
-                    email=invitation_form.cleaned_data['email'],
-                    invited_by=request.user,
-                    expires_at=dj_timezone.now() + dj_timezone.timedelta(days=7),
-                )
-                email_sent, email_error = _send_invitation_email(request, invitation)
+        if 'resend_invitation' in request.POST:
+            invitation_id = (request.POST.get('invitation_id') or '').strip()
+            invitation = Invitation.objects.filter(id=invitation_id).first()
+            if invitation is None:
+                messages.error(request, 'Invitation not found.')
+            elif invitation.status != Invitation.STATUS_PENDING:
+                messages.error(request, 'Only pending invitations can be resent.')
+            else:
                 _log_audit_event(
                     request,
-                    action_type=AUDIT_ACTION_ADMIN_CREATE_INVITATION,
+                    action_type=AUDIT_ACTION_ADMIN_RESEND_INVITATION_EMAIL,
                     action_outcome=AuditLogEntry.OUTCOME_SUCCESS,
                     target_entity_type='invitation',
                     target_entity_id=str(invitation.id),
                     target_entity_label=invitation.email,
-                    message=f"Created invitation for {invitation.email}.",
+                    message=f"Resent invitation for {invitation.email}.",
                 )
-                _log_audit_event(
+                _activate_and_resend_invitation(request, invitation)
+                _send_and_log_invitation_email(
                     request,
+                    invitation,
                     action_type=AUDIT_ACTION_ADMIN_SEND_INVITATION_EMAIL,
-                    action_outcome=AuditLogEntry.OUTCOME_SUCCESS if email_sent else AuditLogEntry.OUTCOME_FAILED,
-                    target_entity_type='invitation',
-                    target_entity_id=str(invitation.id),
-                    target_entity_label=invitation.email,
-                    message=(
-                        f"Sent invitation email to {invitation.email}."
-                        if email_sent
-                        else f"Failed to send invitation email to {invitation.email}: {email_error}"
-                    ),
-                    metadata={
-                        'email_backend': getattr(settings, 'EMAIL_BACKEND', ''),
-                        'send_attempted': True,
-                        'sent': email_sent,
-                        'error': email_error,
-                    },
+                    success_message=f"Sent invitation email to {invitation.email}.",
+                    failure_message=f"Failed to send invitation email to {invitation.email}: {{error}}",
                 )
+                messages.warning(request, f'Invitation already exists for {invitation.email}. The pending invitation was resent.')
+            pending_invitations = invitations.filter(status=Invitation.STATUS_PENDING)
+        if 'create_invitation' in request.POST:
+            invitation_form = InvitationForm(request.POST)
+            if invitation_form.is_valid():
+                email = invitation_form.cleaned_data['email']
+                existing_invitation = Invitation.objects.filter(email__iexact=email).first()
+                if existing_invitation is not None:
+                    if existing_invitation.status == Invitation.STATUS_ACCEPTED:
+                        messages.error(request, f'An invitation already exists for {email} and was already accepted.')
+                    else:
+                        _log_audit_event(
+                            request,
+                            action_type=AUDIT_ACTION_ADMIN_RESEND_INVITATION_EMAIL,
+                            action_outcome=AuditLogEntry.OUTCOME_SUCCESS,
+                            target_entity_type='invitation',
+                            target_entity_id=str(existing_invitation.id),
+                            target_entity_label=existing_invitation.email,
+                            message=f"Resent invitation for {existing_invitation.email}.",
+                        )
+                        _activate_and_resend_invitation(request, existing_invitation)
+                        _send_and_log_invitation_email(
+                            request,
+                            existing_invitation,
+                            action_type=AUDIT_ACTION_ADMIN_SEND_INVITATION_EMAIL,
+                            success_message=f"Sent invitation email to {existing_invitation.email}.",
+                            failure_message=f"Failed to send invitation email to {existing_invitation.email}: {{error}}",
+                        )
+                        messages.warning(request, f'Invitation already exists for {email}. The pending invitation was resent.')
+                else:
+                    try:
+                        invitation = Invitation.objects.create(
+                            email=email,
+                            invited_by=request.user,
+                            expires_at=dj_timezone.now() + dj_timezone.timedelta(days=7),
+                        )
+                    except IntegrityError:
+                        existing_invitation = Invitation.objects.filter(email__iexact=email).first()
+                        if existing_invitation is None:
+                            messages.error(request, f'Unable to create invitation for {email}. Please try again.')
+                        elif existing_invitation.status == Invitation.STATUS_ACCEPTED:
+                            messages.error(request, f'An invitation already exists for {email} and was already accepted.')
+                        else:
+                            _log_audit_event(
+                                request,
+                                action_type=AUDIT_ACTION_ADMIN_RESEND_INVITATION_EMAIL,
+                                action_outcome=AuditLogEntry.OUTCOME_SUCCESS,
+                                target_entity_type='invitation',
+                                target_entity_id=str(existing_invitation.id),
+                                target_entity_label=existing_invitation.email,
+                                message=f"Resent invitation for {existing_invitation.email}.",
+                            )
+                            _activate_and_resend_invitation(request, existing_invitation)
+                            _send_and_log_invitation_email(
+                                request,
+                                existing_invitation,
+                                action_type=AUDIT_ACTION_ADMIN_SEND_INVITATION_EMAIL,
+                                success_message=f"Sent invitation email to {existing_invitation.email}.",
+                                failure_message=f"Failed to send invitation email to {existing_invitation.email}: {{error}}",
+                            )
+                            messages.warning(request, f'Invitation already exists for {email}. The pending invitation was resent.')
+                    else:
+                        _log_audit_event(
+                            request,
+                            action_type=AUDIT_ACTION_ADMIN_CREATE_INVITATION,
+                            action_outcome=AuditLogEntry.OUTCOME_SUCCESS,
+                            target_entity_type='invitation',
+                            target_entity_id=str(invitation.id),
+                            target_entity_label=invitation.email,
+                            message=f"Created invitation for {invitation.email}.",
+                        )
+                        _send_and_log_invitation_email(
+                            request,
+                            invitation,
+                            action_type=AUDIT_ACTION_ADMIN_SEND_INVITATION_EMAIL,
+                            success_message=f"Sent invitation email to {invitation.email}.",
+                            failure_message=f"Failed to send invitation email to {invitation.email}: {{error}}",
+                        )
+                        messages.success(request, f'Created invitation for {email}.')
                 invitation_form = InvitationForm()
         elif 'account_action' in request.POST:
             action_form = AccountActionForm(request.POST)
@@ -1673,6 +1774,7 @@ def user_admin_view(request):
     return render(request, 'sitesync/user_admin.html', {
         'users': users,
         'invitations': invitations,
+        'pending_invitations': pending_invitations,
         'invitation_form': invitation_form,
         'action_form': action_form,
         'is_admin': _user_is_admin(getattr(request, 'user', None)),
