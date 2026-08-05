@@ -125,5 +125,5 @@ As an admin user, I want a dedicated page for usage and invoice import review so
 - The public home page is the default landing page for regular users after sign-in.
 - The admin area already exists as a separate authenticated section of the product.
 - Inactive supplies can be identified from existing supply or meter status information.
-- The supply filter is expected to search within the currently selected site's supplies using the labels already visible to users.
+- The supply search is applied after site selection and alongside the existing utility-type and meter-type filters; the inactive-meter toggle only controls whether inactive supplies are eligible to appear in the result set.
 - The export formats are expected to reflect the data currently shown on the import review page.
