@@ -438,9 +438,11 @@ class EtainaibleSyncService:
     
     def __init__(self):
         """Initialize the sync service with API configuration."""
+        runtime_settings = SettingsConfigService.get_settings()
         self.api_key = (settings.ETAINABL_API_KEY or '').strip()
-        self.api_url = settings.ETAINABL_API_URL
-        self.timeout = settings.API_TIMEOUT
+        self.api_url = runtime_settings.etainabl_api_url or settings.ETAINABL_API_URL
+        self.timeout = runtime_settings.api_timeout or settings.API_TIMEOUT
+        self.page_size = max(1, int(runtime_settings.page_size or 50))
         self.max_retries = 10
         self.base_backoff = 1  # Start with 1 second
         self.max_backoff = 120  # Cap at 120 seconds
@@ -521,13 +523,12 @@ class EtainaibleSyncService:
         
         try:
             endpoint = f"{self.api_url}/assets"
-            page_size = 50
             page = 1
             
             while True:
                 # Fetch paginated results
                 params = {
-                    'limit': page_size,
+                    'limit': self.page_size,
                     'page': page,
                 }
                 
@@ -562,14 +563,14 @@ class EtainaibleSyncService:
                 if total is not None:
                     reported_skip = data.get('skip') if isinstance(data, dict) else None
                     reported_limit = data.get('limit') if isinstance(data, dict) else None
-                    offset = reported_skip if isinstance(reported_skip, int) else (page - 1) * page_size
+                    offset = reported_skip if isinstance(reported_skip, int) else (page - 1) * self.page_size
                     limit_used = reported_limit if isinstance(reported_limit, int) else len(assets)
                     downloaded = offset + limit_used
                     if downloaded >= total:
                         logger.info(f"Reached end of assets (total={total})")
                         break
 
-                if len(assets) < page_size:
+                if len(assets) < self.page_size:
                     logger.info("Reached final assets page by page size (page=%s)", page)
                     break
 
@@ -619,13 +620,12 @@ class EtainaibleSyncService:
         
         try:
             endpoint = f"{self.api_url}/accounts"
-            page_size = 50
             page = 1
             
             while True:
                 # Fetch paginated results
                 params = {
-                    'limit': page_size,
+                    'limit': self.page_size,
                     'page': page,
                 }
                 
@@ -660,14 +660,14 @@ class EtainaibleSyncService:
                 if total is not None:
                     reported_skip = data.get('skip') if isinstance(data, dict) else None
                     reported_limit = data.get('limit') if isinstance(data, dict) else None
-                    offset = reported_skip if isinstance(reported_skip, int) else (page - 1) * page_size
+                    offset = reported_skip if isinstance(reported_skip, int) else (page - 1) * self.page_size
                     limit_used = reported_limit if isinstance(reported_limit, int) else len(accounts)
                     downloaded = offset + limit_used
                     if downloaded >= total:
                         logger.info(f"Reached end of accounts (total={total})")
                         break
 
-                if len(accounts) < page_size:
+                if len(accounts) < self.page_size:
                     logger.info("Reached final accounts page by page size (page=%s)", page)
                     break
 

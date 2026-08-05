@@ -1964,16 +1964,19 @@ def manual_sync_view(request):
         return _redirect_with_sync_status('success')
     except Exception as exc:
         logger.exception("Manual sync failed")
-        _log_audit_event(
-            request,
-            action_type=AUDIT_ACTION_ADMIN_SYNC_TRIGGER,
-            action_outcome=AuditLogEntry.OUTCOME_FAILED,
-            target_entity_type='sync',
-            target_entity_id='manual',
-            target_entity_label='manual_sync',
-            message='Manual sync failed.',
-            metadata={'error': str(exc)},
-        )
+        try:
+            _log_audit_event(
+                request,
+                action_type=AUDIT_ACTION_ADMIN_SYNC_TRIGGER,
+                action_outcome=AuditLogEntry.OUTCOME_FAILED,
+                target_entity_type='sync',
+                target_entity_id='manual',
+                target_entity_label='manual_sync',
+                message='Manual sync failed.',
+                metadata={'error': str(exc)},
+            )
+        except Exception:
+            logger.exception("Failed to write manual sync failure audit event")
         return JsonResponse({
             'error': {
                 'message': 'Unable to complete sync',
