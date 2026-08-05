@@ -1,12 +1,14 @@
 """Tests for report cover page defaults and payload structure."""
 
 import re
+from datetime import datetime, timezone
+from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
 
-from sitesync.models import Site, Supply
+from sitesync.models import ImportRun, InvoiceCost, Site, Supply
 
 
 class ReportCoverPagesTest(TestCase):
@@ -99,3 +101,28 @@ class ReportCoverPagesTest(TestCase):
         content = response.content.decode('utf-8')
         self.assertIn('"coverDefaults"', content)
         self.assertIn('"report_month_title": "June 2026 Energy Report"', content)
+
+    def test_overview_uses_supply_name_as_meter_number(self):
+        import_run = ImportRun.objects.create(
+            reporting_month='2026-06',
+            selected_supply_ids=['supply-cover-elec'],
+            affected_supply_count=1,
+        )
+        supply = Supply.objects.get(external_id='supply-cover-elec')
+        InvoiceCost.objects.create(
+            import_run=import_run,
+            supply=supply,
+            canonical_month_key='2026-06',
+            source_period_start=datetime(2026, 6, 1, tzinfo=timezone.utc),
+            source_period_end=datetime(2026, 6, 30, tzinfo=timezone.utc),
+            cost=Decimal('250.00'),
+        )
+
+        response = self.client.get(
+            reverse('sitesync:report_data_api'),
+            {'site_id': self.site.id, 'end_month': '2026-06'},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        overview_rows = response.json()['overview']['per_meter']
+        self.assertEqual(overview_rows[0]['meter_number'], 'Electricity Main')

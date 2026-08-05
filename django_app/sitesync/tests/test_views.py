@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase, RequestFactory
+from unittest.mock import Mock, patch
 from sitesync.models import Site, Supply
 from sitesync.views import site_list_view
 
@@ -77,3 +78,15 @@ class SiteListViewTest(TestCase):
         self.assertIn('report-end-month', content)
         self.assertIn('report-refresh-mode', content)
         self.assertIn('Refresh data before opening report', content)
+
+    @patch('sitesync.views.render')
+    def test_site_list_view_sorts_names_ascending(self, mock_render):
+        mock_render.return_value = Mock(status_code=200)
+        Site.objects.create(external_id='site-3', name='aardvark house', description='Third location')
+        request = self._auth_get('/')
+        response = site_list_view(request)
+
+        self.assertEqual(response.status_code, 200)
+        rendered_context = mock_render.call_args.args[2]
+        rendered_names = [site.name for site in rendered_context['sites']]
+        self.assertEqual(rendered_names, ['aardvark house', 'Alpha Site', 'Beta Site'])

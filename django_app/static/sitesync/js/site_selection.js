@@ -413,19 +413,18 @@ function triggerCreateReport() {
     const selectedSupplyIds = getSelectedSupplyIds();
     const reportUrl = '/report/?' + buildReportQuery(selectedSiteIdForReport, endMonth, selectedSupplyIds);
 
-    if (!refreshMode) {
+    const reportSupplyIds = getSuppliesForReportRefresh();
+    if (!reportSupplyIds.length) {
+        setCreateReportStatus('No supplies available for data checks. Opening report.', false);
         window.location.href = reportUrl;
         return;
     }
 
-    const refreshSupplyIds = getSuppliesForReportRefresh();
-    if (!refreshSupplyIds.length) {
-        setCreateReportStatus('No supplies available to refresh. Opening report.', false);
-        window.location.href = reportUrl;
-        return;
+    if (refreshMode) {
+        setCreateReportStatus('Refreshing selected supply data before opening report...', false);
+    } else {
+        setCreateReportStatus('Checking data availability for selected supplies...', false);
     }
-
-    setCreateReportStatus('Refreshing selected supply data before opening report...', false);
     if (button) {
         button.disabled = true;
     }
@@ -437,9 +436,9 @@ function triggerCreateReport() {
             'X-CSRFToken': getCsrfToken(),
         },
         body: JSON.stringify({
-            supply_ids: refreshSupplyIds,
+            supply_ids: reportSupplyIds,
             reporting_month: endMonth,
-            refresh_mode: true,
+            refresh_mode: refreshMode,
         }),
     })
         .then((response) => {
@@ -448,12 +447,32 @@ function triggerCreateReport() {
             }
             return response.json();
         })
-        .then(() => {
+        .then((payload) => {
+            const recordsFailed = Number(payload && payload.records_failed ? payload.records_failed : 0);
+            const recordsImported = Number(payload && payload.records_imported ? payload.records_imported : 0);
+
+            if (recordsFailed > 0) {
+                setCreateReportStatus('Data preparation failed for one or more supplies. Please retry import before opening report.', true);
+                return;
+            }
+
+            if (refreshMode) {
+                if (recordsImported > 0) {
+                    setCreateReportStatus('Data refresh completed. Opening report...', false);
+                } else {
+                    setCreateReportStatus('Refresh completed with no new records. Opening report...', false);
+                }
+            } else if (recordsImported > 0) {
+                setCreateReportStatus('Missing data detected and downloaded. Opening report...', false);
+            } else {
+                setCreateReportStatus('All required data is already available. Opening report...', false);
+            }
+
             window.location.href = reportUrl;
         })
         .catch((error) => {
             console.error(error);
-            setCreateReportStatus('Unable to refresh data before report. Please try again.', true);
+            setCreateReportStatus('Unable to prepare data before report. Please try again.', true);
         })
         .finally(() => {
             updateCreateReportControls();

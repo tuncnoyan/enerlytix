@@ -638,7 +638,7 @@ def _overview_for_site(site, report_start, report_end):
     for row in invoice_rows:
         utility_type = row['supply__utility_type']
         totals[utility_type] += row['total_cost'] or Decimal('0')
-        meter_number = row.get('supply__device_id') or row.get('supply__name') or str(row['supply_id'])
+        meter_number = row.get('supply__name') or row.get('supply__device_id') or str(row['supply_id'])
         if meter_number not in meter_numbers[utility_type]:
             meter_numbers[utility_type].append(meter_number)
         per_meter_rows.append({
@@ -1729,7 +1729,7 @@ def site_list_view(request):
             distinct=True,
         ),
     )
-    sites = all_sites_qs.prefetch_related('supplies').order_by('name')
+    sites = all_sites_qs.prefetch_related('supplies')
     if query:
         logger.info("Filtering sites by query: %s", query)
         sites = sites.filter(
@@ -1738,6 +1738,8 @@ def site_list_view(request):
             | Q(external_id__icontains=query)
             | Q(supplies__name__icontains=query)
         ).distinct()
+
+    sites = sorted(sites, key=lambda site: (site.name or '').casefold())
 
     return render(request, 'sitesync/site_list.html', {
         'sites': sites,
