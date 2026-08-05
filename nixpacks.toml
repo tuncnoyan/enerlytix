@@ -1,8 +1,8 @@
 [phases.install]
-cmds = ["python -m pip install --upgrade pip", "python -m pip install -r requirements.txt"]
+cmds = ["python3 -m pip install --upgrade pip", "python3 -m pip install -r requirements.txt"]
 
 [phases.build]
-cmds = ["python manage.py collectstatic --noinput || true"]
+cmds = ["python3 manage.py collectstatic --noinput || true"]
 
 [start]
-cmd = "cd django_app && python -m gunicorn --bind 0.0.0.0:$PORT config.wsgi:application"
+cmd = "cd django_app && python3 -m gunicorn --bind 0.0.0.0:$PORT config.wsgi:application"
