@@ -3,10 +3,13 @@
  */
 
 let selectedSiteId = null;
+const dashboardMode = (document.body && document.body.dataset && document.body.dataset.dashboardMode) || 'home';
 
 const currentSupplyFilters = {
     utilityType: 'all',
     meterType: 'fiscal',  // default: exclude submeters until the checkbox is ticked
+    supplyQuery: '',
+    includeInactive: false,
 };
 
 function getCsrfToken() {
@@ -14,17 +17,6 @@ function getCsrfToken() {
 
     const match = document.cookie.match(/(?:^|;)\s*csrftoken=([^;]+)/);
     return match ? decodeURIComponent(match[1]) : '';
-}
-
-function setReportStatus(message, isWarning) {
-    "use strict";
-
-    const statusNode = document.getElementById('report-status');
-    if (!statusNode) {
-        return;
-    }
-    statusNode.textContent = message || '';
-    statusNode.style.color = isWarning ? '#b91c1c' : '#0f766e';
 }
 
 function selectSite(siteId, event) {
@@ -48,6 +40,7 @@ function selectSite(siteId, event) {
         checkbox.checked = true;
     }
     updateTopStatsFromCheckedSites();
+    updateCreateReportControls();
     
     // Load supplies for the selected site
     selectedSiteId = siteId;
@@ -76,6 +69,8 @@ function loadSupplies(siteId) {
         site_ids: checkedSiteIds.join(','),
         utility_type: currentSupplyFilters.utilityType,
         meter_type: currentSupplyFilters.meterType,
+        supply_q: currentSupplyFilters.supplyQuery,
+        include_inactive: currentSupplyFilters.includeInactive ? '1' : '0',
     });
 
     // Fetch supplies
@@ -103,6 +98,8 @@ function applySupplyFilters() {
     const utilitySelect = document.getElementById('supply-filter-utility');
     const meterSelect = document.getElementById('supply-filter-meter');
     const includeSubmetersCheckbox = document.getElementById('supply-filter-include-submeters');
+    const supplySearchInput = document.getElementById('supply-filter-query');
+    const includeInactiveCheckbox = document.getElementById('supply-filter-include-inactive');
 
     currentSupplyFilters.utilityType = utilitySelect ? utilitySelect.value : 'all';
     if (includeSubmetersCheckbox) {
@@ -112,9 +109,22 @@ function applySupplyFilters() {
     } else {
         currentSupplyFilters.meterType = 'fiscal';
     }
+    currentSupplyFilters.supplyQuery = supplySearchInput ? supplySearchInput.value.trim() : '';
+    currentSupplyFilters.includeInactive = Boolean(includeInactiveCheckbox && includeInactiveCheckbox.checked);
 
     updateTopStatsFromCheckedSites();
     loadSupplies(selectedSiteId);
+}
+
+function clearSupplySearch() {
+    "use strict";
+
+    const supplySearchInput = document.getElementById('supply-filter-query');
+    if (supplySearchInput) {
+        supplySearchInput.value = '';
+    }
+    currentSupplyFilters.supplyQuery = '';
+    applySupplyFilters();
 }
 
 function getCheckedSiteIds() {
@@ -186,21 +196,20 @@ function updateTopStatsFromCheckedSites() {
         .filter(Boolean);
     const visibleCheckedSiteItems = checkedSiteItems.filter((siteItem) => siteItem.style.display !== 'none');
 
-    if (!siteCountNode || !fiscalCountNode || !submeterCountNode) {
-        return;
-    }
-
     if (selectedSitesCountNode) {
         selectedSitesCountNode.textContent = 'Selected Sites: '
             + String(checkedSiteItems.length)
             + ' (' + String(visibleCheckedSiteItems.length) + ' visible)';
     }
 
+    if (!siteCountNode || !fiscalCountNode || !submeterCountNode) {
+        return;
+    }
+
     if (!checkedSiteItems.length) {
         siteCountNode.textContent = siteCountNode.dataset.default || siteCountNode.textContent;
         fiscalCountNode.textContent = fiscalCountNode.dataset.default || fiscalCountNode.textContent;
         submeterCountNode.textContent = submeterCountNode.dataset.default || submeterCountNode.textContent;
-        updateReportButtonState();
         return;
     }
 
@@ -219,7 +228,6 @@ function updateTopStatsFromCheckedSites() {
     siteCountNode.textContent = String(totals.siteCount);
     fiscalCountNode.textContent = String(totals.fiscalCount);
     submeterCountNode.textContent = String(totals.submeterCount);
-    updateReportButtonState();
 }
 
 function toggleSiteSelection(event) {
@@ -229,6 +237,7 @@ function toggleSiteSelection(event) {
         event.stopPropagation();
     }
     updateTopStatsFromCheckedSites();
+    updateCreateReportControls();
     loadSupplies(selectedSiteId);
 }
 
@@ -246,6 +255,7 @@ function selectAllSites() {
         }
     });
     updateTopStatsFromCheckedSites();
+    updateCreateReportControls();
     loadSupplies(selectedSiteId);
 }
 
@@ -259,6 +269,8 @@ function deselectAllSites() {
         item.classList.remove('selected');
     });
     updateTopStatsFromCheckedSites();
+    updateCreateReportControls();
+    setCreateReportStatus('', false);
     loadSupplies(selectedSiteId);
 }
 
@@ -284,222 +296,6 @@ function getImportDataTypeValue() {
     return input ? input.value : 'monthly';
 }
 
-function getReportMonthValue() {
-    "use strict";
-
-    const input = document.getElementById('report-reporting-month');
-    return input ? input.value : '';
-}
-
-function getReportRefreshModeValue() {
-    "use strict";
-
-    const input = document.getElementById('report-refresh-mode');
-    return input ? input.checked : false;
-}
-
-function supplyHasUsableReportData(supply) {
-    "use strict";
-
-    if (!supply) {
-        return false;
-    }
-
-    const monthly = supply.monthly || {};
-    const hasCurrentMonthly = (Array.isArray(monthly.current_kwh) && monthly.current_kwh.some((value) => value !== null && value !== undefined))
-        || (Array.isArray(monthly.current_m3) && monthly.current_m3.some((value) => value !== null && value !== undefined));
-    const hhComparison = supply.hh_comparison || null;
-    const hasHhData = Boolean(hhComparison && (
-        (Array.isArray(hhComparison.current) && hhComparison.current.length > 0)
-        || (Array.isArray(hhComparison.previous_year) && hhComparison.previous_year.length > 0)
-    ));
-
-    if (supply.utility_type === 'electricity' || supply.utility_type === 'gas') {
-        return hasCurrentMonthly || hasHhData;
-    }
-
-    if (supply.utility_type === 'water') {
-        return hasCurrentMonthly;
-    }
-
-    return hasCurrentMonthly || hasHhData;
-}
-
-function reportPayloadHasData(payload, selectedSupplyIds) {
-    "use strict";
-
-    if (!payload || !Array.isArray(payload.supplies) || payload.supplies.length === 0) {
-        return false;
-    }
-
-    const suppliesToEvaluate = selectedSupplyIds.length
-        ? payload.supplies.filter((supply) => selectedSupplyIds.includes(supply.external_id))
-        : payload.supplies;
-
-    if (!suppliesToEvaluate.length) {
-        return false;
-    }
-
-    return suppliesToEvaluate.every((supply) => supplyHasUsableReportData(supply));
-}
-
-function getSupplyIdsForReportImport(selectedSupplyIds, reportPayload) {
-    "use strict";
-
-    if (selectedSupplyIds.length) {
-        return selectedSupplyIds;
-    }
-
-    if (!reportPayload || !Array.isArray(reportPayload.supplies)) {
-        return [];
-    }
-
-    return reportPayload.supplies
-        .map((supply) => supply.external_id)
-        .filter(Boolean);
-}
-
-function fetchReportPayload(siteId, reportMonth, selectedSupplyIds) {
-    "use strict";
-
-    const params = new URLSearchParams({
-        site_id: siteId,
-        end_month: reportMonth,
-    });
-
-    if (selectedSupplyIds.length > 0) {
-        params.set('supply_ids', selectedSupplyIds.join(','));
-    }
-
-    return fetch('/api/report-data/?' + params.toString())
-        .then((response) => {
-            if (!response.ok) {
-                throw new Error('Unable to check report data availability.');
-            }
-            return response.json();
-        });
-}
-
-function importReportData(supplyIds, reportMonth, refreshMode) {
-    "use strict";
-
-    return fetch('/api/consumption-import/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCsrfToken(),
-        },
-        body: JSON.stringify({
-            supply_ids: supplyIds,
-            reporting_month: reportMonth,
-            refresh_mode: refreshMode,
-        }),
-    }).then((response) => {
-        if (!response.ok) {
-            throw new Error('Unable to load required report data.');
-        }
-        return response.json();
-    });
-}
-
-function updateReportButtonState() {
-    "use strict";
-
-    const button = document.getElementById('trigger-report-button');
-    if (!button) {
-        return;
-    }
-
-    const checkedSiteIds = getCheckedSiteIds();
-    const reportMonth = getReportMonthValue();
-    const isEnabled = checkedSiteIds.length === 1 && Boolean(reportMonth);
-
-    button.disabled = !isEnabled;
-    if (checkedSiteIds.length === 0) {
-        button.title = 'Select a site first';
-        setReportStatus('Select a site first.', true);
-    } else if (checkedSiteIds.length > 1) {
-        button.title = 'Select only one site to create a report';
-        setReportStatus('Select only one site to create a report.', true);
-    } else if (!reportMonth) {
-        button.title = 'Select a reporting month';
-        setReportStatus('Select a reporting month.', true);
-    } else {
-        button.title = 'Create a report for the selected site';
-        setReportStatus('', false);
-    }
-}
-
-async function triggerReportView() {
-    "use strict";
-
-    const checkedSiteIds = getCheckedSiteIds();
-    const reportMonth = getReportMonthValue();
-    const reportRefreshMode = getReportRefreshModeValue();
-    const button = document.getElementById('trigger-report-button');
-    if (checkedSiteIds.length !== 1) {
-        updateReportButtonState();
-        return;
-    }
-
-    if (!reportMonth) {
-        updateReportButtonState();
-        return;
-    }
-
-    const selectedSupplyIds = getSelectedSupplyIds();
-    if (button) {
-        button.disabled = true;
-    }
-
-    try {
-        const siteId = checkedSiteIds[0];
-        let reportPayload = null;
-        let shouldImport = reportRefreshMode;
-        let supplyIdsForImport = selectedSupplyIds.slice();
-
-        if (reportRefreshMode) {
-            setReportStatus('Refreshing report data. This may take a moment...', false);
-        } else {
-            setReportStatus('Checking report data availability...', false);
-            reportPayload = await fetchReportPayload(siteId, reportMonth, selectedSupplyIds);
-            if (!reportPayloadHasData(reportPayload, selectedSupplyIds)) {
-                shouldImport = true;
-                supplyIdsForImport = getSupplyIdsForReportImport(selectedSupplyIds, reportPayload);
-                setReportStatus('Required report data is missing. Downloading required data now; this may take a moment...', false);
-            }
-        }
-
-        if (shouldImport) {
-            if (!supplyIdsForImport.length) {
-                setReportStatus('No supplies available to load for this report.', true);
-                return;
-            }
-            await importReportData(supplyIdsForImport, reportMonth, reportRefreshMode);
-        }
-
-        setReportStatus('Opening report...', false);
-
-        const params = new URLSearchParams({
-            site_id: siteId,
-            end_month: reportMonth,
-        });
-
-        // Pass the currently checked supply external IDs so the report only
-        // renders sections for supplies the user actually selected.
-        if (selectedSupplyIds.length > 0) {
-            params.set('supply_ids', selectedSupplyIds.join(','));
-        }
-
-        window.location.href = '/report/?' + params.toString();
-    } catch (error) {
-        console.error(error);
-        setReportStatus('Unable to prepare report data. Please try again.', true);
-    } finally {
-        updateReportButtonState();
-    }
-}
-
 function getRefreshModeValue() {
     "use strict";
 
@@ -516,6 +312,152 @@ function setImportStatus(message, isError) {
     }
     statusNode.textContent = message || '';
     statusNode.style.color = isError ? '#b91c1c' : '#0f766e';
+}
+
+function setCreateReportStatus(message, isError) {
+    "use strict";
+
+    const statusNode = document.getElementById('create-report-status');
+    if (!statusNode) {
+        return;
+    }
+    statusNode.textContent = message || '';
+    statusNode.style.color = isError ? '#b91c1c' : '#5b7080';
+}
+
+function getReportMonthValue() {
+    "use strict";
+
+    const input = document.getElementById('report-end-month');
+    return input ? input.value : '';
+}
+
+function getReportRefreshModeValue() {
+    "use strict";
+
+    const input = document.getElementById('report-refresh-mode');
+    return input ? input.checked : true;
+}
+
+function updateCreateReportControls() {
+    "use strict";
+
+    const button = document.getElementById('trigger-create-report-button');
+    if (!button) {
+        return;
+    }
+
+    const checkedSiteIds = getCheckedSiteIds();
+    if (checkedSiteIds.length === 1) {
+        button.disabled = false;
+        button.title = 'Create report for selected site';
+        return;
+    }
+
+    button.disabled = true;
+    button.title = checkedSiteIds.length
+        ? 'Select only one site to create a report'
+        : 'Select one site to create a report';
+}
+
+function buildReportQuery(siteId, endMonth, selectedSupplyIds) {
+    "use strict";
+
+    const params = new URLSearchParams({
+        site_id: String(siteId),
+        end_month: endMonth,
+    });
+    if (selectedSupplyIds && selectedSupplyIds.length) {
+        params.set('supply_ids', selectedSupplyIds.join(','));
+    }
+    return params.toString();
+}
+
+function getSuppliesForReportRefresh() {
+    "use strict";
+
+    const selected = getSelectedSupplyIds();
+    if (selected.length) {
+        return selected;
+    }
+
+    return Array.from(document.querySelectorAll('.supply-selector'))
+        .map((checkbox) => checkbox.getAttribute('data-supply-id'))
+        .filter(Boolean);
+}
+
+function triggerCreateReport() {
+    "use strict";
+
+    const checkedSiteIds = getCheckedSiteIds();
+    const endMonth = getReportMonthValue();
+    const refreshMode = getReportRefreshModeValue();
+    const button = document.getElementById('trigger-create-report-button');
+
+    if (!checkedSiteIds.length) {
+        setCreateReportStatus('Select one site to create a report.', true);
+        return;
+    }
+
+    if (checkedSiteIds.length > 1) {
+        setCreateReportStatus('Select only one site to create a report.', true);
+        return;
+    }
+
+    if (!endMonth) {
+        setCreateReportStatus('Reporting month is required.', true);
+        return;
+    }
+
+    const selectedSiteIdForReport = checkedSiteIds[0];
+    const selectedSupplyIds = getSelectedSupplyIds();
+    const reportUrl = '/report/?' + buildReportQuery(selectedSiteIdForReport, endMonth, selectedSupplyIds);
+
+    if (!refreshMode) {
+        window.location.href = reportUrl;
+        return;
+    }
+
+    const refreshSupplyIds = getSuppliesForReportRefresh();
+    if (!refreshSupplyIds.length) {
+        setCreateReportStatus('No supplies available to refresh. Opening report.', false);
+        window.location.href = reportUrl;
+        return;
+    }
+
+    setCreateReportStatus('Refreshing selected supply data before opening report...', false);
+    if (button) {
+        button.disabled = true;
+    }
+
+    fetch('/api/consumption-import/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken(),
+        },
+        body: JSON.stringify({
+            supply_ids: refreshSupplyIds,
+            reporting_month: endMonth,
+            refresh_mode: true,
+        }),
+    })
+        .then((response) => {
+            if (!response.ok) {
+                throw new Error('Report pre-refresh failed.');
+            }
+            return response.json();
+        })
+        .then(() => {
+            window.location.href = reportUrl;
+        })
+        .catch((error) => {
+            console.error(error);
+            setCreateReportStatus('Unable to refresh data before report. Please try again.', true);
+        })
+        .finally(() => {
+            updateCreateReportControls();
+        });
 }
 
 function triggerConsumptionImport() {
@@ -560,12 +502,14 @@ function triggerConsumptionImport() {
             return response.json();
         })
         .then(() => {
+            const importReviewUrl = (document.body && document.body.dataset && document.body.dataset.importReviewUrl)
+                || '/panel/imports/';
             const params = new URLSearchParams({
                 reporting_month: reportingMonth,
                 data_type: dataType,
                 supply_ids: supplyIds.join(','),
             });
-            window.location.href = '/consumption-display/?' + params.toString();
+            window.location.href = importReviewUrl + '?' + params.toString();
         })
         .catch((error) => {
             console.error(error);
@@ -581,17 +525,23 @@ function triggerConsumptionImport() {
 document.addEventListener('DOMContentLoaded', function() {
     "use strict";
     updateTopStatsFromCheckedSites();
+    updateCreateReportControls();
 
     const now = new Date();
     const currentMonth = now.toISOString().slice(0, 7);
+    const reportMonthInput = document.getElementById('report-end-month');
+    if (reportMonthInput && !reportMonthInput.value) {
+        reportMonthInput.value = currentMonth;
+    }
+
+    const createReportButton = document.getElementById('trigger-create-report-button');
+    if (createReportButton) {
+        createReportButton.addEventListener('click', triggerCreateReport);
+    }
+
     const reportingMonthInput = document.getElementById('import-reporting-month');
     if (reportingMonthInput && !reportingMonthInput.value) {
         reportingMonthInput.value = currentMonth;
-    }
-
-    const reportMonthInput = document.getElementById('report-reporting-month');
-    if (reportMonthInput && !reportMonthInput.value) {
-        reportMonthInput.value = currentMonth;
     }
 
     const importButton = document.getElementById('trigger-import-button');
@@ -599,15 +549,10 @@ document.addEventListener('DOMContentLoaded', function() {
         importButton.addEventListener('click', triggerConsumptionImport);
     }
 
-    const reportButton = document.getElementById('trigger-report-button');
-    if (reportButton) {
-        reportButton.addEventListener('click', triggerReportView);
-    }
-
-    if (reportMonthInput) {
-        reportMonthInput.addEventListener('change', updateReportButtonState);
+    const supplySearchInput = document.getElementById('supply-filter-query');
+    if (supplySearchInput) {
+        supplySearchInput.addEventListener('input', applySupplyFilters);
     }
 
     renderNoSelectedSites();
-    updateReportButtonState();
 });

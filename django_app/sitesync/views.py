@@ -1729,15 +1729,6 @@ def site_list_view(request):
             distinct=True,
         ),
     )
-    all_supplies_qs = Supply.objects.all()
-    site_count = all_sites_qs.count()
-    fiscal_meter_count = all_supplies_qs.filter(
-        Q(parent_account_id__isnull=True) | Q(parent_account_id='')
-    ).count()
-    submeter_count = all_supplies_qs.exclude(
-        Q(parent_account_id__isnull=True) | Q(parent_account_id='')
-    ).count()
-
     sites = all_sites_qs.prefetch_related('supplies').order_by('name')
     if query:
         logger.info("Filtering sites by query: %s", query)
@@ -1751,9 +1742,6 @@ def site_list_view(request):
     return render(request, 'sitesync/site_list.html', {
         'sites': sites,
         'query': query,
-        'site_count': site_count,
-        'fiscal_meter_count': fiscal_meter_count,
-        'submeter_count': submeter_count,
         'is_admin': _user_is_admin(getattr(request, 'user', None)),
     })
 
@@ -1779,6 +1767,8 @@ def supply_list_view(request):
     selected_site_ids = list(dict.fromkeys(selected_site_ids))
     utility_type = (request.GET.get('utility_type') or 'all').strip().lower()
     meter_type = (request.GET.get('meter_type') or 'all').strip().lower()
+    supply_query = (request.GET.get('supply_q') or '').strip()
+    include_inactive = (request.GET.get('include_inactive') or '').strip().lower() in {'1', 'true', 'yes', 'on'}
     supplies = []
     fiscal_supplies = []
     orphan_submeters = []
@@ -1813,6 +1803,11 @@ def supply_list_view(request):
             site_supplies = Supply.objects.filter(site_id__in=selected_site_ids)
             filtered_supplies = site_supplies
 
+            # Inactive toggle controls whether inactive supplies are eligible first,
+            # then utility/meter/search filters are applied.
+            if not include_inactive:
+                filtered_supplies = filtered_supplies.exclude(status__iexact='inactive')
+
             if utility_type in {'electricity', 'gas', 'water', 'other'}:
                 filtered_supplies = filtered_supplies.filter(utility_type=utility_type)
 
@@ -1825,6 +1820,13 @@ def supply_list_view(request):
                     Q(parent_account_id__isnull=True) | Q(parent_account_id='')
                 )
 
+            if supply_query:
+                filtered_supplies = filtered_supplies.filter(
+                    Q(name__icontains=supply_query)
+                    | Q(external_id__icontains=supply_query)
+                    | Q(device_id__icontains=supply_query)
+                )
+
             supplies = filtered_supplies.order_by('name')
             logger.info("Loaded supplies for site_ids=%s", selected_site_ids)
 
@@ -1835,7 +1837,7 @@ def supply_list_view(request):
                 Q(parent_account_id__isnull=True) | Q(parent_account_id='')
             ).count()
 
-            all_site_supplies = list(site_supplies.order_by('name'))
+            all_site_supplies = list(supplies)
             all_supplies_by_external_id = {
                 supply.external_id: supply for supply in all_site_supplies
             }
@@ -1899,6 +1901,8 @@ def supply_list_view(request):
         'filtered_submeter_count': filtered_submeter_count,
         'selected_utility_type': utility_type,
         'selected_meter_type': meter_type,
+        'supply_query': supply_query,
+        'include_inactive': include_inactive,
         'selected_utility_label': utility_label_map.get(utility_type, 'All'),
         'selected_meter_label': meter_label_map.get(meter_type, 'All'),
     })
@@ -1913,6 +1917,14 @@ def manual_sync_view(request):
                 'message': 'Method not allowed',
             }
         }, status=405)
+
+    next_url = (request.POST.get('next') or '').strip()
+    if not next_url.startswith('/'):
+        next_url = reverse('sitesync:site_list')
+
+    def _redirect_with_sync_status(status_value):
+        joiner = '&' if '?' in next_url else '?'
+        return redirect(f"{next_url}{joiner}sync={status_value}")
 
     try:
         sync_service = EtainaibleSyncService()
@@ -1938,7 +1950,7 @@ def manual_sync_view(request):
                 message='Manual sync completed with no persistence changes.',
                 metadata={'sync_activity': sync_activity, 'results': results},
             )
-            return redirect(f"{reverse('sitesync:site_list')}?sync=empty")
+            return _redirect_with_sync_status('empty')
         _log_audit_event(
             request,
             action_type=AUDIT_ACTION_ADMIN_SYNC_TRIGGER,
@@ -1949,7 +1961,7 @@ def manual_sync_view(request):
             message='Manual sync completed successfully.',
             metadata={'sync_activity': sync_activity, 'results': results},
         )
-        return redirect(f"{reverse('sitesync:site_list')}?sync=success")
+        return _redirect_with_sync_status('success')
     except Exception as exc:
         logger.exception("Manual sync failed")
         _log_audit_event(
@@ -2133,10 +2145,104 @@ def consumption_display_api_view(request):
     serializer.is_valid(raise_exception=True)
     validated = serializer.validated_data
 
-    reporting_month = validated['reporting_month']
-    supply_external_id = validated.get('supply_id')
-    supply_ids_raw = validated.get('supply_ids')
-    data_type = validated.get('data_type', 'monthly')
+    payload = _build_consumption_display_payload(validated)
+    return Response(payload)
+
+
+@login_required(login_url='/login/')
+def admin_import_review_sites_api_view(request):
+    """Return site options for admin import-review selection."""
+
+    if not _user_is_admin(request.user):
+        _log_denied_admin_panel_access(request)
+        return JsonResponse({'detail': 'Admin access required.'}, status=403)
+
+    sites = Site.objects.annotate(supply_count=Count('supplies')).order_by('name')
+    payload = [
+        {
+            'id': site.id,
+            'name': site.name,
+            'external_id': site.external_id,
+            'supply_count': site.supply_count,
+        }
+        for site in sites
+    ]
+    return JsonResponse({'sites': payload})
+
+
+@login_required(login_url='/login/')
+def admin_import_review_supplies_api_view(request):
+    """Return supply options scoped to selected sites for import review."""
+
+    if not _user_is_admin(request.user):
+        _log_denied_admin_panel_access(request)
+        return JsonResponse({'detail': 'Admin access required.'}, status=403)
+
+    raw_site_ids = request.GET.get('site_ids', '')
+    raw_supply_ids = request.GET.get('supply_ids', '')
+    search_query = (request.GET.get('q') or '').strip()
+    include_inactive = (request.GET.get('include_inactive') or '').strip().lower() in {'1', 'true', 'yes', 'on'}
+    utility_type = (request.GET.get('utility_type') or 'all').strip().lower()
+    include_submeters = (request.GET.get('include_submeters') or '').strip().lower() in {'1', 'true', 'yes', 'on'}
+
+    site_ids = []
+    if raw_site_ids:
+        for value in raw_site_ids.split(','):
+            value = value.strip()
+            if not value:
+                continue
+            try:
+                site_ids.append(int(value))
+            except (TypeError, ValueError):
+                continue
+    site_ids = list(dict.fromkeys(site_ids))
+
+    supply_external_ids = [value.strip() for value in raw_supply_ids.split(',') if value.strip()] if raw_supply_ids else []
+
+    supplies = Supply.objects.select_related('site')
+    if site_ids:
+        supplies = supplies.filter(site_id__in=site_ids)
+    if supply_external_ids:
+        supplies = supplies.filter(external_id__in=supply_external_ids)
+    if not include_inactive:
+        supplies = supplies.exclude(status__iexact='inactive')
+    if utility_type in {'electricity', 'gas', 'water', 'other'}:
+        supplies = supplies.filter(utility_type=utility_type)
+    if not include_submeters:
+        supplies = supplies.filter(Q(parent_account_id__isnull=True) | Q(parent_account_id=''))
+    if search_query:
+        supplies = supplies.filter(
+            Q(name__icontains=search_query)
+            | Q(external_id__icontains=search_query)
+            | Q(site__name__icontains=search_query)
+            | Q(device_id__icontains=search_query)
+        )
+
+    payload = []
+    for supply in supplies.order_by('site__name', 'name'):
+        parent_id = (supply.parent_account_id or '').strip()
+        payload.append({
+            'external_id': supply.external_id,
+            'name': supply.name or supply.external_id,
+            'site_id': supply.site_id,
+            'site_name': supply.site.name,
+            'utility_type': supply.utility_type,
+            'utility_label': supply.get_utility_type_display(),
+            'meter_type': 'submeter' if parent_id else 'fiscal',
+            'status': (supply.status or '').strip().lower() or 'unknown',
+            'device_id': supply.device_id or '',
+        })
+
+    return JsonResponse({'supplies': payload, 'total': len(payload)})
+
+
+def _build_consumption_display_payload(validated_query):
+    """Build import-review records payload shared by API and export views."""
+
+    reporting_month = validated_query['reporting_month']
+    supply_external_id = validated_query.get('supply_id')
+    supply_ids_raw = validated_query.get('supply_ids')
+    data_type = validated_query.get('data_type', 'monthly')
 
     supply_external_ids = []
     if supply_ids_raw:
@@ -2149,8 +2255,6 @@ def consumption_display_api_view(request):
         supply_external_ids=supply_external_ids,
     )
 
-    # Tell the client if the returned data falls outside the requested period
-    # (e.g. API returned only historical records, not the selected window).
     in_window = True
     if data_type == 'invoice' and rows:
         from .services import get_invoice_window  # local import avoids circular risk
@@ -2162,38 +2266,190 @@ def consumption_display_api_view(request):
             for r in rows
         )
 
-    return Response({
+    return {
         'reporting_month': reporting_month,
         'data_type': data_type,
         'total_records': len(rows),
         'in_window': in_window,
         'records': rows,
-    })
+    }
 
 
 @login_required(login_url='/login/')
 def consumption_display_view(request):
+    # Preserve legacy bookmarks by redirecting to the new admin panel route.
+    redirect_url = reverse('sitesync:admin_import_review_results')
+    query_string = request.GET.urlencode()
+    if query_string:
+        redirect_url = f"{redirect_url}?{query_string}"
+    return redirect(redirect_url)
+
+
+@login_required(login_url='/login/')
+def admin_import_review_view(request):
+    """Render admin import selection page (sites + supplies)."""
+
+    if not _user_is_admin(request.user):
+        _log_denied_admin_panel_access(request)
+        messages.error(request, 'Admin access required.')
+        return redirect('sitesync:site_list')
+
     reporting_month = request.GET.get('reporting_month', '')
+    site_ids = request.GET.get('site_ids', '')
+    supply_ids = request.GET.get('supply_ids', '')
+    supply_id = request.GET.get('supply_id', '')
+    data_type = request.GET.get('data_type', 'monthly')
+    utility_type = request.GET.get('utility_type', 'all')
+    include_submeters = request.GET.get('include_submeters', '')
+    include_inactive = request.GET.get('include_inactive', '')
+
+    context = {
+        'reporting_month': reporting_month,
+        'site_ids': site_ids,
+        'supply_id': supply_id,
+        'supply_ids': supply_ids,
+        'data_type': data_type,
+        'utility_type': utility_type,
+        'include_submeters': include_submeters,
+        'include_inactive': include_inactive,
+    }
+    return render(request, 'sitesync/import_selection.html', context)
+
+
+@login_required(login_url='/login/')
+def admin_import_review_results_view(request):
+    """Render admin import review results table in a dedicated page."""
+
+    if not _user_is_admin(request.user):
+        _log_denied_admin_panel_access(request)
+        messages.error(request, 'Admin access required.')
+        return redirect('sitesync:site_list')
+
+    reporting_month = request.GET.get('reporting_month', '')
+    site_ids = request.GET.get('site_ids', '')
     supply_id = request.GET.get('supply_id', '')
     supply_ids = request.GET.get('supply_ids', '')
     data_type = request.GET.get('data_type', 'monthly')
 
+    query_string = request.GET.urlencode()
+    csv_export_url = reverse('sitesync:admin_import_review_export_csv')
+    xlsx_export_url = reverse('sitesync:admin_import_review_export_xlsx')
+    if query_string:
+        csv_export_url = f"{csv_export_url}?{query_string}"
+        xlsx_export_url = f"{xlsx_export_url}?{query_string}"
+
     context = {
         'reporting_month': reporting_month,
+        'site_ids': site_ids,
         'supply_id': supply_id,
         'supply_ids': supply_ids,
         'data_type': data_type,
-        'sites': Site.objects.order_by('name'),
-        'site_count': Site.objects.count(),
-        'fiscal_meter_count': Supply.objects.filter(
-            Q(parent_account_id__isnull=True) | Q(parent_account_id='')
-        ).count(),
-        'submeter_count': Supply.objects.exclude(
-            Q(parent_account_id__isnull=True) | Q(parent_account_id='')
-        ).count(),
-        'is_admin': _user_is_admin(getattr(request, 'user', None)),
+        'csv_export_url': csv_export_url,
+        'xlsx_export_url': xlsx_export_url,
+        'query_string': query_string,
     }
     return render(request, 'sitesync/consumption_display.html', context)
+
+
+@login_required(login_url='/login/')
+def admin_import_review_export_csv_view(request):
+    """Export the current filtered import-review view to CSV."""
+
+    if not _user_is_admin(request.user):
+        _log_denied_admin_panel_access(request)
+        messages.error(request, 'Admin access required.')
+        return redirect('sitesync:site_list')
+
+    serializer = ConsumptionDisplayQuerySerializer(data=request.GET)
+    if not serializer.is_valid():
+        return JsonResponse({'errors': serializer.errors}, status=400)
+
+    payload = _build_consumption_display_payload(serializer.validated_data)
+    rows = payload.get('records', [])
+
+    response = HttpResponse(content_type='text/csv')
+    filename = f"import_review_{payload['data_type']}_{payload['reporting_month']}.csv"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    writer = csv.DictWriter(
+        response,
+        fieldnames=[
+            'supply_name',
+            'supply_external_id',
+            'source_period_start',
+            'source_period_end',
+            'canonical_month_key',
+            'value',
+            'data_type',
+        ],
+    )
+    writer.writeheader()
+    for row in rows:
+        writer.writerow({
+            'supply_name': row.get('supply_name') or '',
+            'supply_external_id': row.get('supply_external_id') or '',
+            'source_period_start': row.get('source_period_start') or '',
+            'source_period_end': row.get('source_period_end') or '',
+            'canonical_month_key': row.get('canonical_month_key') or '',
+            'value': row.get('value') or '',
+            'data_type': row.get('data_type') or payload['data_type'],
+        })
+    return response
+
+
+@login_required(login_url='/login/')
+def admin_import_review_export_xlsx_view(request):
+    """Export the current filtered import-review view to XLSX."""
+
+    if not _user_is_admin(request.user):
+        _log_denied_admin_panel_access(request)
+        messages.error(request, 'Admin access required.')
+        return redirect('sitesync:site_list')
+
+    serializer = ConsumptionDisplayQuerySerializer(data=request.GET)
+    if not serializer.is_valid():
+        return JsonResponse({'errors': serializer.errors}, status=400)
+
+    payload = _build_consumption_display_payload(serializer.validated_data)
+    rows = payload.get('records', [])
+
+    def _excel_safe(value):
+        if isinstance(value, datetime):
+            if dj_timezone.is_aware(value):
+                return dj_timezone.make_naive(value, datetime_timezone.utc)
+            return value
+        return value
+
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.title = 'Import Review'
+    headers = [
+        'supply_name',
+        'supply_external_id',
+        'source_period_start',
+        'source_period_end',
+        'canonical_month_key',
+        'value',
+        'data_type',
+    ]
+    worksheet.append(headers)
+    for row in rows:
+        worksheet.append([
+            row.get('supply_name') or '',
+            row.get('supply_external_id') or '',
+            _excel_safe(row.get('source_period_start')) or '',
+            _excel_safe(row.get('source_period_end')) or '',
+            row.get('canonical_month_key') or '',
+            row.get('value') or '',
+            row.get('data_type') or payload['data_type'],
+        ])
+
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    filename = f"import_review_{payload['data_type']}_{payload['reporting_month']}.xlsx"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    workbook.save(response)
+    return response
 
 
 @api_view(['GET'])
@@ -2679,6 +2935,13 @@ def admin_panel_view(request):
         'active_users': active_users,
         'total_teams': total_teams,
         'total_assignments': total_assignments,
+        'site_count': Site.objects.count(),
+        'fiscal_meter_count': Supply.objects.filter(
+            Q(parent_account_id__isnull=True) | Q(parent_account_id='')
+        ).count(),
+        'submeter_count': Supply.objects.exclude(
+            Q(parent_account_id__isnull=True) | Q(parent_account_id='')
+        ).count(),
     }
     return render(request, 'sitesync/panel_dashboard.html', context)
 

@@ -18,8 +18,8 @@
 
 **Purpose**: Prepare the shared routing and template structure for the homepage refresh work
 
-- [ ] T001 Add an admin navigation placeholder for the upcoming import review page in `django_app/templates/sitesync/panel_base.html`
-- [ ] T002 Add a reusable export/navigation contract stub for the new admin import page in `specs/014-homepage-refresh/contracts/routes.md`
+- [X] T001 Add an admin navigation placeholder for the upcoming import review page in `django_app/templates/sitesync/panel_base.html`
+- [X] T002 Add a reusable export/navigation contract stub for the new admin import page in `specs/014-homepage-refresh/contracts/routes.md`
 
 ---
 
@@ -29,11 +29,11 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Create the admin import review view shell and redirect handling for legacy `consumption-display` in `django_app/sitesync/views.py`
-- [ ] T004 Create the new admin import review template shell in `django_app/templates/sitesync/consumption_display.html`
-- [ ] T005 [P] Extend the shared dashboard JavaScript in `django_app/static/sitesync/js/site_selection.js` to support mode-aware rendering for the public home page and the admin import page
-- [ ] T006 [P] Extend the supply panel endpoint contract in `django_app/sitesync/views.py` and `django_app/templates/sitesync/supply_list.html` so the supply panel can accept supply search and inactive-meter state
-- [ ] T007 Add a small shared helper in `django_app/sitesync/services.py` or `django_app/sitesync/views.py` for exportable import-review row selection so both page rendering and exports use the same filtered data
+- [X] T003 Create the admin import review view shell and redirect handling for legacy `consumption-display` in `django_app/sitesync/views.py`
+- [X] T004 Create the new admin import review template shell in `django_app/templates/sitesync/consumption_display.html`
+- [X] T005 [P] Extend the shared dashboard JavaScript in `django_app/static/sitesync/js/site_selection.js` to support mode-aware rendering for the public home page and the admin import page
+- [X] T006 [P] Extend the supply panel endpoint contract in `django_app/sitesync/views.py` and `django_app/templates/sitesync/supply_list.html` so the supply panel can accept supply search and inactive-meter state
+- [X] T007 Add a small shared helper in `django_app/sitesync/services.py` or `django_app/sitesync/views.py` for exportable import-review row selection so both page rendering and exports use the same filtered data
 
 **Checkpoint**: The public dashboard, admin dashboard, and admin import review page can now share the same underlying request/response model
 
@@ -45,10 +45,10 @@
 
 **Independent Test**: Open the home page as a regular user and confirm only the site-search and site-selection controls remain in the public surface
 
-- [ ] T008 [US1] Remove the public refresh and create-report controls from `django_app/templates/sitesync/site_list.html`
-- [ ] T009 [US1] Rework the page layout spacing in `django_app/templates/sitesync/site_list.html` so the site and supply columns gain more vertical room
-- [ ] T010 [US1] Update the dashboard state logic in `django_app/static/sitesync/js/site_selection.js` so the public page no longer initializes report-trigger behavior
-- [ ] T011 [US1] Adjust the public dashboard context in `django_app/sitesync/views.py` so the home page only supplies data needed for site filtering and supply viewing
+- [X] T008 [US1] Remove the public refresh and create-report controls from `django_app/templates/sitesync/site_list.html`
+- [X] T009 [US1] Rework the page layout spacing in `django_app/templates/sitesync/site_list.html` so the site and supply columns gain more vertical room
+- [X] T010 [US1] Update the dashboard state logic in `django_app/static/sitesync/js/site_selection.js` so the public page no longer initializes report-trigger behavior
+- [X] T011 [US1] Adjust the public dashboard context in `django_app/sitesync/views.py` so the home page only supplies data needed for site filtering and supply viewing
 
 **Checkpoint**: The public home page is usable as a simplified, regular-user entry point
 
@@ -60,11 +60,11 @@
 
 **Independent Test**: Select a site, enter a supply filter, and toggle the inactive-meter option to confirm inactive supplies are hidden by default and become visible only when enabled
 
-- [ ] T012 [US2] Add supply-search handling to the supply panel request path in `django_app/sitesync/views.py`
-- [ ] T013 [US2] Add supply-search and inactive-meter controls to `django_app/templates/sitesync/supply_list.html`
-- [ ] T014 [US2] Update the supply filtering logic in `django_app/static/sitesync/js/site_selection.js` so the new supply-search term and inactive-meter flag are sent with each load
-- [ ] T015 [US2] Filter inactive supplies out by default in `django_app/sitesync/views.py` and preserve them only when the inactive-meter flag is enabled
-- [ ] T016 [P] [US2] Update the selected-supply count and empty-state text in `django_app/templates/sitesync/supply_list.html` so the new filters are reflected clearly to the user
+- [X] T012 [US2] Add supply-search handling to the supply panel request path in `django_app/sitesync/views.py`
+- [X] T013 [US2] Add supply-search and inactive-meter controls to `django_app/templates/sitesync/supply_list.html`
+- [X] T014 [US2] Update the supply filtering logic in `django_app/static/sitesync/js/site_selection.js` so the new supply-search term and inactive-meter flag are sent with each load
+- [X] T015 [US2] Filter inactive supplies out by default in `django_app/sitesync/views.py` and preserve them only when the inactive-meter flag is enabled
+- [X] T016 [P] [US2] Update the selected-supply count and empty-state text in `django_app/templates/sitesync/supply_list.html` so the new filters are reflected clearly to the user
 
 **Checkpoint**: Supply inspection now supports search and inactive-meter filtering without exposing inactive supplies by default
 
@@ -76,10 +76,10 @@
 
 **Independent Test**: Open the admin dashboard and confirm the moved refresh and summary controls are available there, while the public home page stays clean
 
-- [ ] T017 [US3] Add the moved refresh action and summary cards to `django_app/templates/sitesync/panel_dashboard.html`
-- [ ] T018 [US3] Update `django_app/sitesync/views.py` so `admin_panel_view` provides the summary metrics needed by the admin dashboard
-- [ ] T019 [US3] Wire the admin dashboard navigation in `django_app/templates/sitesync/panel_base.html` so the moved controls are discoverable from the admin shell
-- [ ] T020 [US3] Update `django_app/static/sitesync/js/site_selection.js` so the admin-facing refresh behavior is available from the admin context rather than the public page
+- [X] T017 [US3] Add the moved refresh action and summary cards to `django_app/templates/sitesync/panel_dashboard.html`
+- [X] T018 [US3] Update `django_app/sitesync/views.py` so `admin_panel_view` provides the summary metrics needed by the admin dashboard
+- [X] T019 [US3] Wire the admin dashboard navigation in `django_app/templates/sitesync/panel_base.html` so the moved controls are discoverable from the admin shell
+- [X] T020 [US3] Update `django_app/static/sitesync/js/site_selection.js` so the admin-facing refresh behavior is available from the admin context rather than the public page
 
 **Checkpoint**: Admin-only summary and refresh behavior lives in the panel area rather than the public home page
 
@@ -91,13 +91,13 @@
 
 **Independent Test**: Open the new admin import review page, confirm the data loads in the admin shell, export the current filtered view, and use the back action to return to the admin dashboard
 
-- [ ] T021 [US4] Add the new admin import review route and namespaced URL entries in `django_app/sitesync/urls.py`
-- [ ] T022 [US4] Implement the admin import review page view in `django_app/sitesync/views.py`
-- [ ] T023 [US4] Update `django_app/templates/sitesync/consumption_display.html` so it uses the admin shell, omits the create-report section, and renders Export CSV / Export XLSX controls wired to the admin import export endpoints
-- [ ] T024 [US4] Update `django_app/static/sitesync/js/consumption_display.js` so the page loads the admin review data and exposes the current filtered export state
-- [ ] T025 [US4] Implement CSV export for the current filtered import review view in `django_app/sitesync/views.py`
-- [ ] T026 [US4] Implement XLSX export for the current filtered import review view in `django_app/sitesync/views.py`
-- [ ] T027 [US4] Update the Back to Dashboard navigation in `django_app/templates/sitesync/consumption_display.html` so it returns to `django_app/sitesync/views.py::admin_panel_view`
+- [X] T021 [US4] Add the new admin import review route and namespaced URL entries in `django_app/sitesync/urls.py`
+- [X] T022 [US4] Implement the admin import review page view in `django_app/sitesync/views.py`
+- [X] T023 [US4] Update `django_app/templates/sitesync/consumption_display.html` so it uses the admin shell, omits the create-report section, and renders Export CSV / Export XLSX controls wired to the admin import export endpoints
+- [X] T024 [US4] Update `django_app/static/sitesync/js/consumption_display.js` so the page loads the admin review data and exposes the current filtered export state
+- [X] T025 [US4] Implement CSV export for the current filtered import review view in `django_app/sitesync/views.py`
+- [X] T026 [US4] Implement XLSX export for the current filtered import review view in `django_app/sitesync/views.py`
+- [X] T027 [US4] Update the Back to Dashboard navigation in `django_app/templates/sitesync/consumption_display.html` so it returns to `django_app/sitesync/views.py::admin_panel_view`
 
 **Checkpoint**: Admin users can review imported usage and invoice data in a dedicated page and export the filtered results
 
@@ -107,9 +107,9 @@
 
 **Purpose**: Final consistency, navigation, and documentation cleanup across all stories
 
-- [ ] T028 [P] Clean up any leftover public-page report-control references in `django_app/templates/sitesync/site_list.html` and `django_app/static/sitesync/js/site_selection.js`
-- [ ] T029 [P] Verify the legacy `consumption-display` path preserves query parameters in `django_app/sitesync/urls.py` and `django_app/sitesync/views.py`
-- [ ] T030 Update the homepage-refresh quickstart and route contract documentation in `specs/014-homepage-refresh/quickstart.md` and `specs/014-homepage-refresh/contracts/routes.md` if implementation details changed during build
+- [X] T028 [P] Clean up any leftover public-page report-control references in `django_app/templates/sitesync/site_list.html` and `django_app/static/sitesync/js/site_selection.js`
+- [X] T029 [P] Verify the legacy `consumption-display` path preserves query parameters in `django_app/sitesync/urls.py` and `django_app/sitesync/views.py`
+- [X] T030 Update the homepage-refresh quickstart and route contract documentation in `specs/014-homepage-refresh/quickstart.md` and `specs/014-homepage-refresh/contracts/routes.md` if implementation details changed during build
 
 ---
 

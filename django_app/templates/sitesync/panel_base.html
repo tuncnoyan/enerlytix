@@ -56,6 +56,9 @@
                 <a href="{% url 'sitesync:admin_roles' %}" class="sidebar-link {% block nav_roles %}{% endblock %}">
                     <i class="bi bi-shield-lock"></i> Roles
                 </a>
+                <a href="{% url 'sitesync:admin_import_review' %}" class="sidebar-link {% block nav_imports %}{% endblock %}">
+                    <i class="bi bi-cloud-arrow-down"></i> Data Imports
+                </a>
                 <a href="{% url 'sitesync:settings_panel' %}" class="sidebar-link {% block nav_settings %}{% endblock %}">
                     <i class="bi bi-gear"></i> Settings
                 </a>

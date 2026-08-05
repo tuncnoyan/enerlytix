@@ -6,7 +6,9 @@
     <title>Site & Supply Dashboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">    <link href="{% static 'sitesync/cxg-base.css' %}" rel="stylesheet">    <style>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="{% static 'sitesync/cxg-base.css' %}" rel="stylesheet">
+    <style>
         :root {
             --cxg-bg-10: #F2F2F3;
             --cxg-bg-25: #DEE0E3;
@@ -47,34 +49,6 @@
             font-weight: 500;
         }
 
-        .toolbar {
-            margin-top: 0.9rem;
-            display: flex;
-            gap: 0.75rem;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-
-        .toolbar form {
-            margin: 0;
-        }
-
-        .toolbar button {
-            background: var(--cxg-highlight-376);
-            color: var(--cxg-primary-432);
-            border: none;
-            border-radius: 0.35rem;
-            padding: 0.52rem 0.78rem;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 0.82rem;
-            box-shadow: 0 1px 0 rgba(0, 105, 60, 0.15);
-        }
-
-        .toolbar button:hover {
-            background: #96E000;
-        }
-
         .notice {
             margin-top: 0.75rem;
             padding: 0.6rem 0.8rem;
@@ -92,74 +66,124 @@
             border: 1px solid #C9FF5C;
         }
 
-        .search-bar {
+        .header-controls {
             margin-top: 0.9rem;
-            display: flex;
-            gap: 0.5rem;
-            width: min(100%, 30rem);
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 0.8rem;
+            align-items: stretch;
         }
 
-        .search-bar input {
-            flex: 1;
-            padding: 0.6rem 0.8rem;
+        .search-card,
+        .create-report-card {
             border: 1px solid var(--cxg-border);
             border-radius: 0.35rem;
-            font-size: 0.86rem;
+            background: #fbfcfc;
+            padding: 0.7rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.55rem;
+        }
+
+        .search-card {
+            border-top: 3px solid var(--cxg-primary-430);
+        }
+
+        .create-report-card {
+            border-top: 3px solid var(--cxg-highlight-376);
+        }
+
+        .create-report-title {
+            margin: 0;
+            font-size: 0.88rem;
+            color: var(--cxg-primary-432);
+            font-weight: 700;
+        }
+
+        .search-grid,
+        .create-report-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 0.55rem;
+            align-items: end;
+        }
+
+        .create-report-label {
+            font-size: 0.76rem;
+            color: #5b7080;
+            font-weight: 600;
+            display: block;
+            margin-bottom: 0.18rem;
+        }
+
+        .search-input,
+        .create-report-month {
+            width: 100%;
+            padding: 0.45rem;
+            border: 1px solid var(--cxg-border);
+            border-radius: 0.3rem;
+            font-size: 0.82rem;
             color: var(--cxg-primary-432);
             background: var(--cxg-white);
         }
 
-        .search-bar button {
+        .search-clear-button {
             background: var(--cxg-primary-432);
             color: var(--cxg-white);
             border: none;
-            border-radius: 0.35rem;
-            padding: 0.6rem 0.8rem;
+            border-radius: 0.3rem;
+            padding: 0.48rem 0.75rem;
             cursor: pointer;
-            font-weight: 600;
-            font-size: 0.8rem;
+            font-weight: 700;
+            font-size: 0.76rem;
+            white-space: nowrap;
         }
 
-        .search-bar button:hover {
+        .search-clear-button:hover {
             background: #475764;
         }
 
-        .stats-row {
-            margin-top: 1rem;
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 0.75rem;
-        }
-
-        .stats-card {
-            background: var(--cxg-white);
-            border: 1px solid var(--cxg-border);
-            border-radius: 0.35rem;
-            padding: 0.55rem 0.75rem;
-            box-shadow: 0 1px 2px rgba(51, 63, 72, 0.06);
-        }
-
-        .stats-label {
-            color: var(--cxg-primary-430);
-            font-size: 0.68rem;
-            text-transform: uppercase;
-            letter-spacing: 0.09em;
-            margin-bottom: 0.08rem;
-            font-weight: 700;
-        }
-
-        .stats-value {
+        .create-report-button {
+            background: var(--cxg-highlight-376);
             color: var(--cxg-primary-432);
+            border: 1px solid #6ea700;
+            border-radius: 0.3rem;
+            padding: 0.48rem 0.78rem;
+            cursor: pointer;
+            font-size: 0.78rem;
             font-weight: 700;
-            font-size: 1.35rem;
-            line-height: 1.2;
+            white-space: nowrap;
+        }
+
+        .create-report-button:disabled {
+            background: #d8dfcc;
+            color: #6f7d72;
+            border-color: #c8d0be;
+            cursor: not-allowed;
+        }
+
+        .create-report-options {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            font-size: 0.76rem;
+            color: #5b7080;
+            font-weight: 600;
+        }
+
+        .create-report-status {
+            min-height: 1rem;
+            margin: 0;
+            font-size: 0.75rem;
+            color: #5b7080;
+            font-weight: 600;
         }
 
         .content-layout {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 0.8rem;
-            margin-top: 0.7rem;
+            margin-top: 1rem;
         }
 
         .site-list {
@@ -170,7 +194,7 @@
             box-shadow: 0 1px 2px rgba(51, 63, 72, 0.06);
             display: flex;
             flex-direction: column;
-            height: clamp(28rem, 62vh, 38rem);
+            height: clamp(34rem, 72vh, 46rem);
         }
 
         .site-list-header {
@@ -274,7 +298,7 @@
             border-radius: 0.35rem;
             background: var(--cxg-white);
             padding: 0.8rem;
-            height: clamp(28rem, 62vh, 38rem);
+            height: clamp(34rem, 72vh, 46rem);
             box-shadow: 0 1px 2px rgba(51, 63, 72, 0.06);
             overflow-y: auto;
         }
@@ -396,75 +420,12 @@
             font-size: 0.86rem;
         }
 
-        .import-controls {
-            margin-bottom: 0.8rem;
-            background: var(--cxg-white);
-            border: 1px solid var(--cxg-border);
-            border-radius: 0.35rem;
-            padding: 0.75rem;
-            box-shadow: 0 1px 2px rgba(51, 63, 72, 0.06);
-        }
-
-        .import-controls h4 {
-            margin: 0 0 0.55rem;
-            font-size: 0.85rem;
-            color: var(--cxg-primary-432);
-        }
-
-        .import-controls-grid {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 0.55rem;
-            align-items: end;
-        }
-
-        .import-controls label {
-            display: block;
-            font-size: 0.72rem;
-            font-weight: 700;
-            color: #5b7080;
-            margin-bottom: 0.25rem;
-        }
-
-        .import-controls input,
-        .import-controls select {
-            width: 100%;
-            border: 1px solid var(--cxg-border);
-            border-radius: 0.3rem;
-            padding: 0.45rem 0.55rem;
-            font-size: 0.78rem;
-            color: var(--cxg-primary-432);
-            background: var(--cxg-white);
-        }
-
-        .import-controls button {
-            background: var(--cxg-highlight-349);
-            color: var(--cxg-white);
-            border: none;
-            border-radius: 0.3rem;
-            padding: 0.5rem 0.7rem;
-            font-size: 0.78rem;
-            font-weight: 700;
-            cursor: pointer;
-        }
-
-        .import-controls button:hover {
-            background: #0e7f4d;
-        }
-
-        .import-status {
-            margin-top: 0.45rem;
-            font-size: 0.76rem;
-            min-height: 1.05rem;
-        }
-
         @media (max-width: 1024px) {
-            .stats-row,
-            .content-layout {
+            .header-controls {
                 grid-template-columns: 1fr;
             }
 
-            .import-controls-grid {
+            .content-layout {
                 grid-template-columns: 1fr;
             }
 
@@ -492,7 +453,7 @@
         }
     </style>
 </head>
-<body>
+<body data-dashboard-mode="home" data-import-review-url="{% url 'sitesync:admin_import_review' %}">
     <div class="page-shell">
         {% include 'sitesync/_topbar.html' with active_page='home' %}
 
@@ -501,71 +462,44 @@
                 <h1>Site & Supply Dashboard</h1>
                 <p>Select one or more sites to view associated supplies and details.</p>
 
-                <div class="toolbar">
-                    <form method="post" action="{% url 'sitesync:manual_sync' %}">
-                        {% csrf_token %}
-                        <button type="submit">Refresh data</button>
-                    </form>
-                </div>
-
                 {% if request.GET.sync == 'success' %}
                     <div class="notice">Sync completed successfully.</div>
                 {% elif request.GET.sync == 'empty' %}
                     <div class="notice warning">Sync completed but returned no site records. Check Etainabl account permissions or API scope.</div>
                 {% endif %}
 
-                <div class="search-bar">
-                    <input id="site-search" type="search" value="{{ query|default_if_none:'' }}" placeholder="Filter sites..." aria-label="Search sites" />
-                    <button type="button" onclick="document.getElementById('site-search').value=''; filterSites();">Clear</button>
-                </div>
+                <div class="header-controls">
+                    <div class="search-card">
+                        <p class="create-report-title">Site Search</p>
+                        <div class="search-grid">
+                            <div>
+                                <label class="create-report-label" for="site-search">Filter Sites</label>
+                                <input id="site-search" class="search-input" type="search" value="{{ query|default_if_none:'' }}" placeholder="Filter sites..." aria-label="Search sites" oninput="filterSites()" onsearch="filterSites()" />
+                            </div>
+                            <button class="search-clear-button" type="button" onclick="document.getElementById('site-search').value=''; filterSites();">Clear</button>
+                        </div>
+                    </div>
 
-                <div class="stats-row" aria-label="portfolio statistics">
-                    <div class="stats-card">
-                        <div class="stats-label">Available Sites</div>
-                        <div class="stats-value" id="stats-site-count" data-default="{{ site_count }}">{{ site_count }}</div>
-                    </div>
-                    <div class="stats-card">
-                        <div class="stats-label">Fiscal Meters</div>
-                        <div class="stats-value" id="stats-fiscal-count" data-default="{{ fiscal_meter_count }}">{{ fiscal_meter_count }}</div>
-                    </div>
-                    <div class="stats-card">
-                        <div class="stats-label">Submeters</div>
-                        <div class="stats-value" id="stats-submeter-count" data-default="{{ submeter_count }}">{{ submeter_count }}</div>
+                    <div class="create-report-card">
+                        <p class="create-report-title">Create Report</p>
+                        <div class="create-report-grid">
+                            <div>
+                                <label class="create-report-label" for="report-end-month">Reporting Month</label>
+                                <input id="report-end-month" class="create-report-month" type="month" aria-label="Select report month" />
+                            </div>
+                            <button id="trigger-create-report-button" class="create-report-button" type="button" title="Select exactly one site to create a report">Create Report</button>
+                        </div>
+                        <label class="create-report-options" for="report-refresh-mode">
+                            <input id="report-refresh-mode" type="checkbox" />
+                            Refresh data before opening report
+                        </label>
+                        <p id="create-report-status" class="create-report-status"></p>
                     </div>
                 </div>
             </div>
 
             <div class="content-layout">
                 <div class="site-column">
-                    <div class="import-controls">
-                        <h4>Usage and Invoice Import</h4>
-                        <div class="import-controls-grid">
-                            <div>
-                                <label for="import-reporting-month">Reporting Month</label>
-                                <input id="import-reporting-month" type="month" />
-                            </div>
-                            <div>
-                                <label for="import-data-type">Default Display Type</label>
-                                <select id="import-data-type">
-                                    <option value="monthly">Monthly</option>
-                                    <option value="halfhourly">Half-hourly</option>
-                                    <option value="invoice">Invoice</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label>&nbsp;</label>
-                                <div style="display: flex; align-items: center; gap: 0.65rem;">
-                                    <button id="trigger-import-button" type="button">Load Data</button>
-                                    <label for="import-refresh-mode" style="display: flex; align-items: center; gap: 0.35rem; margin: 0; font-weight: 600; white-space: nowrap;">
-                                        <input id="import-refresh-mode" type="checkbox" />
-                                        Refresh data
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="import-status" id="import-status"></div>
-                    </div>
-
                     {% if sites %}
                         <div class="site-list">
                             <div class="site-list-header">
@@ -621,27 +555,6 @@
                 </div>
 
                 <div class="supply-column">
-                    <div class="import-controls">
-                        <h4>Create Report</h4>
-                        <div class="import-controls-grid" style="grid-template-columns: 1fr 1fr;">
-                            <div>
-                                <label for="report-reporting-month">Reporting Month</label>
-                                <input id="report-reporting-month" type="month" />
-                            </div>
-                            <div>
-                                <label>&nbsp;</label>
-                                <div style="display: flex; align-items: center; gap: 0.65rem;">
-                                    <button id="trigger-report-button" type="button">Create Report</button>
-                                    <label for="report-refresh-mode" style="display: flex; align-items: center; gap: 0.35rem; margin: 0; font-weight: 600; white-space: nowrap;">
-                                        <input id="report-refresh-mode" type="checkbox" />
-                                        Refresh data
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="import-status" id="report-status"></div>
-                    </div>
-
                     <div class="supply-panel" id="supply-panel">
                         <h3>Supply Details</h3>
                         <div class="empty-state">

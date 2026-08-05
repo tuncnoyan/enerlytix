@@ -1,65 +1,33 @@
+{% extends "sitesync/panel_base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Usage and Invoices</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link href="{% static 'sitesync/cxg-base.css' %}" rel="stylesheet">
-    <style>
-        :root {
-            --cxg-bg-10: #F2F2F3;
-            --cxg-primary-432: #333F48;
-            --cxg-primary-430: #7C878E;
-            --cxg-highlight-349: #00693C;
-            --cxg-border: #C6D0D7;
-            --cxg-white: #FFFFFF;
-        }
-        * { box-sizing: border-box; }
-        body { margin: 0; font-family: "Manrope", "Segoe UI", sans-serif; background: var(--cxg-bg-10); color: var(--cxg-primary-432); }
-        .topbar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 0.85rem 1.4rem; border-bottom: 1px solid var(--cxg-border); background: var(--cxg-white); }
-        .brand { font-size: 1.15rem; font-weight: 800; }
-        .topbar-links { display: flex; gap: 1.1rem; }
-        .topbar-links a { color: var(--cxg-primary-430); text-decoration: none; font-size: 0.78rem; font-weight: 600; padding: 0.3rem 0.15rem; border-bottom: 2px solid transparent; }
-        .topbar-links a.is-active { color: var(--cxg-primary-432); border-bottom-color: var(--cxg-primary-430); }
-        .content-wrap { width: min(1400px, 100%); margin: 0 auto; padding: 1rem; }
-        .panel { background: var(--cxg-white); border: 1px solid var(--cxg-border); border-radius: 0.45rem; padding: 0.9rem; margin-bottom: 0.8rem; }
-        .header-row { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
-        .return-link {
-            display: inline-block;
-            text-decoration: none;
-            color: var(--cxg-white);
-            background: var(--cxg-highlight-349);
-            border-radius: 0.3rem;
-            padding: 0.48rem 0.72rem;
-            font-size: 0.78rem;
-            font-weight: 700;
-        }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { border-bottom: 1px solid #e2e8f0; padding: 9px; text-align: left; font-size: 0.82rem; }
-        th { background: #f4f8fb; color: #134e4a; }
-        .empty { color: #64748b; font-size: 0.82rem; }
-    </style>
-</head>
-<body>
-    {% include 'sitesync/_topbar.html' with active_page='home' %}
 
-    <div class="content-wrap">
-        <div class="panel">
-            <div class="header-row">
-                <div>
-                    <h2 style="margin: 0 0 0.25rem;">Usage and Invoice Records</h2>
-                    <p class="empty" id="query-summary" style="margin: 0;"></p>
-                </div>
-                <a class="return-link" href="{% url 'sitesync:site_list' %}">Back to Dashboard</a>
-            </div>
+{% block title %}Import Review{% endblock %}
+{% block nav_imports %}is-active{% endblock %}
+{% block breadcrumb_label %}Data Imports{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12 d-flex justify-content-between align-items-center gap-3 flex-wrap">
+        <div>
+            <h1 class="mb-1">Usage and Invoice Records</h1>
+            <p class="text-muted mb-0" id="query-summary"></p>
         </div>
+        <a id="back-to-import-link" class="btn btn-outline-secondary" href="{% url 'sitesync:admin_import_review' %}">Back to Data Import</a>
+    </div>
+</div>
 
-        <div class="panel">
-            <table>
+<div class="d-flex justify-content-between align-items-center mb-3 gap-2 flex-wrap">
+    <div class="text-muted">Export the current filtered view.</div>
+    <div class="d-flex gap-2">
+        <a id="export-csv-link" class="btn btn-outline-primary" href="{{ csv_export_url }}">Export CSV</a>
+        <a id="export-xlsx-link" class="btn btn-outline-success" href="{{ xlsx_export_url }}">Export XLSX</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table mb-0">
                 <thead>
                     <tr>
                         <th>Supply</th>
@@ -72,10 +40,17 @@
                 </thead>
                 <tbody id="records-body"></tbody>
             </table>
-            <p id="summary" class="empty">Loading records...</p>
         </div>
     </div>
+</div>
 
-    <script src="{% static 'sitesync/js/consumption_display.js' %}"></script>
-</body>
-</html>
+<p id="summary" class="text-muted mt-2">Loading records...</p>
+
+<div id="results-context"
+    data-reporting-month="{{ reporting_month|default:'' }}"
+    data-data-type="{{ data_type|default:'monthly' }}"
+    data-site-ids="{{ site_ids|default:'' }}"
+    data-supply-ids="{{ supply_ids|default:supply_id }}"></div>
+
+<script src="{% static 'sitesync/js/consumption_display_results.js' %}"></script>
+{% endblock %}

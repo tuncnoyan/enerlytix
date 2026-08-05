@@ -4,7 +4,9 @@
      data-submeter-count="{{ filtered_submeter_count|default:0 }}"
      data-site-name="{{ selected_site_name|default:'' }}"
      data-utility-label="{{ selected_utility_label|default:'All' }}"
-     data-meter-label="{{ selected_meter_label|default:'All' }}"></div>
+    data-meter-label="{{ selected_meter_label|default:'All' }}"
+    data-supply-query="{{ supply_query|default:'' }}"
+    data-include-inactive="{% if include_inactive %}1{% else %}0{% endif %}"></div>
 
 {% if selected_site_count %}
     <div class="supply-summary">
@@ -28,6 +30,31 @@
             <label class="supply-filter-label" style="display:flex;align-items:center;gap:0.45rem;padding-top:1.4rem;font-weight:600;cursor:pointer;">
                 <input type="checkbox" id="supply-filter-include-submeters" onchange="applySupplyFilters()" style="width:1rem;height:1rem;accent-color:var(--cxg-highlight-349);" {% if selected_meter_type == 'all' or selected_meter_type == 'sub' %}checked{% endif %} />
                 Include Sub Meters
+            </label>
+            <label class="supply-filter-label">
+                Supply Search
+                <div style="display:flex;gap:0.4rem;align-items:center;">
+                    <input
+                        id="supply-filter-query"
+                        type="search"
+                        value="{{ supply_query|default:'' }}"
+                        placeholder="Filter supplies..."
+                        class="supply-filter-select"
+                        oninput="applySupplyFilters()"
+                        onsearch="applySupplyFilters()"
+                    />
+                    <button
+                        type="button"
+                        onclick="clearSupplySearch()"
+                        style="margin-top:0.2rem;background:var(--cxg-bg-10);color:var(--cxg-primary-432);border:1px solid var(--cxg-border);border-radius:0.3rem;padding:0.4rem 0.6rem;cursor:pointer;font-size:0.75rem;font-weight:600;white-space:nowrap;"
+                    >
+                        Clear
+                    </button>
+                </div>
+            </label>
+            <label class="supply-filter-label" style="display:flex;align-items:center;gap:0.45rem;padding-top:1.4rem;font-weight:600;cursor:pointer;">
+                <input type="checkbox" id="supply-filter-include-inactive" onchange="applySupplyFilters()" style="width:1rem;height:1rem;accent-color:var(--cxg-highlight-349);" {% if include_inactive %}checked{% endif %} />
+                Include Inactive Meters
             </label>
         </div>
     </div>

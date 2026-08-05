@@ -29,9 +29,28 @@
 
 ### `GET /panel/imports/`
 
-- Purpose: Render the admin import review page for usage and invoice data.
-- Query parameters: `reporting_month`, `data_type`, `supply_ids`, `supply_id`.
-- Expected behavior: Shows the current filtered import view in the admin area with no create-report section.
+- Purpose: Render the admin data-import selection page.
+- Query parameters: `reporting_month`, `data_type`, optional `site_ids`, optional `supply_ids`, optional `supply_id` for legacy compatibility.
+- Expected behavior: Shows import controls plus admin selectors for choosing sites and then supplies (including multiple sites) before loading data.
+
+### `GET /panel/imports/results/`
+
+- Purpose: Render the dedicated admin import-review results table page.
+- Query parameters: `reporting_month`, `data_type`, optional `site_ids`, optional `supply_ids`, optional `supply_id` for legacy compatibility.
+- Expected behavior: Renders records table, export actions, and a Back to Data Import action that returns to the selector page.
+
+### `GET /api/import-review-sites/`
+
+- Purpose: Return admin-selectable site options for the import review page.
+- Access: Admin-only.
+- Expected behavior: Returns site metadata for list rendering and multi-site selection.
+
+### `GET /api/import-review-supplies/`
+
+- Purpose: Return admin-selectable supply options scoped to selected site IDs.
+- Query parameters: `site_ids`, optional `q`, optional `utility_type`, optional `include_submeters`, optional `include_inactive`, optional `supply_ids` for legacy deep-link hydration.
+- Access: Admin-only.
+- Expected behavior: Returns supply metadata (name, external ID, site, utility, meter type, status) used by the selector UI.
 
 ### `GET /panel/imports/export.csv`
 
@@ -50,7 +69,7 @@
 ### `GET /consumption-display/`
 
 - Purpose: Preserve existing bookmarks and old links.
-- Expected behavior: Redirects to the new admin import review route while preserving the relevant query string.
+- Expected behavior: Redirects to the dedicated admin results route while preserving the relevant query string.
 
 ## Client-Side Expectations
 

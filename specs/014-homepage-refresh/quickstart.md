@@ -26,13 +26,16 @@ python manage.py runserver 0.0.0.0:8080
 
 1. Open `/panel/` as an admin user.
 2. Confirm the moved refresh and summary controls are present there.
-3. Open `/panel/imports/?reporting_month=2026-08&data_type=monthly&supply_ids=<ids>` and confirm the admin import review page loads.
-4. Confirm the page layout matches the admin shell and does not include the create-report section.
-5. Confirm the Back action returns to `/panel/`.
+3. Open `/panel/imports/` and confirm the admin data-import selection page loads.
+4. Select one or more sites from the left selector and confirm supplies load in the right selector.
+5. Use the supply search, Utility Type filter, Include sub meters checkbox, and Include inactive checkbox to verify filtering behavior.
+6. Select one or more supplies (across one or multiple selected sites), set reporting month/display type, and click `Load Data`.
+7. Confirm the app navigates to `/panel/imports/results/` and loaded records appear in the table.
+8. Confirm the results page includes `Back to Data Import` and that it returns to `/panel/imports/` with query context.
 
 ## Validate export behavior
 
-1. Apply filters on the admin import review page.
+1. Load data on the admin import results page (month, type, site + supply selections).
 2. Use `Export CSV` and `Export XLSX`.
 3. Confirm each export reflects the currently filtered view only.
 

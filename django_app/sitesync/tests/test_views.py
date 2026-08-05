@@ -57,10 +57,10 @@ class SiteListViewTest(TestCase):
         content = response.content.decode('utf-8')
 
         self.assertIn('Available Sites', content)
-        self.assertIn('Fiscal Meters', content)
-        self.assertIn('Submeters', content)
-        self.assertIn('>2<', content)
-        self.assertIn('>1<', content)
+        self.assertIn('Supply Details', content)
+        self.assertIn('Selected Sites: 0', content)
+        self.assertNotIn('Fiscal Meters', content)
+        self.assertNotIn('Submeters', content)
 
     def test_site_list_view_renders_selection_controls(self):
         request = self._auth_get('/')
@@ -73,4 +73,7 @@ class SiteListViewTest(TestCase):
         self.assertIn('site-selector', content)
         self.assertIn('data-fiscal-total=', content)
         self.assertIn('data-submeter-total=', content)
-        self.assertIn('Refresh data', content)
+        self.assertIn('Create Report', content)
+        self.assertIn('report-end-month', content)
+        self.assertIn('report-refresh-mode', content)
+        self.assertIn('Refresh data before opening report', content)
