@@ -33,4 +33,4 @@ RUN python manage.py collectstatic --noinput 2>/dev/null || true
 EXPOSE 8080
 
 # Run gunicorn
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8080"]
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-8080} config.wsgi:application"]

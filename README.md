@@ -64,6 +64,26 @@ App URL:
 
 - http://localhost:8080/
 
+## Railway deployment
+
+Enerlytix is ready for Railway with a production-style Django entrypoint and static file serving.
+
+Required environment variables:
+
+- SECRET_KEY
+- DEBUG=False
+- ALLOWED_HOSTS=your-domain.com
+- DATABASE_URL=postgresql://...
+- PORT=8080
+- RAILWAY_PUBLIC_DOMAIN=your-app.up.railway.app
+- SECURE_SSL_REDIRECT=True
+- SESSION_COOKIE_SECURE=True
+- CSRF_COOKIE_SECURE=True
+
+Recommended startup command:
+
+- `cd django_app && gunicorn --bind 0.0.0.0:$PORT config.wsgi:application`
+
 ## Docker setup
 
 From the repository root:

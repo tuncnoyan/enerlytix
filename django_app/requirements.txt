@@ -7,3 +7,5 @@ django-anymail==15.1
 pytest==7.4.3
 pytest-django==4.7.0
 openpyxl==3.1.5
+gunicorn==22.0.0
+whitenoise==6.7.0
