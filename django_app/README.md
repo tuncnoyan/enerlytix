@@ -2,10 +2,17 @@
 
 ## Setup
 
-- Install the Python dependencies from `requirements.txt`.
-- Configure environment variables in `.env`.
-- Run migrations from the `django_app/` directory.
-- Start the app with `python manage.py runserver`.
+- Development and testing are Docker-only.
+- Configure environment variables in `.env` at repository root.
+- Start services with Docker Compose.
+- Run migrations inside the web container.
+
+From repository root:
+
+```bash
+docker compose -f django_app/docker/docker-compose.yml up -d --build
+docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py migrate
+```
 
 ## Runtime pages
 
@@ -60,13 +67,13 @@ docker compose -f django_app/docker/docker-compose.yml exec -T web python manage
 ## Retention cleanup
 
 - Default retention is 36 months (`CONSUMPTION_RETENTION_MONTHS`).
-- Run cleanup manually:
-
-```bash
-python manage.py cleanup_expired_consumption
-```
+- Run cleanup in Docker:
 
 - Command removes expired `HalfHourlyConsumption`, `MonthlyConsumption`, and `InvoiceCost` records.
+
+```bash
+docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py cleanup_expired_consumption
+```
 
 ## Configuration
 

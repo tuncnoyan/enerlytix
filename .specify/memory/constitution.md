@@ -1,12 +1,14 @@
 <!--
 Sync Impact Report
-Version change: 1.0.0 -> 1.0.1
-Modified principles: none
+Version change: 1.0.1 -> 1.1.0
+Modified principles: V. Containerized Maintainability & Observability -> V. Containerized Maintainability, Docker Compatibility & Observability
 Added sections: none
 Removed sections: none
 Templates requiring updates: ✅ Reviewed, no changes required: .specify/templates/plan-template.md
 ✅ Reviewed, no changes required: .specify/templates/spec-template.md
 ✅ Reviewed, no changes required: .specify/templates/tasks-template.md
+✅ Updated runtime guidance: README.md
+✅ Updated runtime guidance: django_app/README.md
 Follow-up TODOs: none
 -->
 
@@ -39,9 +41,11 @@ Production deployments and administrative account changes MUST require explicit 
 - New administrative accounts or privilege escalations MUST be granted only after approval by authorized owners.
 - Emergency changes MUST be documented, justified, and retroactively reviewed.
 
-### V. Containerized Maintainability & Observability
-The application MUST be containerized natively and built for maintainable, observable operation.
+### V. Containerized Maintainability, Docker Compatibility & Observability
+The application MUST be containerized natively, support Docker workflows, and be built for maintainable, observable operation.
 - Containerization MUST be the standard packaging and deployment model for application components.
+- The application MUST support Docker runtime execution and Docker-based local and CI workflows.
+- All development and test execution MUST run inside the defined container environment.
 - Containers MUST be configured so the app can be deployed, maintained, and operated without admin privileges.
 - Operational observability MUST include structured logging, health checks, and security event monitoring.
 
@@ -49,6 +53,7 @@ The application MUST be containerized natively and built for maintainable, obser
 - The product MUST behave as a business-focused web application for electricity, gas, and water usage analysis.
 - The application MUST support Windows-native hosting and maintenance without depending on admin-level system changes.
 - Deployment tooling and runtime packaging MUST be container-native and compatible with Windows container ecosystems.
+- Docker Compose (or an equivalent Docker orchestration definition approved by governance owners) MUST be maintained as the authoritative development and test runtime entry point.
 - Data security requirements MUST include database hardening, secure configuration management, and protection from unauthorized external access.
 - API keys, secrets, and similar runtime parameters MUST be sourced from `.env` during development and test environments.
 - Production MAY also use `.env` if the deployment platform provides no stronger secret management mechanism, but a platform-native secure secret store MUST be preferred when available.
@@ -60,6 +65,7 @@ The application MUST be containerized natively and built for maintainable, obser
 - Production release candidates MUST pass an approval gate before deployment.
 - Admin account creation and privileged role changes MUST be processed through a documented approval workflow.
 - Compliance with security and least-privilege rules MUST be verified during planning, implementation, and deployment reviews.
+- Development and automated test commands documented for a feature MUST execute in the containerized Docker environment.
 
 ## Governance
 This constitution supersedes ad hoc preferences and is the authoritative source for platform, security, and workflow decisions.
@@ -68,4 +74,4 @@ This constitution supersedes ad hoc preferences and is the authoritative source 
 - Changes to this constitution MUST include a clear rationale, impact analysis, and version update.
 - Regular compliance review SHOULD occur whenever the project’s platform, security, or deployment context changes.
 
-**Version**: 1.0.1 | **Ratified**: 2026-06-23 | **Last Amended**: 2026-06-24
+**Version**: 1.1.0 | **Ratified**: 2026-06-23 | **Last Amended**: 2026-08-06

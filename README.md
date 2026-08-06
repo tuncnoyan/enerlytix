@@ -36,29 +36,22 @@ Key Django modules:
 
 ## Prerequisites
 
-- Python 3.14 (project Pipfile target).
-- pip (or Pipenv if you prefer Pipfile workflow).
-- Docker Desktop (optional, for containerized run).
+- Docker Desktop (required for all development and test workflows).
+- Docker Compose v2 (required).
 
-## Local setup (Windows and cross-platform)
+## Development setup (Docker-only)
 
-1. Create and activate a virtual environment.
-2. Install dependencies.
-3. Create a local environment file from .env.example.
-4. Run migrations.
-5. Start the development server.
+All development and tests must run in the containerized Docker environment.
 
-Example commands:
+1. Create a local environment file from .env.example.
+2. Start the Docker stack.
+3. Run database migrations in the web container.
 
-PowerShell:
+Example commands (PowerShell):
 
-- py -3.14 -m venv .venv
-- .\.venv\Scripts\Activate.ps1
-- pip install -r django_app/requirements.txt
 - Copy-Item .env.example .env
-- Set-Location django_app
-- python manage.py migrate
-- python manage.py runserver 0.0.0.0:8080
+- docker compose -f django_app/docker/docker-compose.yml up -d --build
+- docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py migrate
 
 App URL:
 
@@ -205,18 +198,18 @@ For local development, start with .env.example values and harden for production.
 
 ### Data cleanup command
 
-Run periodic retention cleanup from django_app:
+Run periodic retention cleanup in Docker:
 
-- python manage.py cleanup_expired_consumption
+- docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py cleanup_expired_consumption
 
 This removes expired HalfHourlyConsumption, MonthlyConsumption, and InvoiceCost records based on retention configuration.
 
 ## Testing and checks
 
-From django_app:
+Run checks and tests in Docker only:
 
-- python manage.py check
-- python manage.py test
+- docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py check
+- docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test
 
 ### Docker-only verification for report ownership implementation
 
