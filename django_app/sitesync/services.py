@@ -13,6 +13,7 @@ from openpyxl import Workbook, load_workbook
 from django.http import HttpResponse
 from django.conf import settings
 from django.db import transaction
+from django.db.utils import OperationalError, ProgrammingError
 from django.db.models import Q
 from django.utils import timezone as dj_timezone
 
@@ -449,7 +450,13 @@ def get_latest_completed_capacity_upload_run() -> Optional[CapacityUploadRun]:
 
 def capacity_upload_run_has_row_results(run: Optional[CapacityUploadRun]) -> bool:
     """Return True when a run has persisted per-row outcomes."""
-    return bool(run and run.row_results.exists())
+    if not run:
+        return False
+    try:
+        return bool(run.row_results.exists())
+    except (ProgrammingError, OperationalError):
+        logger.warning('CapacityUploadRowResult table unavailable; treating row results as missing.')
+        return False
 
 
 def _capacity_upload_export_column_order(row_results: List[CapacityUploadRowResult]) -> List[str]:

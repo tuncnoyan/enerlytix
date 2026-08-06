@@ -1,12 +1,15 @@
 from io import BytesIO
+from types import SimpleNamespace
 
 from django.contrib.auth import get_user_model
 from django.contrib.messages import get_messages
+from django.db.utils import ProgrammingError
 from django.test import TestCase
 from django.urls import reverse
 from openpyxl import load_workbook
 
 from sitesync.models import CapacityUploadRun
+from sitesync.services import capacity_upload_run_has_row_results
 
 
 class CapacityUploadResultsExportTests(TestCase):
@@ -166,3 +169,11 @@ class CapacityUploadResultsExportTests(TestCase):
         self.assertEqual(target_row[5], 'failure')
         self.assertIn('Av Cap (kVA) must be numeric when provided', target_row[6])
         self.assertIn('Duplicate eSight Meter Code in upload', target_row[6])
+
+    def test_capacity_upload_row_result_helper_handles_missing_table(self):
+        class _BrokenRowResults:
+            def exists(self):
+                raise ProgrammingError('relation "sitesync_capacityuploadrowresult" does not exist')
+
+        run = SimpleNamespace(row_results=_BrokenRowResults())
+        self.assertFalse(capacity_upload_run_has_row_results(run))
