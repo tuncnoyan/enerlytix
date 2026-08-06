@@ -623,6 +623,7 @@ class MonthlyReportVersion(models.Model):
         null=True,
         blank=True,
     )
+    selected_supply_ids = models.JSONField(default=list)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

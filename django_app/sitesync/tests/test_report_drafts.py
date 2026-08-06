@@ -9,7 +9,7 @@ from django.urls import reverse
 
 from sitesync.models import AppSettings, CapacityReference, HalfHourlyConsumption, ImportRun, MonthlyReport, MonthlyReportVersion, MonthlyConsumption, Site, Supply, Team, UserTeamAssignment
 from sitesync.services import assign_report_validator
-from sitesync.views import report_view
+from sitesync.views import _report_editor_context, report_view
 
 
 class ReportDraftWorkflowTest(TestCase):
@@ -92,6 +92,89 @@ class ReportDraftWorkflowTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn('"endMonth": "2026-05"', response.content.decode('utf-8'))
+
+    def test_post_report_persists_selected_supply_ids_on_version(self):
+        response = self.client.post(
+            '/report/',
+            data={
+                'site_id': str(self.site.id),
+                'end_month': '2026-05',
+                'save_mode': 'draft',
+                'supply_ids': 'supply-a,supply-b',
+                'comments': json.dumps({'overview': 'Draft note'}),
+            },
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        report = MonthlyReport.objects.get(site=self.site, reporting_month='2026-05')
+        self.assertEqual(report.current_version.selected_supply_ids, ['supply-a', 'supply-b'])
+
+    def test_get_report_reuses_saved_supply_ids_when_query_is_missing(self):
+        self.client.post(
+            '/report/',
+            data={
+                'site_id': str(self.site.id),
+                'end_month': '2026-05',
+                'save_mode': 'draft',
+                'supply_ids': 'supply-a,supply-b',
+                'comments': json.dumps({'overview': 'Draft note'}),
+            },
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+
+        context = _report_editor_context(
+            str(self.site.id),
+            '2026-05',
+            '',
+            '',
+            user=self.user,
+        )
+        self.assertEqual(context['supply_ids'], 'supply-a,supply-b')
+        self.assertEqual(context['report_context']['supplyIds'], 'supply-a,supply-b')
+
+    def test_post_report_pins_default_supply_ids_when_none_selected(self):
+        """Regression test: saving a report without an explicit supply selection must
+        pin the site's current fiscal supplies on the version, rather than persisting
+        an empty list. Otherwise, supplies added to the site later would silently
+        appear (with no data) when the saved report is reopened."""
+        Supply.objects.create(
+            site=self.site,
+            external_id='supply-existing',
+            name='Existing Meter',
+            utility_type='electricity',
+        )
+
+        response = self.client.post(
+            '/report/',
+            data={
+                'site_id': str(self.site.id),
+                'end_month': '2026-05',
+                'save_mode': 'draft',
+                'comments': json.dumps({'overview': 'Draft note'}),
+            },
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+        self.assertEqual(response.status_code, 200)
+        report = MonthlyReport.objects.get(site=self.site, reporting_month='2026-05')
+        self.assertEqual(report.current_version.selected_supply_ids, ['supply-existing'])
+
+        # A new supply is added to the site after the report was saved.
+        Supply.objects.create(
+            site=self.site,
+            external_id='supply-added-later',
+            name='Later Meter',
+            utility_type='gas',
+        )
+
+        context = _report_editor_context(
+            str(self.site.id),
+            '2026-05',
+            '',
+            '',
+            user=self.user,
+        )
+        self.assertEqual(context['supply_ids'], 'supply-existing')
 
     def test_get_report_renders_validator_assignment_control_for_owner(self):
         team = Team.objects.create(name='Validator Control Team', level=1)

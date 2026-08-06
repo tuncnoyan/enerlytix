@@ -506,6 +506,10 @@ def _report_editor_context(raw_site_id, raw_end_month, raw_reporting_month, raw_
     reference_comment_keys = []
     if site is not None:
         monthly_report = MonthlyReport.objects.filter(site=site, reporting_month=end_month).first()
+        if not supply_ids and monthly_report and monthly_report.current_version:
+            saved_supply_ids = monthly_report.current_version.selected_supply_ids or []
+            if isinstance(saved_supply_ids, list):
+                supply_ids = ','.join([str(value).strip() for value in saved_supply_ids if str(value).strip()])
         if monthly_report and monthly_report.current_version:
             for comment in monthly_report.current_version.comments.all().order_by('visual_key'):
                 initial_comments[comment.visual_key] = comment.text
@@ -671,6 +675,17 @@ def _overview_for_site(site, report_start, report_end):
     }
 
 
+def _default_report_supply_external_ids(site):
+    """Fiscal supply external_ids used when a report has no explicit supply selection."""
+    return list(
+        site.supplies.filter(
+            utility_type__in=REPORT_UTILITY_ORDER,
+        ).filter(
+            Q(parent_account_id__isnull=True) | Q(parent_account_id='')
+        ).order_by('utility_type', 'name', 'id').values_list('external_id', flat=True)
+    )
+
+
 def _report_payload(site, end_month, supply_external_ids=None):
     current_month_keys = _month_sequence(end_month, 12)
     previous_month_keys = [_previous_year_month_key(month_key) for month_key in current_month_keys]
@@ -751,6 +766,7 @@ def _report_payload(site, end_month, supply_external_ids=None):
 def report_view(request):
     if request.method == 'POST':
         raw_site_id = (request.POST.get('site_id') or '').strip()
+        raw_supply_ids = (request.POST.get('supply_ids') or '').strip()
         save_mode = (request.POST.get('save_mode') or 'draft').strip().lower()
         confirm_final_edit = (request.POST.get('confirm_final_edit') or '').strip().lower() in {'1', 'true', 'yes'}
         end_month = normalize_reporting_month(
@@ -788,6 +804,13 @@ def report_view(request):
         report = get_or_create_monthly_report(site, end_month, actor_user=request.user)
         previous_version = report.current_version
         previous_status = report.current_status
+        selected_supply_ids = [value.strip() for value in raw_supply_ids.split(',') if value.strip()]
+        if not selected_supply_ids and previous_version and isinstance(previous_version.selected_supply_ids, list):
+            selected_supply_ids = [str(value).strip() for value in previous_version.selected_supply_ids if str(value).strip()]
+        if not selected_supply_ids:
+            # Pin the concrete supply set so future reopens of this version aren't
+            # affected by supplies added to (or removed from) the site afterwards.
+            selected_supply_ids = _default_report_supply_external_ids(site)
         access_mode = get_report_access_mode(report, request.user)
         if not user_can_write_report(report, request.user):
             _log_audit_event(
@@ -876,6 +899,7 @@ def report_view(request):
             version_kind=version_kind,
             comments=comments_payload,
             derived_from_version=report.current_version,
+            selected_supply_ids=selected_supply_ids,
             actor_user=request.user,
         )
 
@@ -1013,6 +1037,12 @@ def saved_reports_view(request):
     reports_payload = []
     for report in accessible_reports:
         validation_summary = get_report_validation_summary(report)
+        saved_supply_ids = []
+        if report.current_version and isinstance(report.current_version.selected_supply_ids, list):
+            saved_supply_ids = [str(value).strip() for value in report.current_version.selected_supply_ids if str(value).strip()]
+        open_url = f"{reverse('sitesync:report')}?site_id={report.site_id}&end_month={report.reporting_month}"
+        if saved_supply_ids:
+            open_url += f"&supply_ids={','.join(saved_supply_ids)}"
         reports_payload.append({
             'id': str(report.id),
             'site_id': report.site_id,
@@ -1031,7 +1061,7 @@ def saved_reports_view(request):
             'validated_by_name': validation_summary['validated_by_user'].get_username() if validation_summary['validated_by_user'] else None,
             'validation_date': validation_summary['validated_at'].isoformat() if validation_summary['validated_at'] else None,
             'can_save_final': validation_summary['can_finalize'],
-            'open_url': f"{reverse('sitesync:report')}?site_id={report.site_id}&end_month={report.reporting_month}",
+            'open_url': open_url,
         })
     
     wants_json = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.GET.get('format') == 'json'

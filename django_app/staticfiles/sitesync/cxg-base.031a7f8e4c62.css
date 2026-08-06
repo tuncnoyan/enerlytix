@@ -1,0 +1,354 @@
+/* =================================================================
+   cxg-base.css — shared topbar + CXG tokens for all Enerlytix pages
+   Font: Manrope (loaded per-template via Google Fonts <link>)
+   ================================================================= */
+
+:root {
+    --cxg-bg-10:       #F2F2F3;
+    --cxg-bg-25:       #DEE0E3;
+    --cxg-primary-430: #7C878E;
+    --cxg-primary-432: #333F48;
+    --cxg-green:       #7AB800;
+    --cxg-dark-green:  #00693C;
+    --cxg-border:      #C6D0D7;
+    --cxg-white:       #FFFFFF;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+    font-family: 'Manrope', 'Segoe UI', sans-serif;
+    margin: 0; padding: 0;
+    background: var(--cxg-bg-10);
+    color: var(--cxg-primary-432);
+}
+
+/* ── Topbar ───────────────────────────────────────────────────── */
+.topbar {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.85rem 1.4rem;
+    background: var(--cxg-white);
+    border-bottom: 1px solid var(--cxg-border);
+    box-shadow: 0 1px 0 rgba(51,63,72,0.06);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.topbar-logo-link {
+    justify-self: start;
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+.topbar-logo {
+    height: 1.7rem;
+    width: auto;
+    display: block;
+}
+
+.brand {
+    justify-self: center;
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--cxg-primary-432);
+    letter-spacing: 0.02em;
+    text-decoration: none;
+}
+
+.topbar-links {
+    justify-self: end;
+    display: flex;
+    align-items: center;
+    gap: 1.1rem;
+}
+
+.site-footer {
+    margin-top: auto;
+    padding: 0.9rem 1rem 1.2rem;
+    text-align: center;
+    color: var(--cxg-primary-430);
+    font-size: 0.76rem;
+    font-weight: 600;
+}
+
+.site-footer span {
+    display: inline-block;
+    padding: 0.5rem 0.9rem;
+    border-top: 1px solid var(--cxg-border);
+}
+
+@media (max-width: 860px) {
+    .topbar {
+        grid-template-columns: auto 1fr;
+        row-gap: 0.55rem;
+    }
+
+    .brand {
+        justify-self: center;
+    }
+
+    .topbar-links {
+        grid-column: 1 / -1;
+        justify-self: start;
+        flex-wrap: wrap;
+    }
+}
+
+.topbar-user-menu {
+    position: relative;
+}
+
+.topbar-user-menu summary {
+    list-style: none;
+}
+
+.topbar-user-menu summary::-webkit-details-marker {
+    display: none;
+}
+
+.topbar-user-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--cxg-primary-430);
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 0.3rem 0.15rem;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.topbar-user-avatar {
+    width: 1.2rem;
+    height: 1.2rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--cxg-primary-432);
+    color: var(--cxg-white);
+    font-size: 0.62rem;
+    font-weight: 800;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.topbar-user-trigger::after {
+    content: '▾';
+    margin-left: 0.32rem;
+    font-size: 0.62rem;
+    color: currentColor;
+}
+
+.topbar-user-menu[open] .topbar-user-trigger,
+.topbar-user-menu.is-active .topbar-user-trigger {
+    color: var(--cxg-primary-432);
+    border-bottom-color: var(--cxg-primary-430);
+}
+
+.topbar-user-dropdown {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 0.4rem);
+    min-width: 10.5rem;
+    background: var(--cxg-white);
+    border: 1px solid var(--cxg-border);
+    border-radius: 0.45rem;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.15);
+    padding: 0.35rem;
+    z-index: 40;
+}
+
+.topbar-user-dropdown a,
+.topbar-user-dropdown .topbar-logout-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    border: 0;
+    border-radius: 0.35rem;
+    padding: 0.45rem 0.55rem;
+    color: var(--cxg-primary-430);
+    background: transparent;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.topbar-user-dropdown a:hover,
+.topbar-user-dropdown .topbar-logout-btn:hover {
+    background: var(--cxg-bg-10);
+    color: var(--cxg-primary-432);
+}
+
+.topbar-user-dropdown a.is-active {
+    color: var(--cxg-primary-432);
+    background: var(--cxg-bg-10);
+}
+
+.topbar-links a {
+    color: var(--cxg-primary-430);
+    text-decoration: none;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.3rem 0.15rem;
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+    white-space: nowrap;
+}
+
+.topbar-links a:hover { color: var(--cxg-dark-green); }
+
+.topbar-links a.is-active {
+    color: var(--cxg-primary-432);
+    border-bottom-color: var(--cxg-primary-430);
+}
+
+/* Admin Panel indicator dot */
+.topbar-links .topbar-admin {
+    color: var(--cxg-primary-430);
+    position: relative;
+}
+.topbar-links .topbar-admin::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--cxg-green);
+    margin-right: 5px;
+    vertical-align: middle;
+    position: relative;
+    top: -1px;
+}
+
+.topbar-logout-form { margin: 0; }
+
+.topbar-logout-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--cxg-primary-430);
+    font-size: 0.78rem;
+    font-weight: 600;
+    font-family: inherit;
+    padding: 0.3rem 0.15rem;
+    transition: color 0.2s;
+}
+.topbar-logout-btn:hover { color: var(--cxg-dark-green); }
+
+/* ── Content wrapper ─────────────────────────────────────────── */
+.content-wrap {
+    width: min(1400px, 100%);
+    margin: 0 auto;
+    padding: 1.4rem 1rem;
+}
+
+.auth-card {
+    width: min(92vw, 460px);
+    margin: 1rem auto;
+    background: var(--cxg-white);
+    border: 1px solid var(--cxg-border);
+    border-radius: 0.75rem;
+    padding: 1.2rem;
+    box-shadow: 0 18px 40px rgba(51, 63, 72, 0.14);
+}
+
+.auth-card h1 {
+    margin: 0 0 0.6rem;
+    font-size: 1.4rem;
+}
+
+.auth-card label {
+    display: block;
+    margin: 0.55rem 0 0.25rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.auth-card input {
+    width: 100%;
+    border: 1px solid var(--cxg-border);
+    border-radius: 0.45rem;
+    padding: 0.65rem 0.75rem;
+    font: inherit;
+}
+
+.auth-primary-btn {
+    margin-top: 0.9rem;
+    border: 0;
+    border-radius: 0.45rem;
+    padding: 0.65rem 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    background: var(--cxg-green);
+    color: var(--cxg-primary-432);
+}
+
+.auth-error {
+    color: #b70000;
+    font-weight: 700;
+}
+
+.auth-success {
+    color: var(--cxg-dark-green);
+    font-weight: 700;
+}
+
+.logout-modal-open {
+    overflow: hidden;
+}
+
+.logout-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    display: grid;
+    place-items: center;
+    z-index: 1000;
+}
+
+.logout-modal[hidden] {
+    display: none !important;
+}
+
+.logout-modal-dialog {
+    width: min(92vw, 360px);
+    background: var(--cxg-white);
+    border-radius: 0.6rem;
+    border: 1px solid var(--cxg-border);
+    padding: 1rem;
+}
+
+.logout-modal-dialog h2 {
+    margin: 0 0 0.45rem;
+    font-size: 1.1rem;
+}
+
+.logout-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.8rem;
+}
+
+.logout-cancel-btn,
+.logout-confirm-btn {
+    border: 1px solid var(--cxg-border);
+    border-radius: 0.35rem;
+    padding: 0.45rem 0.7rem;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.logout-confirm-btn {
+    background: var(--cxg-green);
+    color: var(--cxg-primary-432);
+    border-color: var(--cxg-green);
+}

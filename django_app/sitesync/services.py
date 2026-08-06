@@ -1749,6 +1749,7 @@ def create_report_version(
     version_kind: str,
     comments: Optional[Dict[str, str]] = None,
     derived_from_version: Optional[MonthlyReportVersion] = None,
+    selected_supply_ids: Optional[List[str]] = None,
     actor_user=None,
 ) -> MonthlyReportVersion:
     """Create an immutable report version and update report pointers."""
@@ -1757,6 +1758,7 @@ def create_report_version(
         version_number=_next_report_version_number(report),
         version_kind=version_kind,
         derived_from_version=derived_from_version,
+        selected_supply_ids=selected_supply_ids or [],
     )
 
     for visual_key, text in (comments or {}).items():
@@ -2664,11 +2666,11 @@ class ConsumptionImportService:
 
         hh_windows = get_halfhourly_windows(reporting_month)
         for start, end in hh_windows:
-            if not refresh_mode and HalfHourlyConsumption.objects.filter(
+            if not refresh_mode and self._has_complete_halfhourly_window_data(
                 supply=supply,
-                source_period_start__gte=start,
-                source_period_start__lt=end,
-            ).exists():
+                start=start,
+                end=end,
+            ):
                 outcomes.append({
                     'supply_id': supply.external_id,
                     'data_type': 'halfhourly',
@@ -2719,11 +2721,11 @@ class ConsumptionImportService:
                 })
 
         monthly_start, monthly_end = get_monthly_window(reporting_month)
-        if not refresh_mode and MonthlyConsumption.objects.filter(
+        if not refresh_mode and self._has_complete_monthly_window_data(
             supply=supply,
-            source_period_start__gte=monthly_start,
-            source_period_start__lt=monthly_end,
-        ).exists():
+            start=monthly_start,
+            end=monthly_end,
+        ):
             outcomes.append({
                 'supply_id': supply.external_id,
                 'data_type': 'monthly',
@@ -2898,6 +2900,38 @@ class ConsumptionImportService:
             except Exception as exc:  # pylint: disable=broad-except
                 errors.append(f"{account_id}: {exc}")
         raise Exception('All accountId candidates failed for invoices: ' + ' | '.join(errors))
+
+    def _has_complete_halfhourly_window_data(self, supply: Supply, start: datetime, end: datetime) -> bool:
+        expected_rows = int((end - start).total_seconds() // (30 * 60))
+        if expected_rows <= 0:
+            return False
+        actual_rows = HalfHourlyConsumption.objects.filter(
+            supply=supply,
+            source_period_start__gte=start,
+            source_period_start__lt=end,
+        ).count()
+        return actual_rows >= expected_rows
+
+    def _expected_month_keys_for_window(self, start: datetime, end: datetime) -> List[str]:
+        keys: List[str] = []
+        cursor = start
+        while cursor < end:
+            keys.append(cursor.strftime('%Y-%m'))
+            cursor = shift_months(cursor, 1)
+        return keys
+
+    def _has_complete_monthly_window_data(self, supply: Supply, start: datetime, end: datetime) -> bool:
+        expected_keys = self._expected_month_keys_for_window(start=start, end=end)
+        if not expected_keys:
+            return False
+
+        actual_keys = set(
+            MonthlyConsumption.objects.filter(
+                supply=supply,
+                canonical_month_key__in=expected_keys,
+            ).values_list('canonical_month_key', flat=True).distinct()
+        )
+        return all(month_key in actual_keys for month_key in expected_keys)
 
 
 def get_consumption_display_records(

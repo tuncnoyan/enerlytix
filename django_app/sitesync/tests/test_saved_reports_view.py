@@ -51,7 +51,9 @@ class SavedReportsViewTest(TestCase):
         self.assertContains(response, 'draft')
 
     def test_saved_reports_json_includes_open_url(self):
-        self._create_report('2026-05', kind='final')
+        report = self._create_report('2026-05', kind='final')
+        report.current_version.selected_supply_ids = ['supply-a', 'supply-b']
+        report.current_version.save(update_fields=['selected_supply_ids'])
 
         response = self.client.get('/reports/?format=json')
 
@@ -63,6 +65,7 @@ class SavedReportsViewTest(TestCase):
         self.assertEqual(row['reporting_month'], '2026-05')
         self.assertIn('site_id=', row['open_url'])
         self.assertIn('end_month=2026-05', row['open_url'])
+        self.assertIn('supply_ids=supply-a,supply-b', row['open_url'])
 
 
 class SavedReportsDelegationModeConsistencyTest(TestCase):
