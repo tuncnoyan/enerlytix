@@ -168,3 +168,49 @@ class SavedReportsTeamContextTests(TestCase):
         self.assertEqual(payload['reports'], [])
         self.assertEqual(payload['selected_filters']['report_statuses'], [])
         self.assertEqual(payload['selected_filters']['validation_statuses'], [])
+
+    def test_saved_reports_sort_reporting_month_defaults_to_newest_first(self):
+        second_site = Site.objects.create(external_id='team-site-3', name='Team Scoped Site B', team=self.team)
+        MonthlyReport.objects.create(
+            site=second_site,
+            reporting_month='2026-05',
+            owner_user=self.owner,
+            created_by_user=self.owner,
+            last_modified_by_user=self.owner,
+            last_modified_at=timezone.now(),
+            current_status=MonthlyReport.STATUS_DRAFT,
+            validation_status=MonthlyReport.VALIDATION_DRAFT,
+        )
+
+        self.client.force_login(self.team_lead)
+        response = self.client.get(reverse('sitesync:saved_reports'), {'format': 'json', 'sort_field': 'reporting_month'})
+        self.client.logout()
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload['sort']['field'], 'reporting_month')
+        months = [row['reporting_month'] for row in payload['reports']]
+        self.assertEqual(months, sorted(months, reverse=True))
+
+    def test_saved_reports_sort_site_name_defaults_to_ascending(self):
+        second_site = Site.objects.create(external_id='team-site-4', name='Aardvark Site', team=self.team)
+        MonthlyReport.objects.create(
+            site=second_site,
+            reporting_month='2026-08',
+            owner_user=self.owner,
+            created_by_user=self.owner,
+            last_modified_by_user=self.owner,
+            last_modified_at=timezone.now(),
+            current_status=MonthlyReport.STATUS_DRAFT,
+            validation_status=MonthlyReport.VALIDATION_DRAFT,
+        )
+
+        self.client.force_login(self.team_lead)
+        response = self.client.get(reverse('sitesync:saved_reports'), {'format': 'json', 'sort_field': 'site_name'})
+        self.client.logout()
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload['sort']['field'], 'site_name')
+        site_names = [row['site_name'] for row in payload['reports']]
+        self.assertEqual(site_names, sorted(site_names))

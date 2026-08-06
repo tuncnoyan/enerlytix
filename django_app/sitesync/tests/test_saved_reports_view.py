@@ -4,8 +4,10 @@ from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
+from uuid import uuid4
 
-from sitesync.models import MonthlyReport, ReportWriteGrant, Site, Team, UserTeamAssignment
+from sitesync.models import AuditLogEntry, MonthlyReport, ReportWriteGrant, Site, Team, UserTeamAssignment
+from sitesync.services import AUDIT_ACTION_REPORT_BULK_DELETE, AUDIT_ACTION_REPORT_BULK_DELETE_DENIED
 from sitesync.services import create_report_version, get_or_create_monthly_report
 
 
@@ -106,6 +108,104 @@ class SavedReportsViewTest(TestCase):
         self.assertIn('name="validation_status" value="draft" checked', html)
         self.assertIn('name="validation_status" value="awaiting_validation" checked', html)
         self.assertIn('name="validation_status" value="validated" checked', html)
+
+    def test_saved_reports_admin_only_controls_visibility(self):
+        self._create_report('2026-05', kind='final')
+
+        response = self.client.get('/reports/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'saved-reports-bulk-delete-form')
+        self.assertContains(response, 'saved-reports-select-all')
+
+        non_admin = get_user_model().objects.create_user(
+            username='savedreportsmember',
+            password='pass123',
+        )
+        self.client.force_login(non_admin)
+        member_response = self.client.get('/reports/')
+        self.client.force_login(self.user)
+
+        self.assertEqual(member_response.status_code, 200)
+        self.assertNotContains(member_response, 'saved-reports-bulk-delete-form')
+        self.assertNotContains(member_response, 'saved-reports-select-all')
+
+    def test_saved_reports_sort_unknown_field_falls_back_to_reporting_month(self):
+        self._create_report('2026-04', kind='final')
+        self._create_report('2026-06', kind='final')
+
+        response = self.client.get('/reports/?format=json&sort_field=not-a-field')
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload['sort']['field'], 'reporting_month')
+        self.assertTrue(payload['sort']['applied_fallback'])
+        self.assertEqual([row['reporting_month'] for row in payload['reports']], ['2026-06', '2026-04'])
+
+    def test_saved_reports_bulk_delete_success_with_correct_password(self):
+        report_one = self._create_report('2026-05', kind='final')
+        report_two = self._create_report('2026-06', kind='draft')
+
+        response = self.client.post(
+            reverse('sitesync:saved_reports_bulk_delete') + '?format=json',
+            {
+                'selected_report_ids': [str(report_one.id), str(report_two.id)],
+                'password_confirmation': 'pass123',
+            },
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['deleted_count'], 2)
+        self.assertFalse(MonthlyReport.objects.filter(id=report_one.id).exists())
+        self.assertFalse(MonthlyReport.objects.filter(id=report_two.id).exists())
+        entry = AuditLogEntry.objects.filter(
+            action_type=AUDIT_ACTION_REPORT_BULK_DELETE,
+            action_outcome=AuditLogEntry.OUTCOME_SUCCESS,
+        ).latest('occurred_at_utc')
+        self.assertIn('Deleted 2 reports from saved reports page:', entry.message)
+        self.assertIn('Saved Reports Site 2026-05', entry.message)
+        self.assertIn('Saved Reports Site 2026-06', entry.message)
+
+    def test_saved_reports_bulk_delete_denied_with_invalid_password(self):
+        report = self._create_report('2026-05', kind='final')
+
+        response = self.client.post(
+            reverse('sitesync:saved_reports_bulk_delete') + '?format=json',
+            {
+                'selected_report_ids': [str(report.id)],
+                'password_confirmation': 'wrong-password',
+            },
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()['code'], 'invalid_password')
+        self.assertTrue(MonthlyReport.objects.filter(id=report.id).exists())
+        entry = AuditLogEntry.objects.filter(
+            action_type=AUDIT_ACTION_REPORT_BULK_DELETE_DENIED,
+            action_outcome=AuditLogEntry.OUTCOME_DENIED,
+        ).latest('occurred_at_utc')
+        self.assertIn('invalid password confirmation', entry.message)
+        self.assertIn('Saved Reports Site 2026-05', entry.message)
+
+    def test_saved_reports_bulk_delete_requires_selection(self):
+        self._create_report('2026-05', kind='final')
+
+        response = self.client.post(
+            reverse('sitesync:saved_reports_bulk_delete') + '?format=json',
+            {
+                'password_confirmation': 'pass123',
+            },
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['code'], 'no_reports_selected')
+        entry = AuditLogEntry.objects.filter(
+            action_type=AUDIT_ACTION_REPORT_BULK_DELETE_DENIED,
+            action_outcome=AuditLogEntry.OUTCOME_DENIED,
+        ).latest('occurred_at_utc')
+        self.assertIn('empty report selection', entry.message)
 
 
 class SavedReportsDelegationModeConsistencyTest(TestCase):

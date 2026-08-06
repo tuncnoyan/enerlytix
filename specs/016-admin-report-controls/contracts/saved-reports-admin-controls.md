@@ -83,6 +83,10 @@ Route name: `sitesync:saved_reports_bulk_delete` (new)
   - Non-admin or password mismatch.
   - Zero rows deleted.
   - Audit row written with `DENIED` or `FAILED` outcome per reason.
+- Validation blocked:
+  - No selected report IDs supplied.
+  - Zero rows deleted.
+  - Response includes `no_reports_selected` code.
 - Atomic failure:
   - If any selected report is not deletable, zero rows deleted.
   - Response includes blocking report references.
@@ -111,7 +115,7 @@ Route name: `sitesync:saved_reports_bulk_delete` (new)
   - `deleted_count`: integer.
 - Bulk delete denied/failed:
   - `detail`: failure summary.
-  - `code`: failure code (for example `access_denied`, `invalid_password`, `atomic_delete_blocked`).
+  - `code`: failure code (`access_denied`, `invalid_password`, `no_reports_selected`, or `atomic_delete_blocked`).
   - `blocked_report_refs`: array when atomic conflict occurs.
 
 ## Compatibility Requirements

@@ -8,6 +8,8 @@ import csv
 from collections import defaultdict
 from datetime import datetime, timezone as datetime_timezone
 from decimal import Decimal, ROUND_HALF_UP
+from uuid import UUID
+from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.contrib.auth import get_user_model
@@ -15,7 +17,7 @@ from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.core.mail import EmailMessage
 from django.core.paginator import Paginator
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models import Count, Q, Sum
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404, render, redirect
@@ -88,6 +90,8 @@ from .services import (
     AUDIT_ACTION_REPORT_APPROVE_UNAVAILABLE_OWNER,
     AUDIT_ACTION_REPORT_GRANT_WRITE,
     AUDIT_ACTION_REPORT_REPLACE_FINAL,
+    AUDIT_ACTION_REPORT_BULK_DELETE,
+    AUDIT_ACTION_REPORT_BULK_DELETE_DENIED,
     AUDIT_ACTION_REPORT_REVOKE_WRITE,
     AUDIT_ACTION_REPORT_SAVE_DRAFT,
     AUDIT_ACTION_REPORT_SAVE_FINAL,
@@ -158,6 +162,65 @@ SAVED_REPORT_VALIDATION_STATUS_CHOICES = [
     MonthlyReport.VALIDATION_AWAITING,
     MonthlyReport.VALIDATION_VALIDATED,
 ]
+SAVED_REPORT_SORT_DEFAULT_FIELD = 'reporting_month'
+SAVED_REPORT_SORT_FIELD_DEFINITIONS = {
+    'site_name': {
+        'label': 'Site',
+        'kind': 'text',
+        'order_by': ('site__name', '-reporting_month', '-updated_at'),
+    },
+    'reporting_month': {
+        'label': 'Reporting Month',
+        'kind': 'date',
+        'order_by': ('-reporting_month', 'site__name', '-updated_at'),
+    },
+    'status': {
+        'label': 'Status',
+        'kind': 'text',
+        'order_by': ('current_status', '-reporting_month', 'site__name'),
+    },
+    'owner_name': {
+        'label': 'Owner',
+        'kind': 'text',
+        'order_by': ('owner_user__username', '-reporting_month', 'site__name'),
+    },
+    'created_at': {
+        'label': 'Created At',
+        'kind': 'date',
+        'order_by': ('-created_at', '-reporting_month', 'site__name'),
+    },
+    'last_edited_by_name': {
+        'label': 'Last Edited By',
+        'kind': 'text',
+        'order_by': ('last_modified_by_user__username', '-reporting_month', 'site__name'),
+    },
+    'last_edited_at': {
+        'label': 'Last Edited At',
+        'kind': 'date',
+        'order_by': ('-last_modified_at', '-updated_at', '-reporting_month', 'site__name'),
+    },
+    'access_mode': {
+        'label': 'Access',
+        'kind': 'text',
+        'order_by': ('-reporting_month', 'site__name', '-updated_at'),
+        'payload_key': 'access_mode',
+    },
+    'validator_name': {
+        'label': 'Validator',
+        'kind': 'text',
+        'order_by': ('validator_user__username', '-reporting_month', 'site__name'),
+    },
+    'validation_date': {
+        'label': 'Validation Date',
+        'kind': 'date',
+        'order_by': ('-validated_at', '-reporting_month', 'site__name'),
+    },
+    'validation_status': {
+        'label': 'Validation Status',
+        'kind': 'text',
+        'order_by': ('validation_status', '-reporting_month', 'site__name'),
+    },
+}
 
 
 def _get_client_ip(request):
@@ -1002,6 +1065,12 @@ def _is_truthy_param(raw_value):
     return str(raw_value or '').strip().lower() in {'1', 'true', 'yes', 'on'}
 
 
+def _is_platform_admin(user):
+    if not user or not user.is_authenticated:
+        return False
+    return bool(user.is_staff or user.is_superuser)
+
+
 def _normalize_month_key(raw_value):
     value = str(raw_value or '').strip()
     if not value:
@@ -1019,6 +1088,104 @@ def _normalize_select_values(values, allowed_values):
         if str(value or '').strip()
     }
     return [value for value in allowed_values if value in normalized]
+
+
+def _saved_report_sort_direction_for_kind(kind):
+    if kind == 'date':
+        return 'desc'
+    if kind == 'number':
+        return 'desc'
+    return 'asc'
+
+
+def _build_saved_report_sort(request):
+    raw_sort_field = str(request.GET.get('sort_field') or '').strip()
+    sort_field = raw_sort_field if raw_sort_field in SAVED_REPORT_SORT_FIELD_DEFINITIONS else SAVED_REPORT_SORT_DEFAULT_FIELD
+    definition = SAVED_REPORT_SORT_FIELD_DEFINITIONS[sort_field]
+    return {
+        'field': sort_field,
+        'label': definition['label'],
+        'kind': definition['kind'],
+        'direction': _saved_report_sort_direction_for_kind(definition['kind']),
+        'applied_fallback': bool(raw_sort_field and raw_sort_field != sort_field),
+        'requested_field': raw_sort_field,
+    }
+
+
+def _saved_report_sort_order_by(sort_state):
+    definition = SAVED_REPORT_SORT_FIELD_DEFINITIONS[sort_state['field']]
+    return tuple(definition['order_by'])
+
+
+def _collect_saved_report_ids(values):
+    seen = set()
+    normalized_ids = []
+    for raw_value in values:
+        raw = str(raw_value or '').strip()
+        if not raw:
+            continue
+        try:
+            report_uuid = str(UUID(raw))
+        except ValueError:
+            continue
+        if report_uuid in seen:
+            continue
+        seen.add(report_uuid)
+        normalized_ids.append(report_uuid)
+    return normalized_ids
+
+
+def _build_saved_report_bulk_delete_request(request):
+    selected_report_ids = _collect_saved_report_ids(request.POST.getlist('selected_report_ids'))
+    password_confirmation = str(request.POST.get('password_confirmation') or '').strip()
+    return {
+        'selected_report_ids': selected_report_ids,
+        'password_confirmation': password_confirmation,
+    }
+
+
+def _normalize_saved_report_filters_for_redirect(selected_filters):
+    params = {}
+
+    for key in ('site_query', 'user_query', 'start_month', 'end_month'):
+        value = str(selected_filters.get(key) or '').strip()
+        if value:
+            params[key] = value
+
+    report_statuses = selected_filters.get('report_statuses') or []
+    validation_statuses = selected_filters.get('validation_statuses') or []
+
+    if selected_filters.get('report_status_applied'):
+        params['report_status_applied'] = '1'
+        if report_statuses:
+            params['report_status'] = list(report_statuses)
+
+    if selected_filters.get('validation_status_applied'):
+        params['validation_status_applied'] = '1'
+        if validation_statuses:
+            params['validation_status'] = list(validation_statuses)
+
+    return params
+
+
+def _saved_report_row_reference(report):
+    return f"{report.site.name} {report.reporting_month}"
+
+
+def _sort_reports_payload_rows(rows, sort_state):
+    payload_key = SAVED_REPORT_SORT_FIELD_DEFINITIONS[sort_state['field']].get('payload_key') or sort_state['field']
+    direction = sort_state['direction']
+
+    def _normalize(value):
+        if value is None:
+            return (1, '')
+        if payload_key == 'reporting_month':
+            return (0, str(value))
+        if payload_key in {'created_at', 'last_edited_at', 'validation_date'}:
+            return (0, str(value))
+        return (0, str(value).lower())
+
+    return sorted(rows, key=lambda row: _normalize(row.get(payload_key)), reverse=(direction == 'desc'))
 
 
 def _build_saved_report_filters(request):
@@ -1078,6 +1245,16 @@ def saved_reports_view(request):
 
     wants_json = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.GET.get('format') == 'json'
     selected_filters, filters_error_code, filters_error_message = _build_saved_report_filters(request)
+    sort_state = _build_saved_report_sort(request)
+    sort_options = [
+        {
+            'field': field,
+            'label': definition['label'],
+            'kind': definition['kind'],
+            'direction': _saved_report_sort_direction_for_kind(definition['kind']),
+        }
+        for field, definition in SAVED_REPORT_SORT_FIELD_DEFINITIONS.items()
+    ]
 
     user_has_teams = (
         UserTeamAssignment.objects.filter(user=request.user).exists()
@@ -1087,13 +1264,17 @@ def saved_reports_view(request):
     # show empty state for unassigned authenticated user
     if not user_has_teams and not (request.user.is_staff or request.user.is_superuser):
         if wants_json:
-            return JsonResponse({'reports': [], 'selected_filters': selected_filters})
+            return JsonResponse({'reports': [], 'selected_filters': selected_filters, 'sort': sort_state, 'sort_options': sort_options})
         context = {
             'show_empty_state': True,
             'user_has_teams': False,
-            'is_admin': _user_is_admin(request.user),
+            'is_admin': _is_platform_admin(request.user),
             'selected_filters': selected_filters,
             'selected_filters_json': json.dumps(selected_filters),
+            'sort_state': sort_state,
+            'sort_state_json': json.dumps(sort_state),
+            'sort_options': sort_options,
+            'sort_options_json': json.dumps(sort_options),
         }
         return render(request, 'sitesync/saved_reports.html', context)
 
@@ -1144,7 +1325,7 @@ def saved_reports_view(request):
         'created_by_user',
         'last_modified_by_user',
         'validator_user',
-    ).order_by('-reporting_month', 'site__name')
+    ).order_by(*_saved_report_sort_order_by(sort_state))
 
     reports_payload = []
     for report in accessible_reports:
@@ -1175,9 +1356,12 @@ def saved_reports_view(request):
             'can_save_final': validation_summary['can_finalize'],
             'open_url': open_url,
         })
+
+    if sort_state['field'] == 'access_mode':
+        reports_payload = _sort_reports_payload_rows(reports_payload, sort_state)
     
     if wants_json:
-        return JsonResponse({'reports': reports_payload, 'selected_filters': selected_filters})
+        return JsonResponse({'reports': reports_payload, 'selected_filters': selected_filters, 'sort': sort_state, 'sort_options': sort_options})
 
     # Check for recent team assignment to show welcome message
     show_welcome = False
@@ -1200,14 +1384,189 @@ def saved_reports_view(request):
         'selected_site_id': None,
         'selected_filters': selected_filters,
         'selected_filters_json': json.dumps(selected_filters),
+        'sort_state': sort_state,
+        'sort_state_json': json.dumps(sort_state),
+        'sort_options': sort_options,
+        'sort_options_json': json.dumps(sort_options),
         'filters_error': filters_error_message,
         'filters_error_code': filters_error_code,
         'user_has_teams': user_has_teams,
         'show_empty_state': False,
         'show_welcome': show_welcome,
         'welcome_team_name': welcome_team_name,
-        'is_admin': _user_is_admin(getattr(request, 'user', None)),
+        'is_admin': _is_platform_admin(getattr(request, 'user', None)),
     })
+
+
+@login_required(login_url='/login/')
+def saved_reports_bulk_delete_view(request):
+    if request.method != 'POST':
+        return JsonResponse({'detail': 'Method not allowed'}, status=405)
+
+    wants_json = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.GET.get('format') == 'json'
+    selected_filters, _, _ = _build_saved_report_filters(request)
+    sort_state = _build_saved_report_sort(request)
+    payload = _build_saved_report_bulk_delete_request(request)
+    selected_report_ids = payload['selected_report_ids']
+    password_confirmation = payload['password_confirmation']
+
+    base_redirect_params = _normalize_saved_report_filters_for_redirect(selected_filters)
+    base_redirect_params['sort_field'] = sort_state['field']
+
+    if not selected_report_ids:
+        message = 'No reports selected for deletion.'
+        _log_audit_event(
+            request,
+            action_type=AUDIT_ACTION_REPORT_BULK_DELETE_DENIED,
+            action_outcome=AuditLogEntry.OUTCOME_DENIED,
+            target_entity_type='report',
+            target_entity_id='bulk',
+            target_entity_label='saved_reports_bulk_delete',
+            message='Denied bulk report delete attempt due to empty report selection.',
+            metadata={
+                'selected_report_ids': [],
+                'reason': 'no_reports_selected',
+            },
+        )
+        if wants_json:
+            return JsonResponse({'detail': message, 'code': 'no_reports_selected', 'deleted_count': 0}, status=400)
+        messages.error(request, message)
+        return redirect(f"{reverse('sitesync:saved_reports')}?{urlencode(base_redirect_params, doseq=True)}")
+
+    if not _is_platform_admin(request.user):
+        attempted_reports = list(
+            MonthlyReport.objects.filter(id__in=selected_report_ids)
+            .select_related('site')
+        )
+        attempted_refs = [_saved_report_row_reference(report) for report in attempted_reports]
+        attempted_summary = '; '.join(attempted_refs) if attempted_refs else ', '.join(selected_report_ids)
+        _log_audit_event(
+            request,
+            action_type=AUDIT_ACTION_REPORT_BULK_DELETE_DENIED,
+            action_outcome=AuditLogEntry.OUTCOME_DENIED,
+            target_entity_type='report',
+            target_entity_id='bulk',
+            target_entity_label='saved_reports_bulk_delete',
+            message=(
+                'Denied bulk report delete attempt by non-admin user. '
+                f'Attempted reports: {attempted_summary}.'
+            ),
+            metadata={
+                'selected_report_ids': selected_report_ids,
+                'attempted_report_refs': attempted_refs,
+                'reason': 'admin_required',
+            },
+        )
+        if wants_json:
+            return JsonResponse({'detail': 'Permission denied', 'code': 'access_denied', 'deleted_count': 0}, status=403)
+        messages.error(request, 'Only platform admins can delete reports from this page.')
+        return redirect(f"{reverse('sitesync:saved_reports')}?{urlencode(base_redirect_params, doseq=True)}")
+
+    if not password_confirmation or not request.user.check_password(password_confirmation):
+        attempted_reports = list(
+            MonthlyReport.objects.filter(id__in=selected_report_ids)
+            .select_related('site')
+        )
+        attempted_refs = [_saved_report_row_reference(report) for report in attempted_reports]
+        attempted_summary = '; '.join(attempted_refs) if attempted_refs else ', '.join(selected_report_ids)
+        _log_audit_event(
+            request,
+            action_type=AUDIT_ACTION_REPORT_BULK_DELETE_DENIED,
+            action_outcome=AuditLogEntry.OUTCOME_DENIED,
+            target_entity_type='report',
+            target_entity_id='bulk',
+            target_entity_label='saved_reports_bulk_delete',
+            message=(
+                'Denied bulk report delete attempt due to invalid password confirmation. '
+                f'Attempted reports: {attempted_summary}.'
+            ),
+            metadata={
+                'selected_report_ids': selected_report_ids,
+                'attempted_report_refs': attempted_refs,
+                'reason': 'invalid_password',
+            },
+        )
+        if wants_json:
+            return JsonResponse({'detail': 'Password confirmation failed.', 'code': 'invalid_password', 'deleted_count': 0}, status=403)
+        messages.error(request, 'Password confirmation failed. No reports were deleted.')
+        return redirect(f"{reverse('sitesync:saved_reports')}?{urlencode(base_redirect_params, doseq=True)}")
+
+    from .services import get_accessible_reports
+    scoped_queryset = get_accessible_reports(request.user).filter(id__in=selected_report_ids).select_related('site')
+    scoped_reports = list(scoped_queryset)
+    scoped_ids = {str(report.id) for report in scoped_reports}
+    missing_ids = [report_id for report_id in selected_report_ids if report_id not in scoped_ids]
+
+    if missing_ids:
+        requested_report_refs = [_saved_report_row_reference(report) for report in scoped_reports]
+        blocked_summary = ', '.join(missing_ids)
+        _log_audit_event(
+            request,
+            action_type=AUDIT_ACTION_REPORT_BULK_DELETE,
+            action_outcome=AuditLogEntry.OUTCOME_FAILED,
+            target_entity_type='report',
+            target_entity_id='bulk',
+            target_entity_label='saved_reports_bulk_delete',
+            message=(
+                'Bulk report delete failed due to non-deletable selected reports. '
+                f'Resolved reports: {"; ".join(requested_report_refs)}. '
+                f'Blocked report references: {blocked_summary}.'
+            ),
+            metadata={
+                'selected_report_ids': selected_report_ids,
+                'requested_report_refs': requested_report_refs,
+                'blocked_report_refs': missing_ids,
+                'reason': 'atomic_delete_blocked',
+            },
+        )
+        if wants_json:
+            return JsonResponse(
+                {
+                    'detail': 'Bulk delete blocked: one or more selected reports are not deletable.',
+                    'code': 'atomic_delete_blocked',
+                    'deleted_count': 0,
+                    'blocked_report_refs': missing_ids,
+                },
+                status=409,
+            )
+        messages.error(request, f"No reports were deleted. Blocking report references: {', '.join(missing_ids)}")
+        return redirect(f"{reverse('sitesync:saved_reports')}?{urlencode(base_redirect_params, doseq=True)}")
+
+    report_refs = [_saved_report_row_reference(report) for report in scoped_reports]
+
+    with transaction.atomic():
+        deleted_count, _ = MonthlyReport.objects.filter(id__in=selected_report_ids).delete()
+
+    _log_audit_event(
+        request,
+        action_type=AUDIT_ACTION_REPORT_BULK_DELETE,
+        action_outcome=AuditLogEntry.OUTCOME_SUCCESS,
+        target_entity_type='report',
+        target_entity_id='bulk',
+        target_entity_label='saved_reports_bulk_delete',
+        message=(
+            f"Deleted {len(selected_report_ids)} reports from saved reports page: "
+            f"{'; '.join(report_refs)}."
+        ),
+        metadata={
+            'selected_report_ids': selected_report_ids,
+            'deleted_count': len(selected_report_ids),
+            'deleted_rows_total': deleted_count,
+            'report_refs': report_refs,
+        },
+    )
+
+    if wants_json:
+        return JsonResponse(
+            {
+                'detail': f'Deleted {len(selected_report_ids)} report(s).',
+                'deleted_count': len(selected_report_ids),
+                'blocked_report_refs': [],
+            }
+        )
+
+    messages.success(request, f"Deleted {len(selected_report_ids)} report(s) successfully.")
+    return redirect(f"{reverse('sitesync:saved_reports')}?{urlencode(base_redirect_params, doseq=True)}")
 
 
 @login_required(login_url='/login/')

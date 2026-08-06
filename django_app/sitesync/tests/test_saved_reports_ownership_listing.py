@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
+from uuid import uuid4
 
 from sitesync.models import MonthlyReport, ReportWriteGrant, Site, Team, UserTeamAssignment
 
@@ -94,3 +95,25 @@ class SavedReportsOwnershipListingTests(TestCase):
         payload = response.json()['reports']
         self.assertEqual(len(payload), 1)
         self.assertEqual(payload[0]['id'], str(self.report.id))
+
+    def test_bulk_delete_atomic_failure_returns_blocking_references(self):
+        self.viewer.is_staff = True
+        self.viewer.save(update_fields=['is_staff'])
+        self.client.force_login(self.viewer)
+
+        blocked_id = str(uuid4())
+        response = self.client.post(
+            reverse('sitesync:saved_reports_bulk_delete') + '?format=json',
+            {
+                'selected_report_ids': [str(self.report.id), blocked_id],
+                'password_confirmation': 'pw123456',
+            },
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+        self.client.logout()
+
+        self.assertEqual(response.status_code, 409)
+        payload = response.json()
+        self.assertEqual(payload['code'], 'atomic_delete_blocked')
+        self.assertIn(blocked_id, payload['blocked_report_refs'])
+        self.assertTrue(MonthlyReport.objects.filter(id=self.report.id).exists())

@@ -13,6 +13,7 @@ urlpatterns = [
     path('settings/', views.settings_panel_view, name='settings_panel'),
     path('report/', views.report_view, name='report'),
     path('reports/', views.saved_reports_view, name='saved_reports'),
+    path('reports/bulk-delete/', views.saved_reports_bulk_delete_view, name='saved_reports_bulk_delete'),
     path('reports/<uuid:report_id>/validation/assign/', views.report_validation_assign_view, name='report_validation_assign'),
     path('reports/<uuid:report_id>/validation/pages/<slug:page_key>/mark/', views.report_validation_page_toggle_view, name='report_validation_page_toggle'),
     path('reports/<uuid:report_id>/validation/regrant-write/', views.report_validation_regrant_write_view, name='report_validation_regrant_write'),

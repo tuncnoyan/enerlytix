@@ -101,11 +101,19 @@
             font-size: 0.9rem;
             background: #fff;
             color: #1f2937;
+            width: 100%;
+            min-height: 2.2rem;
+            box-sizing: border-box;
+            line-height: 1.2;
+        }
+        select.filter-input {
+            height: 2.2rem;
         }
         .filter-field.site { grid-column: span 3; }
         .filter-field.user { grid-column: span 3; }
         .filter-field.start { grid-column: span 2; }
         .filter-field.end { grid-column: span 2; }
+        .filter-field.sort { grid-column: span 2; }
         .filter-group {
             grid-column: span 6;
             border: 1px solid #d6dee6;
@@ -135,6 +143,62 @@
             display: flex;
             gap: 0.6rem;
             align-items: center;
+            flex-wrap: wrap;
+        }
+        .bulk-delete-panel {
+            grid-column: span 12;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            padding: 0.6rem 0.75rem;
+            background: #f8fafc;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.55rem;
+        }
+        .bulk-delete-panel form {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.55rem;
+            flex-wrap: nowrap;
+        }
+        .bulk-delete-panel label {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #334155;
+        }
+        .bulk-delete-panel .filter-input {
+            width: 220px;
+            min-height: 2.2rem;
+        }
+        .bulk-delete-meta {
+            color: #475569;
+            font-size: 0.82rem;
+            margin-left: auto;
+        }
+        .bulk-delete-error {
+            color: #991b1b;
+            font-size: 0.83rem;
+            width: 100%;
+        }
+        .row-select {
+            text-align: center;
+            width: 44px;
+        }
+        .row-select input {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+        .btn-danger {
+            border: 1px solid #b91c1c;
+            background: #b91c1c;
+            color: #fff;
+            border-radius: 0.45rem;
+            font-size: 0.88rem;
+            font-weight: 700;
+            padding: 0.5rem 0.8rem;
+            cursor: pointer;
         }
         .btn-primary,
         .btn-link {
@@ -169,6 +233,7 @@
             .filter-field.user,
             .filter-field.start,
             .filter-field.end,
+            .filter-field.sort,
             .filter-group {
                 grid-column: span 12;
             }
@@ -209,6 +274,15 @@
                     <input class="filter-input" type="month" id="end_month" name="end_month" value="{{ selected_filters.end_month|default:'' }}" />
                 </div>
 
+                <div class="filter-field sort">
+                    <label for="sort_field">Sort By</label>
+                    <select class="filter-input" id="sort_field" name="sort_field">
+                        {% for option in sort_options %}
+                        <option value="{{ option.field }}" {% if option.field == sort_state.field %}selected{% endif %}>{{ option.label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
                 <fieldset class="filter-group">
                     <legend class="title">Report Status</legend>
                     <label><input type="checkbox" name="report_status" value="draft" {% if 'draft' in selected_filters.report_statuses %}checked{% endif %} /> Draft</label>
@@ -228,6 +302,37 @@
                 </div>
             </form>
 
+            {% if is_admin %}
+            <div class="bulk-delete-panel" id="saved-reports-bulk-delete-panel">
+                <form id="saved-reports-bulk-delete-form" method="post" action="{% url 'sitesync:saved_reports_bulk_delete' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="site_query" value="{{ selected_filters.site_query|default:'' }}" />
+                    <input type="hidden" name="user_query" value="{{ selected_filters.user_query|default:'' }}" />
+                    <input type="hidden" name="start_month" value="{{ selected_filters.start_month|default:'' }}" />
+                    <input type="hidden" name="end_month" value="{{ selected_filters.end_month|default:'' }}" />
+                    <input type="hidden" name="sort_field" value="{{ sort_state.field|default:'reporting_month' }}" />
+                    {% if selected_filters.report_status_applied %}
+                    <input type="hidden" name="report_status_applied" value="1" />
+                    {% for value in selected_filters.report_statuses %}
+                    <input type="hidden" name="report_status" value="{{ value }}" />
+                    {% endfor %}
+                    {% endif %}
+                    {% if selected_filters.validation_status_applied %}
+                    <input type="hidden" name="validation_status_applied" value="1" />
+                    {% for value in selected_filters.validation_statuses %}
+                    <input type="hidden" name="validation_status" value="{{ value }}" />
+                    {% endfor %}
+                    {% endif %}
+
+                    <label for="bulk_delete_password">Confirm Password</label>
+                    <input class="filter-input" type="password" id="bulk_delete_password" name="password_confirmation" autocomplete="current-password" />
+                    <button class="btn-danger" type="submit" id="bulk-delete-submit">Delete Selected</button>
+                </form>
+                <span class="bulk-delete-meta" id="bulk-delete-selection-summary">0 report(s) selected</span>
+                <div class="bulk-delete-error" id="bulk-delete-error" style="display:none;"></div>
+            </div>
+            {% endif %}
+
             {% if filters_error %}
             <div id="saved-reports-filters-error" class="filters-error" role="alert">{{ filters_error }}</div>
             {% endif %}
@@ -236,6 +341,7 @@
             <table id="saved-reports-table" aria-live="polite">
                 <thead>
                     <tr>
+                        {% if is_admin %}<th class="row-select"><input type="checkbox" id="saved-reports-select-all" aria-label="Select all reports" /></th>{% endif %}
                         <th>Site</th>
                         <th>Reporting Month</th>
                         <th>Status</th>
@@ -262,7 +368,10 @@
             reports: {{ reports_json|safe }},
             selectedSiteId: {{ selected_site_id|default:'null' }},
             selectedFilters: {{ selected_filters_json|safe }},
-            filtersError: "{{ filters_error|default:''|escapejs }}"
+            filtersError: "{{ filters_error|default:''|escapejs }}",
+            sort: {{ sort_state_json|safe }},
+            sortOptions: {{ sort_options_json|safe }},
+            isAdmin: {% if is_admin %}true{% else %}false{% endif %}
         };
     </script>
     <script src="{% static 'sitesync/js/saved_reports.js' %}"></script>

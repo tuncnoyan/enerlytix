@@ -12,10 +12,10 @@
 
 **Purpose**: Prepare shared constants, routes, and UI scaffolding needed by all stories
 
-- [ ] T001 Define saved-reports bulk-delete audit action constants in django_app/sitesync/services.py
-- [ ] T002 Add saved-reports sortable field allowlist and field-type direction map in django_app/sitesync/views.py
-- [ ] T003 [P] Add placeholder bulk-delete form container and selection column header in django_app/templates/sitesync/saved_reports.html
-- [ ] T004 [P] Add saved-reports client context placeholders for sort and bulk-delete state in django_app/static/sitesync/js/saved_reports.js
+- [X] T001 Define saved-reports bulk-delete audit action constants in django_app/sitesync/services.py
+- [X] T002 Add saved-reports sortable field allowlist and field-type direction map in django_app/sitesync/views.py
+- [X] T003 [P] Add placeholder bulk-delete form container and selection column header in django_app/templates/sitesync/saved_reports.html
+- [X] T004 [P] Add saved-reports client context placeholders for sort and bulk-delete state in django_app/static/sitesync/js/saved_reports.js
 
 ---
 
@@ -25,13 +25,13 @@
 
 **CRITICAL**: No user story implementation should begin until this phase is complete
 
-- [ ] T005 Implement normalized sort-field parser with allowlist fallback in django_app/sitesync/views.py
-- [ ] T006 Implement field-type default sort-direction resolver in django_app/sitesync/views.py
-- [ ] T007 Implement platform-admin gate and password confirmation validator for bulk delete in django_app/sitesync/views.py
-- [ ] T008 Implement selected report resolution constrained by get_accessible_reports scope in django_app/sitesync/views.py
-- [ ] T009 Implement atomic bulk-delete transaction helper with blocking-reference detection in django_app/sitesync/services.py
-- [ ] T010 Implement shared saved-reports audit event logger for success, denied, and failed outcomes in django_app/sitesync/views.py
-- [ ] T011 Register POST bulk-delete route in django_app/sitesync/urls.py
+- [X] T005 Implement normalized sort-field parser with allowlist fallback in django_app/sitesync/views.py
+- [X] T006 Implement field-type default sort-direction resolver in django_app/sitesync/views.py
+- [X] T007 Implement platform-admin gate and password confirmation validator for bulk delete in django_app/sitesync/views.py
+- [X] T008 Implement selected report resolution constrained by get_accessible_reports scope in django_app/sitesync/views.py
+- [X] T009 Implement atomic bulk-delete transaction helper with blocking-reference detection in django_app/sitesync/services.py
+- [X] T010 Implement shared saved-reports audit event logger for success, denied, and failed outcomes in django_app/sitesync/views.py
+- [X] T011 Register POST bulk-delete route in django_app/sitesync/urls.py
 
 **Checkpoint**: Shared sorting and secure bulk-delete foundation is complete
 
@@ -45,17 +45,17 @@
 
 ### Tests for User Story 1
 
-- [ ] T012 [P] [US1] Add integration test for admin-only visibility of row-selection and delete controls in django_app/sitesync/tests/test_saved_reports_view.py
-- [ ] T013 [P] [US1] Add integration test for successful multi-select deletion with correct password in django_app/sitesync/tests/test_saved_reports_view.py
-- [ ] T014 [P] [US1] Add integration test for incorrect-password denial with zero deletions in django_app/sitesync/tests/test_saved_reports_view.py
+- [X] T012 [P] [US1] Add integration test for admin-only visibility of row-selection and delete controls in django_app/sitesync/tests/test_saved_reports_view.py
+- [X] T013 [P] [US1] Add integration test for successful multi-select deletion with correct password in django_app/sitesync/tests/test_saved_reports_view.py
+- [X] T014 [P] [US1] Add integration test for incorrect-password denial with zero deletions in django_app/sitesync/tests/test_saved_reports_view.py
 
 ### Implementation for User Story 1
 
-- [ ] T015 [US1] Add per-row left-side selection checkboxes and bulk-delete action UI in django_app/templates/sitesync/saved_reports.html
-- [ ] T016 [US1] Implement saved_reports_bulk_delete_view POST handler with admin/password checks in django_app/sitesync/views.py
-- [ ] T017 [US1] Implement selected row ID serialization and bulk-delete submit behavior in django_app/static/sitesync/js/saved_reports.js
-- [ ] T018 [US1] Add success and failure message rendering for delete outcomes in django_app/templates/sitesync/saved_reports.html
-- [ ] T019 [US1] Wire deleted-row refresh behavior after successful delete in django_app/static/sitesync/js/saved_reports.js
+- [X] T015 [US1] Add per-row left-side selection checkboxes and bulk-delete action UI in django_app/templates/sitesync/saved_reports.html
+- [X] T016 [US1] Implement saved_reports_bulk_delete_view POST handler with admin/password checks in django_app/sitesync/views.py
+- [X] T017 [US1] Implement selected row ID serialization and bulk-delete submit behavior in django_app/static/sitesync/js/saved_reports.js
+- [X] T018 [US1] Add success and failure message rendering for delete outcomes in django_app/templates/sitesync/saved_reports.html
+- [X] T019 [US1] Wire deleted-row refresh behavior after successful delete in django_app/static/sitesync/js/saved_reports.js
 
 **Checkpoint**: User Story 1 is fully functional and independently testable
 
@@ -69,15 +69,15 @@
 
 ### Tests for User Story 2
 
-- [ ] T020 [P] [US2] Add contract-style test for sort-field allowlist and unknown-field fallback in django_app/sitesync/tests/test_saved_reports_view.py
-- [ ] T021 [P] [US2] Add integration tests for field-based default sort directions in django_app/sitesync/tests/test_saved_reports_team_context.py
+- [X] T020 [P] [US2] Add contract-style test for sort-field allowlist and unknown-field fallback in django_app/sitesync/tests/test_saved_reports_view.py
+- [X] T021 [P] [US2] Add integration tests for field-based default sort directions in django_app/sitesync/tests/test_saved_reports_team_context.py
 
 ### Implementation for User Story 2
 
-- [ ] T022 [US2] Add sort-field dropdown control with persisted selection state in django_app/templates/sitesync/saved_reports.html
-- [ ] T023 [US2] Apply sort-field ordering in saved_reports_view queryset pipeline in django_app/sitesync/views.py
-- [ ] T024 [US2] Add normalized sort payload to HTML context and JSON response in django_app/sitesync/views.py
-- [ ] T025 [US2] Implement sort-change submission that preserves active filters in django_app/static/sitesync/js/saved_reports.js
+- [X] T022 [US2] Add sort-field dropdown control with persisted selection state in django_app/templates/sitesync/saved_reports.html
+- [X] T023 [US2] Apply sort-field ordering in saved_reports_view queryset pipeline in django_app/sitesync/views.py
+- [X] T024 [US2] Add normalized sort payload to HTML context and JSON response in django_app/sitesync/views.py
+- [X] T025 [US2] Implement sort-change submission that preserves active filters in django_app/static/sitesync/js/saved_reports.js
 
 **Checkpoint**: User Stories 1 and 2 work independently with secure deletion and sortable listing
 
@@ -91,17 +91,17 @@
 
 ### Tests for User Story 3
 
-- [ ] T026 [P] [US3] Add integration test for no-selection guard and clear feedback message in django_app/sitesync/tests/test_saved_reports_view.py
-- [ ] T027 [P] [US3] Add integration test for atomic all-or-nothing failure with blocking references in django_app/sitesync/tests/test_saved_reports_ownership_listing.py
-- [ ] T028 [P] [US3] Add audit integration test for unauthorized direct bulk-delete POST logging in django_app/sitesync/tests/test_audit_helpers.py
+- [X] T026 [P] [US3] Add integration test for no-selection guard and clear feedback message in django_app/sitesync/tests/test_saved_reports_view.py
+- [X] T027 [P] [US3] Add integration test for atomic all-or-nothing failure with blocking references in django_app/sitesync/tests/test_saved_reports_ownership_listing.py
+- [X] T028 [P] [US3] Add audit integration test for unauthorized direct bulk-delete POST logging in django_app/sitesync/tests/test_audit_helpers.py
 
 ### Implementation for User Story 3
 
-- [ ] T029 [US3] Implement no-selection validation path in saved_reports_bulk_delete_view in django_app/sitesync/views.py
-- [ ] T030 [US3] Implement atomic-failure response payload including blocked report references in django_app/sitesync/views.py
-- [ ] T031 [US3] Implement unauthorized direct-request denied audit logging for bulk delete in django_app/sitesync/views.py
-- [ ] T032 [US3] Add confirmation summary text showing selected report count before submit in django_app/templates/sitesync/saved_reports.html
-- [ ] T033 [US3] Render blocked-reference and denied-attempt feedback states in django_app/templates/sitesync/saved_reports.html
+- [X] T029 [US3] Implement no-selection validation path in saved_reports_bulk_delete_view in django_app/sitesync/views.py
+- [X] T030 [US3] Implement atomic-failure response payload including blocked report references in django_app/sitesync/views.py
+- [X] T031 [US3] Implement unauthorized direct-request denied audit logging for bulk delete in django_app/sitesync/views.py
+- [X] T032 [US3] Add confirmation summary text showing selected report count before submit in django_app/templates/sitesync/saved_reports.html
+- [X] T033 [US3] Render blocked-reference and denied-attempt feedback states in django_app/templates/sitesync/saved_reports.html
 
 **Checkpoint**: All user stories are independently functional, safe, and auditable
 
@@ -111,11 +111,11 @@
 
 **Purpose**: Final contract alignment, Docker-native validation, and release readiness
 
-- [ ] T034 [P] Update saved-reports admin-controls contract with final request/response details in specs/016-admin-report-controls/contracts/saved-reports-admin-controls.md
-- [ ] T035 [P] Update manual validation flow and expected outcomes in specs/016-admin-report-controls/quickstart.md
-- [ ] T036 Run Docker-native targeted test command for saved-reports and audit scenarios; capture output notes in specs/016-admin-report-controls/quickstart.md
-- [ ] T037 Run Docker-native full regression command and record pass/fail snapshot in specs/016-admin-report-controls/quickstart.md
-- [ ] T038 Run timed sorting usability validation for SC-004 in Docker environment using 5 moderated runs and record per-run elapsed seconds in specs/016-admin-report-controls/quickstart.md; pass only if all runs are 10 seconds or less
+- [X] T034 [P] Update saved-reports admin-controls contract with final request/response details in specs/016-admin-report-controls/contracts/saved-reports-admin-controls.md
+- [X] T035 [P] Update manual validation flow and expected outcomes in specs/016-admin-report-controls/quickstart.md
+- [X] T036 Run Docker-native targeted test command for saved-reports and audit scenarios; capture output notes in specs/016-admin-report-controls/quickstart.md
+- [X] T037 Run Docker-native full regression command and record pass/fail snapshot in specs/016-admin-report-controls/quickstart.md
+- [X] T038 Run timed sorting usability validation for SC-004 in Docker environment using 5 moderated runs and record per-run elapsed seconds in specs/016-admin-report-controls/quickstart.md; pass only if all runs are 10 seconds or less
 
 ---
 
@@ -199,3 +199,7 @@
    - Developer B: US2 sorting pipeline and dropdown UI
    - Developer C: US3 safety and audit hardening
 3. Finish with shared polish and regression validation
+
+## Phase 7: Convergence
+
+- [X] T039 Add audit-log entry for no-selection bulk-delete attempts (including actor/outcome/target context) per FR-007 and SC-003 (missing)

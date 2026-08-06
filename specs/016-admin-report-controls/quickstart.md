@@ -102,3 +102,51 @@ docker compose -f django_app/docker/docker-compose.yml exec -T web python manage
 - Plan: [plan.md](plan.md)
 - Data model: [data-model.md](data-model.md)
 - Contract: [contracts/saved-reports-admin-controls.md](contracts/saved-reports-admin-controls.md)
+
+## Execution Log (2026-08-06)
+
+### Targeted Docker test run
+
+Command:
+
+```powershell
+docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test sitesync.tests.test_saved_reports_view sitesync.tests.test_saved_reports_ownership_listing sitesync.tests.test_saved_reports_team_context sitesync.tests.test_audit_helpers
+```
+
+Result:
+
+- Ran 32 tests in 16.135s
+- Status: PASS
+
+### Full Docker regression run
+
+Command:
+
+```powershell
+docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test
+```
+
+Result:
+
+- Ran 234 tests in 84.832s
+- Status: PASS
+
+### SC-004 timed sorting validation (5 runs)
+
+Method:
+
+- Docker `manage.py shell` timing against `GET /reports/?format=json&sort_field=reporting_month` with authenticated platform-admin context and HTTP host `localhost`.
+
+Per-run elapsed seconds:
+
+1. 0.2952
+2. 0.1073
+3. 0.1137
+4. 0.1088
+5. 0.1046
+
+Validation:
+
+- Maximum observed elapsed time: 0.2952s
+- Threshold: <= 10.0000s
+- Status: PASS

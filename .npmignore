@@ -1,0 +1,27 @@
+# Runtime and dependencies
+node_modules/
+venv/
+.venv/
+
+# Build and cache output
+dist/
+build/
+coverage/
+.pytest_cache/
+__pycache__/
+
+# Environment and logs
+.env*
+*.log
+
+# Source control and editor metadata
+.git/
+.github/
+.vscode/
+.idea/
+
+# Project docs and local artifacts
+specs/
+.sample/
+sample_app/
+*.md

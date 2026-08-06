@@ -1,12 +1,16 @@
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
+from django.test import Client
 from django.test import TestCase
+from django.urls import reverse
 from django.utils import timezone
 
 from sitesync.forms import AuditLogFilterForm
-from sitesync.models import AuditLogEntry
+from sitesync.models import AuditLogEntry, MonthlyReport, Site, Team, UserTeamAssignment
 from sitesync.services import (
+    AUDIT_ACTION_REPORT_BULK_DELETE,
+    AUDIT_ACTION_REPORT_BULK_DELETE_DENIED,
     check_audit_export_threshold,
     create_audit_log_entry,
     get_filtered_audit_logs,
@@ -155,3 +159,82 @@ class AuditHelpersUnitTests(TestCase):
         allowed_small_limit, row_count_small_limit = check_audit_export_threshold(queryset=queryset, limit=0)
         self.assertFalse(allowed_small_limit)
         self.assertEqual(row_count_small_limit, 1)
+
+
+class SavedReportsBulkDeleteAuditTests(TestCase):
+    def setUp(self):
+        user_model = get_user_model()
+        self.client = Client()
+        self.non_admin = user_model.objects.create_user(
+            username='bulk_non_admin',
+            email='bulk_non_admin@example.com',
+            password='StrongPass123!',
+        )
+        self.owner = user_model.objects.create_user(
+            username='bulk_owner',
+            email='bulk_owner@example.com',
+            password='StrongPass123!',
+        )
+        team = Team.objects.create(name='Audit Delete Team', level=1)
+        site = Site.objects.create(external_id='audit-delete-site', name='Audit Delete Site', team=team)
+        UserTeamAssignment.objects.create(user=self.owner, team=team)
+        self.report = MonthlyReport.objects.create(
+            site=site,
+            reporting_month='2026-08',
+            owner_user=self.owner,
+            created_by_user=self.owner,
+            last_modified_by_user=self.owner,
+            last_modified_at=timezone.now(),
+            current_status=MonthlyReport.STATUS_DRAFT,
+            validation_status=MonthlyReport.VALIDATION_DRAFT,
+        )
+
+    def test_non_admin_direct_bulk_delete_attempt_is_denied_and_audited(self):
+        self.client.force_login(self.non_admin)
+        response = self.client.post(
+            reverse('sitesync:saved_reports_bulk_delete') + '?format=json',
+            {
+                'selected_report_ids': [str(self.report.id)],
+                'password_confirmation': 'StrongPass123!',
+            },
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+        self.client.logout()
+
+        self.assertEqual(response.status_code, 403)
+        payload = response.json()
+        self.assertEqual(payload['code'], 'access_denied')
+        self.assertTrue(MonthlyReport.objects.filter(id=self.report.id).exists())
+        entry = AuditLogEntry.objects.filter(
+            action_type=AUDIT_ACTION_REPORT_BULK_DELETE_DENIED,
+            action_outcome=AuditLogEntry.OUTCOME_DENIED,
+            actor_user=self.non_admin,
+        ).latest('occurred_at_utc')
+        self.assertIn('Denied bulk report delete attempt by non-admin user.', entry.message)
+        self.assertIn('Audit Delete Site 2026-08', entry.message)
+
+    def test_atomic_delete_failure_audit_message_includes_report_names(self):
+        self.non_admin.is_staff = True
+        self.non_admin.save(update_fields=['is_staff'])
+        self.client.force_login(self.non_admin)
+
+        blocked_id = '00000000-0000-0000-0000-000000000000'
+        response = self.client.post(
+            reverse('sitesync:saved_reports_bulk_delete') + '?format=json',
+            {
+                'selected_report_ids': [str(self.report.id), blocked_id],
+                'password_confirmation': 'StrongPass123!',
+            },
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+        self.client.logout()
+
+        self.assertEqual(response.status_code, 409)
+        entry = AuditLogEntry.objects.filter(
+            action_type=AUDIT_ACTION_REPORT_BULK_DELETE,
+            action_outcome=AuditLogEntry.OUTCOME_FAILED,
+            actor_user=self.non_admin,
+        ).latest('occurred_at_utc')
+        self.assertIn('Resolved reports:', entry.message)
+        self.assertIn('Audit Delete Site 2026-08', entry.message)
+        self.assertIn('Blocked report references: 00000000-0000-0000-0000-000000000000.', entry.message)
