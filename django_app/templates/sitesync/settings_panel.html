@@ -136,11 +136,20 @@
         background: #96e000;
     }
 
-    .upload-errors {
-        margin: 0.55rem 0 0;
-        padding-left: 1rem;
-        color: #991b1b;
-        font-size: 0.8rem;
+    .button-link {
+        display: inline-block;
+        background: #f3f4f6;
+        color: var(--cxg-primary-432);
+        border: 1px solid var(--cxg-border);
+        border-radius: 0.3rem;
+        padding: 0.55rem 0.85rem;
+        font-weight: 600;
+        font-size: 0.82rem;
+        text-decoration: none;
+    }
+
+    .button-link:hover {
+        background: #e5e7eb;
     }
 
     @media (max-width: 760px) {
@@ -285,14 +294,6 @@
             </div>
         {% endif %}
 
-        {% if capacity_upload_errors %}
-            <ul class="upload-errors">
-                {% for upload_error in capacity_upload_errors %}
-                    <li>{{ upload_error }}</li>
-                {% endfor %}
-            </ul>
-        {% endif %}
-
         {% if latest_capacity_run %}
             <div class="summary">
                 <strong>Latest file:</strong> {{ latest_capacity_run.uploaded_filename|default:'Unknown' }}<br />
@@ -300,6 +301,16 @@
                 <strong>Status:</strong> {{ latest_capacity_run.status }}<br />
                 <strong>Rows:</strong> {{ latest_capacity_run.total_rows }} total, {{ latest_capacity_run.accepted_rows }} accepted, {{ latest_capacity_run.rejected_rows }} rejected
             </div>
+
+            {% if is_admin %}
+                <div class="actions">
+                    {% if capacity_upload_results_export_available %}
+                        <a class="button-link" href="{{ capacity_upload_results_export_url }}">Download Upload Results (.xlsx)</a>
+                    {% else %}
+                        <span class="help">Download Upload Results (.xlsx) becomes available after a run with stored row outcomes.</span>
+                    {% endif %}
+                </div>
+            {% endif %}
         {% endif %}
 
         <form id="capacity-upload-form" method="post" enctype="multipart/form-data" novalidate>

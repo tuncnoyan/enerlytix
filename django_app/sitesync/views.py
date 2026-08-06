@@ -100,6 +100,8 @@ from .services import (
     build_report_cover_set,
     carry_forward_comments_from_previous_final,
     check_audit_export_threshold,
+    build_capacity_upload_results_export_response,
+    capacity_upload_run_has_row_results,
     ConsumptionImportService,
     create_audit_log_entry,
     create_report_version,
@@ -110,6 +112,7 @@ from .services import (
     get_report_write_grant,
     grant_report_write_access,
     get_consumption_display_records,
+    get_latest_completed_capacity_upload_run,
     get_report_delegation_candidate_users,
     get_report_delegation_role_hint,
     get_report_validation_summary,
@@ -2496,7 +2499,7 @@ def settings_panel_view(request):
     """Display and update runtime configuration settings."""
     settings_instance = SettingsConfigService.get_settings()
     capacity_upload_result = None
-    latest_capacity_run = CapacityUploadRun.objects.order_by('-uploaded_at').first()
+    latest_capacity_run = get_latest_completed_capacity_upload_run()
 
     if request.method == 'POST':
         if 'capacity_upload_submit' in request.POST:
@@ -2587,6 +2590,11 @@ def settings_panel_view(request):
         capacity_upload_rejected_rows = 0
         capacity_upload_errors = []
 
+    can_download_capacity_results = (
+        _is_platform_admin(getattr(request, 'user', None))
+        and capacity_upload_run_has_row_results(latest_capacity_run)
+    )
+
     return render(request, 'sitesync/settings_panel.html', {
         'form': form,
         'capacity_form': capacity_form,
@@ -2598,8 +2606,30 @@ def settings_panel_view(request):
         'capacity_upload_rejected_rows': capacity_upload_rejected_rows,
         'capacity_upload_errors': capacity_upload_errors,
         'latest_capacity_run': latest_capacity_run,
+        'capacity_upload_results_export_available': can_download_capacity_results,
+        'capacity_upload_results_export_url': reverse('sitesync:capacity_upload_results_export') if can_download_capacity_results else '',
         'is_admin': _user_is_admin(getattr(request, 'user', None)),
     })
+
+
+@login_required(login_url='/login/')
+def capacity_upload_results_export_view(request):
+    """Export the latest capacity upload row-level outcomes as XLSX."""
+
+    if not _is_platform_admin(request.user):
+        messages.error(request, 'Admin access required.')
+        return redirect('sitesync:settings_panel')
+
+    latest_capacity_run = get_latest_completed_capacity_upload_run()
+    if latest_capacity_run is None:
+        messages.error(request, 'No completed capacity upload run is available for export.')
+        return redirect('sitesync:settings_panel')
+
+    if not capacity_upload_run_has_row_results(latest_capacity_run):
+        messages.error(request, 'Upload results are unavailable for the latest run.')
+        return redirect('sitesync:settings_panel')
+
+    return build_capacity_upload_results_export_response(latest_capacity_run)
 
 
 class SiteViewSet(viewsets.ReadOnlyModelViewSet):

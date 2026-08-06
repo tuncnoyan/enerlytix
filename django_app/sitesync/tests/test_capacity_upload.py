@@ -12,6 +12,7 @@ from openpyxl import Workbook
 from sitesync.models import (
     AppSettings,
     CapacityReference,
+    CapacityUploadRowResult,
     CapacityUploadRun,
     HalfHourlyConsumption,
     ImportRun,
@@ -77,6 +78,22 @@ class CapacityUploadTests(TestCase):
         self.assertEqual(run.accepted_rows, 1)
         self.assertEqual(run.rejected_rows, 4)
         self.assertTrue(any('Av Cap (kVA) cannot be negative' in error for error in run.error_summary))
+
+        row_results = list(run.row_results.order_by('source_row_number'))
+        self.assertEqual(len(row_results), 5)
+        self.assertEqual(
+            [result.outcome for result in row_results],
+            [
+                CapacityUploadRowResult.OUTCOME_SUCCESS,
+                CapacityUploadRowResult.OUTCOME_FAILURE,
+                CapacityUploadRowResult.OUTCOME_FAILURE,
+                CapacityUploadRowResult.OUTCOME_FAILURE,
+                CapacityUploadRowResult.OUTCOME_FAILURE,
+            ],
+        )
+        self.assertEqual(row_results[0].source_row_number, 2)
+        self.assertEqual(row_results[0].original_columns.get('Name'), 'Meter A')
+        self.assertIn('Duplicate eSight Meter Code in upload', row_results[2].explanation)
 
     def test_capacity_upload_rejects_blank_capacity_values(self):
         payload = self._build_workbook_bytes([

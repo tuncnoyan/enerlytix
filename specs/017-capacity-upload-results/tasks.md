@@ -12,9 +12,9 @@
 
 **Purpose**: Prepare constants, route skeleton, and template placeholders for upload-results export.
 
-- [ ] T001 Define capacity-upload results export constants (sheet names, column labels, outcome values) in `django_app/sitesync/services.py`
-- [ ] T002 [P] Add a capacity upload results download action placeholder near latest-run summary in `django_app/templates/sitesync/settings_panel.html`
-- [ ] T003 Add export route placeholder for latest upload results workbook in `django_app/sitesync/urls.py`
+- [X] T001 Define capacity-upload results export constants (sheet names, column labels, outcome values) in `django_app/sitesync/services.py`
+- [X] T002 [P] Add a capacity upload results download action placeholder near latest-run summary in `django_app/templates/sitesync/settings_panel.html`
+- [X] T003 Add export route placeholder for latest upload results workbook in `django_app/sitesync/urls.py`
 
 ---
 
@@ -24,13 +24,13 @@
 
 **CRITICAL**: No user story implementation should begin until this phase is complete.
 
-- [ ] T004 Add `CapacityUploadRowResult` model (run FK, source row number, outcome, explanation, original columns JSON) in `django_app/sitesync/models.py`
-- [ ] T005 Create migration `django_app/sitesync/migrations/0027_capacity_upload_row_results.py` for `CapacityUploadRowResult`
-- [ ] T006 Implement row-result persistence helpers for success/failure rows in `django_app/sitesync/services.py`
-- [ ] T007 Implement latest-completed-run resolution helper for results export in `django_app/sitesync/services.py`
-- [ ] T008 Implement two-sheet workbook builder (`Successes`, `Failures`) with shared schema in `django_app/sitesync/services.py`
-- [ ] T009 Implement export endpoint skeleton with access checks and response headers in `django_app/sitesync/views.py`
-- [ ] T010 Wire `settings_panel_view` context to expose export availability for latest run in `django_app/sitesync/views.py`
+- [X] T004 Add `CapacityUploadRowResult` model (run FK, source row number, outcome, explanation, original columns JSON) in `django_app/sitesync/models.py`
+- [X] T005 Create migration `django_app/sitesync/migrations/0027_capacity_upload_row_results.py` for `CapacityUploadRowResult`
+- [X] T006 Implement row-result persistence helpers for success/failure rows in `django_app/sitesync/services.py`
+- [X] T007 Implement latest-completed-run resolution helper for results export in `django_app/sitesync/services.py`
+- [X] T008 Implement two-sheet workbook builder (`Successes`, `Failures`) with shared schema in `django_app/sitesync/services.py`
+- [X] T009 Implement export endpoint skeleton with access checks and response headers in `django_app/sitesync/views.py`
+- [X] T010 Wire `settings_panel_view` context to expose export availability for latest run in `django_app/sitesync/views.py`
 
 **Checkpoint**: Persistence and export foundations are ready; user story work can proceed.
 
@@ -44,14 +44,14 @@
 
 ### Tests for User Story 1
 
-- [ ] T011 [P] [US1] Add settings-page regression test asserting no inline upload-errors list is rendered in `django_app/sitesync/tests/test_settings_view.py`
-- [ ] T012 [P] [US1] Add settings-page regression test asserting status notice and latest-run summary remain visible in `django_app/sitesync/tests/test_settings_view.py`
+- [X] T011 [P] [US1] Add settings-page regression test asserting no inline upload-errors list is rendered in `django_app/sitesync/tests/test_settings_view.py`
+- [X] T012 [P] [US1] Add settings-page regression test asserting status notice and latest-run summary remain visible in `django_app/sitesync/tests/test_settings_view.py`
 
 ### Implementation for User Story 1
 
-- [ ] T013 [US1] Remove inline error-list rendering block from available-capacity section in `django_app/templates/sitesync/settings_panel.html`
-- [ ] T014 [US1] Update `settings_panel_view` context usage so aggregate status/summary remains without requiring inline row-error display in `django_app/sitesync/views.py`
-- [ ] T015 [US1] Ensure upload notices and latest-run summary text stay concise and stable for large runs in `django_app/templates/sitesync/settings_panel.html`
+- [X] T013 [US1] Remove inline error-list rendering block from available-capacity section in `django_app/templates/sitesync/settings_panel.html`
+- [X] T014 [US1] Update `settings_panel_view` context usage so aggregate status/summary remains without requiring inline row-error display in `django_app/sitesync/views.py`
+- [X] T015 [US1] Ensure upload notices and latest-run summary text stay concise and stable for large runs in `django_app/templates/sitesync/settings_panel.html`
 
 **Checkpoint**: US1 delivers readable settings UX even for high-error uploads.
 
@@ -65,16 +65,16 @@
 
 ### Tests for User Story 2
 
-- [ ] T016 [P] [US2] Add endpoint authorization and content-type tests for results export in `django_app/sitesync/tests/test_capacity_upload_results_export.py`
-- [ ] T017 [P] [US2] Add workbook shape test asserting exactly `Successes` and `Failures` sheets in `django_app/sitesync/tests/test_capacity_upload_results_export.py`
-- [ ] T018 [P] [US2] Add no-latest-run and no-row-results feedback tests in `django_app/sitesync/tests/test_capacity_upload_results_export.py`
+- [X] T016 [P] [US2] Add endpoint authorization and content-type tests for results export in `django_app/sitesync/tests/test_capacity_upload_results_export.py`
+- [X] T017 [P] [US2] Add workbook shape test asserting exactly `Successes` and `Failures` sheets in `django_app/sitesync/tests/test_capacity_upload_results_export.py`
+- [X] T018 [P] [US2] Add no-latest-run and no-row-results feedback tests in `django_app/sitesync/tests/test_capacity_upload_results_export.py`
 
 ### Implementation for User Story 2
 
-- [ ] T019 [US2] Implement export endpoint behavior (`GET /settings/capacity-upload/results.xlsx`) in `django_app/sitesync/views.py`
-- [ ] T020 [US2] Register export route name `capacity_upload_results_export` in `django_app/sitesync/urls.py`
-- [ ] T021 [US2] Implement workbook response builder and attachment naming for latest run in `django_app/sitesync/services.py`
-- [ ] T022 [US2] Render active download action only when latest run has persisted row outcomes in `django_app/templates/sitesync/settings_panel.html`
+- [X] T019 [US2] Implement export endpoint behavior (`GET /settings/capacity-upload/results.xlsx`) in `django_app/sitesync/views.py`
+- [X] T020 [US2] Register export route name `capacity_upload_results_export` in `django_app/sitesync/urls.py`
+- [X] T021 [US2] Implement workbook response builder and attachment naming for latest run in `django_app/sitesync/services.py`
+- [X] T022 [US2] Render active download action only when latest run has persisted row outcomes in `django_app/templates/sitesync/settings_panel.html`
 
 **Checkpoint**: US2 delivers downloadable full upload outcomes without reintroducing inline list bloat.
 
@@ -88,15 +88,15 @@
 
 ### Tests for User Story 3
 
-- [ ] T023 [P] [US3] Add service test for per-row persistence of source row number and original columns in `django_app/sitesync/tests/test_capacity_upload.py`
-- [ ] T024 [P] [US3] Add export test asserting row schema includes source row number, original columns, outcome, explanation in `django_app/sitesync/tests/test_capacity_upload_results_export.py`
-- [ ] T025 [P] [US3] Add export test asserting multi-error failures are combined into one explanation cell for one failed row in `django_app/sitesync/tests/test_capacity_upload_results_export.py`
+- [X] T023 [P] [US3] Add service test for per-row persistence of source row number and original columns in `django_app/sitesync/tests/test_capacity_upload.py`
+- [X] T024 [P] [US3] Add export test asserting row schema includes source row number, original columns, outcome, explanation in `django_app/sitesync/tests/test_capacity_upload_results_export.py`
+- [X] T025 [P] [US3] Add export test asserting multi-error failures are combined into one explanation cell for one failed row in `django_app/sitesync/tests/test_capacity_upload_results_export.py`
 
 ### Implementation for User Story 3
 
-- [ ] T026 [US3] Persist success and failure row results during import processing in `django_app/sitesync/services.py`
-- [ ] T027 [US3] Persist combined validation reasons into a single failure explanation field in `django_app/sitesync/services.py`
-- [ ] T028 [US3] Materialize export rows with required schema across both sheets in `django_app/sitesync/services.py`
+- [X] T026 [US3] Persist success and failure row results during import processing in `django_app/sitesync/services.py`
+- [X] T027 [US3] Persist combined validation reasons into a single failure explanation field in `django_app/sitesync/services.py`
+- [X] T028 [US3] Materialize export rows with required schema across both sheets in `django_app/sitesync/services.py`
 
 **Checkpoint**: US3 makes exported data directly usable for correction and retry workflows.
 
@@ -106,11 +106,11 @@
 
 **Purpose**: Finalize docs, run Docker validations, and confirm release readiness.
 
-- [ ] T029 [P] Update export contract details with final status/error semantics in `specs/017-capacity-upload-results/contracts/capacity-upload-results-export.md`
-- [ ] T030 [P] Update validation scenarios and expected workbook checks in `specs/017-capacity-upload-results/quickstart.md`
-- [ ] T031 Run targeted Docker tests for capacity upload + settings + export and record results in `specs/017-capacity-upload-results/quickstart.md`
-- [ ] T032 Run Docker full regression and record pass/fail snapshot in `specs/017-capacity-upload-results/quickstart.md`
-- [ ] T033 Run timed SC-005 usability validation (identify at least one failed-row cause from downloaded workbook within 2 minutes) and record per-run timings in specs/017-capacity-upload-results/quickstart.md
+- [X] T029 [P] Update export contract details with final status/error semantics in `specs/017-capacity-upload-results/contracts/capacity-upload-results-export.md`
+- [X] T030 [P] Update validation scenarios and expected workbook checks in `specs/017-capacity-upload-results/quickstart.md`
+- [X] T031 Run targeted Docker tests for capacity upload + settings + export and record results in `specs/017-capacity-upload-results/quickstart.md`
+- [X] T032 Run Docker full regression and record pass/fail snapshot in `specs/017-capacity-upload-results/quickstart.md`
+- [X] T033 Run timed SC-005 usability validation (identify at least one failed-row cause from downloaded workbook within 2 minutes) and record per-run timings in specs/017-capacity-upload-results/quickstart.md
 
 ---
 

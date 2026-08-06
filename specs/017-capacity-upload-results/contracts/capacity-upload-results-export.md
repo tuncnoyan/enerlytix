@@ -40,11 +40,13 @@ Error behavior:
 - If no completed upload run exists, return clear user-facing feedback.
 - If latest run exists but no row-level outcomes are available, return clear user-facing feedback.
 - No silent empty success response for unavailable results.
+- Current implementation uses `302` redirect back to `GET /settings/` with Django messages for these feedback states.
 
 Success response:
 - `200 OK`
 - `Content-Type`: `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
 - Attachment filename includes run context (for example, `capacity-upload-results-YYYYMMDD-HHMMSS.xlsx`).
+- Current implementation filename pattern: `capacity-upload-results-<run_uploaded_at>.xlsx` with `%Y%m%d-%H%M%S` timestamp.
 
 Workbook contract:
 - Exactly two worksheets:
@@ -65,3 +67,9 @@ Outcome/explanation rules:
 - Existing upload processing summary counts and statuses remain unchanged.
 - Existing `.xlsx` upload format and validation rules remain unchanged.
 - Access control behavior for settings routes remains unchanged.
+
+## Verified Implementation Notes
+
+- Authorization is enforced at endpoint entry for authenticated users with `is_staff` or `is_superuser`.
+- Settings page shows the download action only when the latest run has persisted row outcomes and user is platform admin.
+- Inline per-row issue list is removed from settings; row-level diagnostics are available through workbook export only.

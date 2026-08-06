@@ -5,11 +5,12 @@ Etainabl API sync service for fetching and persisting site and supply data.
 import logging
 import time
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date, time as datetime_time
 from decimal import Decimal, InvalidOperation
 from typing import Dict, List, Optional, Set, Tuple
 import requests
-from openpyxl import load_workbook
+from openpyxl import Workbook, load_workbook
+from django.http import HttpResponse
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
@@ -24,6 +25,7 @@ from .models import (
     AuditLogEntry,
     CapacityReference,
     CapacityUploadRun,
+    CapacityUploadRowResult,
     ImportRun,
     HalfHourlyConsumption,
     MonthlyConsumption,
@@ -53,6 +55,13 @@ CAPACITY_UPLOAD_STATUS_PARTIAL_SUCCESS = CapacityUploadRun.STATUS_PARTIAL_SUCCES
 CAPACITY_UPLOAD_STATUS_FAILED = CapacityUploadRun.STATUS_FAILED
 CAPACITY_UPLOAD_ERROR_FILE_EMPTY = 'File is empty or missing a header row.'
 CAPACITY_UPLOAD_ERROR_PARSE_PREFIX = 'Upload parsing failed:'
+CAPACITY_UPLOAD_RESULTS_SHEET_SUCCESS = 'Successes'
+CAPACITY_UPLOAD_RESULTS_SHEET_FAILURE = 'Failures'
+CAPACITY_UPLOAD_RESULTS_COLUMN_SOURCE_ROW_NUMBER = 'Source Row Number'
+CAPACITY_UPLOAD_RESULTS_COLUMN_OUTCOME = 'Outcome'
+CAPACITY_UPLOAD_RESULTS_COLUMN_EXPLANATION = 'Explanation'
+CAPACITY_UPLOAD_ROW_OUTCOME_SUCCESS = CapacityUploadRowResult.OUTCOME_SUCCESS
+CAPACITY_UPLOAD_ROW_OUTCOME_FAILURE = CapacityUploadRowResult.OUTCOME_FAILURE
 SITE_FLOOR_AREA_UNIT_SQM = 'sqm'
 SITE_FLOOR_AREA_UNIT_SQFT = 'sqft'
 COVER_SCOPE_TEMPLATE = (
@@ -350,6 +359,161 @@ def _build_capacity_upload_result(run: CapacityUploadRun) -> Dict:
         'errors': run.error_summary,
         'run': run,
     }
+
+
+def _normalize_capacity_original_cell(value):
+    """Convert upload cell values into JSON-safe primitives."""
+    if value is None:
+        return ''
+    if isinstance(value, (datetime, date, datetime_time)):
+        return value.isoformat()
+    if isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, Decimal):
+        return str(value)
+    return str(value)
+
+
+def _resolve_capacity_upload_headers(header_row) -> List[str]:
+    """Return deterministic original-column labels for export reconstruction."""
+    headers = []
+    seen = set()
+    for index, value in enumerate(header_row or []):
+        raw_header = str(value or '').strip() or f'Column {index + 1}'
+        candidate = raw_header
+        suffix = 2
+        while candidate in seen:
+            candidate = f'{raw_header} ({suffix})'
+            suffix += 1
+        headers.append(candidate)
+        seen.add(candidate)
+    return headers
+
+
+def _build_capacity_original_columns(*, headers: List[str], row_values) -> Dict:
+    """Build original column payload using the source workbook headers."""
+    original_columns = {}
+    for index, header in enumerate(headers):
+        cell_value = row_values[index] if index < len(row_values) else None
+        original_columns[header] = _normalize_capacity_original_cell(cell_value)
+    return original_columns
+
+
+def _build_capacity_success_row_result(*, source_row_number: int, original_columns: Dict) -> Dict:
+    """Return persistence payload for one successful upload row."""
+    return {
+        'source_row_number': source_row_number,
+        'outcome': CAPACITY_UPLOAD_ROW_OUTCOME_SUCCESS,
+        'explanation': '',
+        'original_columns': original_columns,
+    }
+
+
+def _build_capacity_failure_row_result(*, source_row_number: int, original_columns: Dict, reasons: List[str]) -> Dict:
+    """Return persistence payload for one failed upload row."""
+    return {
+        'source_row_number': source_row_number,
+        'outcome': CAPACITY_UPLOAD_ROW_OUTCOME_FAILURE,
+        'explanation': ', '.join(reasons),
+        'original_columns': original_columns,
+    }
+
+
+def persist_capacity_upload_row_results(*, run: CapacityUploadRun, row_results: List[Dict]) -> None:
+    """Persist row-level capacity upload outcomes for a run."""
+    if run is None or not row_results:
+        return
+
+    CapacityUploadRowResult.objects.bulk_create([
+        CapacityUploadRowResult(
+            run=run,
+            source_row_number=row_result['source_row_number'],
+            outcome=row_result['outcome'],
+            explanation=row_result.get('explanation', ''),
+            original_columns=row_result.get('original_columns', {}),
+        )
+        for row_result in row_results
+    ])
+
+
+def get_latest_completed_capacity_upload_run() -> Optional[CapacityUploadRun]:
+    """Return the latest completed capacity upload run shown on settings."""
+    return CapacityUploadRun.objects.filter(
+        status__in=[
+            CAPACITY_UPLOAD_STATUS_SUCCESS,
+            CAPACITY_UPLOAD_STATUS_PARTIAL_SUCCESS,
+            CAPACITY_UPLOAD_STATUS_FAILED,
+        ]
+    ).order_by('-uploaded_at').first()
+
+
+def capacity_upload_run_has_row_results(run: Optional[CapacityUploadRun]) -> bool:
+    """Return True when a run has persisted per-row outcomes."""
+    return bool(run and run.row_results.exists())
+
+
+def _capacity_upload_export_column_order(row_results: List[CapacityUploadRowResult]) -> List[str]:
+    """Resolve shared export columns preserving first-seen header order."""
+    all_headers = set()
+    for row_result in row_results:
+        all_headers.update((row_result.original_columns or {}).keys())
+
+    ordered_headers: List[str] = [header for header in CAPACITY_REQUIRED_HEADERS if header in all_headers]
+    remaining_headers = sorted([header for header in all_headers if header not in CAPACITY_REQUIRED_HEADERS])
+    return [*ordered_headers, *remaining_headers]
+
+
+def _capacity_upload_export_row_values(*, row_result: CapacityUploadRowResult, original_headers: List[str]) -> List:
+    """Build one exported row using the canonical workbook column order."""
+    original_columns = row_result.original_columns or {}
+    return [
+        row_result.source_row_number,
+        *[original_columns.get(header, '') for header in original_headers],
+        row_result.outcome,
+        row_result.explanation or '',
+    ]
+
+
+def build_capacity_upload_results_workbook(run: CapacityUploadRun) -> Workbook:
+    """Build a two-sheet workbook with success/failure upload outcomes."""
+    row_results = list(run.row_results.order_by('source_row_number', 'created_at'))
+    original_headers = _capacity_upload_export_column_order(row_results)
+    headers = [
+        CAPACITY_UPLOAD_RESULTS_COLUMN_SOURCE_ROW_NUMBER,
+        *original_headers,
+        CAPACITY_UPLOAD_RESULTS_COLUMN_OUTCOME,
+        CAPACITY_UPLOAD_RESULTS_COLUMN_EXPLANATION,
+    ]
+
+    workbook = Workbook()
+    success_sheet = workbook.active
+    success_sheet.title = CAPACITY_UPLOAD_RESULTS_SHEET_SUCCESS
+    failure_sheet = workbook.create_sheet(CAPACITY_UPLOAD_RESULTS_SHEET_FAILURE)
+    success_sheet.append(headers)
+    failure_sheet.append(headers)
+
+    for row_result in row_results:
+        row_values = _capacity_upload_export_row_values(
+            row_result=row_result,
+            original_headers=original_headers,
+        )
+        target_sheet = success_sheet if row_result.outcome == CAPACITY_UPLOAD_ROW_OUTCOME_SUCCESS else failure_sheet
+        target_sheet.append(row_values)
+
+    return workbook
+
+
+def build_capacity_upload_results_export_response(run: CapacityUploadRun) -> HttpResponse:
+    """Return XLSX attachment response for one capacity upload run."""
+    uploaded_at = run.uploaded_at or dj_timezone.now()
+    filename = f"capacity-upload-results-{uploaded_at.strftime('%Y%m%d-%H%M%S')}.xlsx"
+    workbook = build_capacity_upload_results_workbook(run)
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    workbook.save(response)
+    return response
 
 
 def _normalize_floor_area_unit(value: Optional[str]) -> Optional[str]:
@@ -1118,6 +1282,7 @@ def import_capacity_upload(uploaded_file) -> Dict:
         for header in CAPACITY_REQUIRED_HEADERS
     }
     row_errors = []
+    row_result_payloads = []
     accepted_rows = 0
     total_rows = 0
 
@@ -1139,6 +1304,7 @@ def import_capacity_upload(uploaded_file) -> Dict:
             )
             return _build_capacity_upload_result(run)
 
+        original_headers = _resolve_capacity_upload_headers(header_row)
         header_values = [normalize_capacity_header(cell) for cell in header_row]
         missing = [
             canonical
@@ -1170,6 +1336,7 @@ def import_capacity_upload(uploaded_file) -> Dict:
                 continue
 
             total_rows += 1
+            original_columns = _build_capacity_original_columns(headers=original_headers, row_values=row)
             name_raw = row[indexes['Name']] if len(row) > indexes['Name'] else None
             code_raw = row[indexes['eSight Meter Code']] if len(row) > indexes['eSight Meter Code'] else None
             capacity_raw = row[indexes['Av Cap (kVA)']] if len(row) > indexes['Av Cap (kVA)'] else None
@@ -1200,9 +1367,18 @@ def import_capacity_upload(uploaded_file) -> Dict:
 
             if current_errors:
                 row_errors.append(f"Row {row_index}: {', '.join(current_errors)}")
+                row_result_payloads.append(_build_capacity_failure_row_result(
+                    source_row_number=row_index,
+                    original_columns=original_columns,
+                    reasons=current_errors,
+                ))
                 continue
 
             seen_codes.add(code)
+            row_result_payloads.append(_build_capacity_success_row_result(
+                source_row_number=row_index,
+                original_columns=original_columns,
+            ))
             valid_rows.append({
                 'name': name,
                 'esight_meter_code': code,
@@ -1239,6 +1415,7 @@ def import_capacity_upload(uploaded_file) -> Dict:
                 status=status,
                 error_summary=row_errors,
             )
+            persist_capacity_upload_row_results(run=run, row_results=row_result_payloads)
 
         return _build_capacity_upload_result(run)
     except Exception as exc:  # pylint: disable=broad-except

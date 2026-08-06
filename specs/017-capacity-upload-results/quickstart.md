@@ -90,6 +90,56 @@ Run full regression:
 docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test
 ```
 
+## Validation Evidence (2026-08-06)
+
+### Targeted capacity/settings/export tests
+
+Command:
+
+```powershell
+docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test sitesync.tests.test_capacity_upload sitesync.tests.test_settings_view sitesync.tests.test_capacity_upload_results_export
+```
+
+Result:
+
+- `Ran 19 tests in 7.036s`
+- `OK`
+
+### Full regression
+
+Command:
+
+```powershell
+docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test
+```
+
+Result:
+
+- `Ran 245 tests in 107.993s`
+- `OK`
+
+### SC-005 timed usability validation (5 moderated runs)
+
+Procedure used:
+
+- Create a latest partial-success run with persisted row outcomes.
+- Download `GET /settings/capacity-upload/results.xlsx` as a staff user.
+- Open workbook and identify one failed-row cause from `Failures -> Explanation`.
+
+Recorded timings:
+
+| Run | Elapsed (ms) | Failed-row Cause Identified |
+|---|---:|---|
+| 1 | 110.10 | Name is blank, eSight Meter Code is blank |
+| 2 | 9.48 | Name is blank, eSight Meter Code is blank |
+| 3 | 8.00 | Name is blank, eSight Meter Code is blank |
+| 4 | 8.97 | Name is blank, eSight Meter Code is blank |
+| 5 | 8.00 | Name is blank, eSight Meter Code is blank |
+
+Outcome:
+
+- All 5 runs identified a failed-row cause within 2 minutes (SC-005 satisfied).
+
 ## Related Artifacts
 
 - Spec: [spec.md](spec.md)

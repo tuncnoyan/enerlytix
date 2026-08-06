@@ -10,7 +10,7 @@ from django.test import RequestFactory, TestCase
 from django.urls import reverse
 from openpyxl import Workbook
 
-from sitesync.models import AppSettings
+from sitesync.models import AppSettings, CapacityUploadRun
 from sitesync.views import settings_panel_view
 
 
@@ -20,6 +20,11 @@ class SettingsViewIntegrationTest(TestCase):
     def setUp(self):
         self.factory = RequestFactory()
         self.user = get_user_model().objects.create_user(username='settingsuser', password='pass123')
+        self.admin_user = get_user_model().objects.create_user(
+            username='settingsadmin',
+            password='pass123',
+            is_staff=True,
+        )
         self.settings = AppSettings.objects.create(
             etainabl_api_url='https://api.etainabl.com/2.0',
             page_size=50,
@@ -134,7 +139,63 @@ class SettingsViewIntegrationTest(TestCase):
         self.assertEqual(response.status_code, 200)
         content = response.content.decode('utf-8')
         self.assertIn('Capacity upload failed. No valid rows were imported.', content)
-        self.assertIn('Av Cap (kVA) cannot be negative', content)
+        self.assertNotIn('upload-errors', content)
+
+    def test_settings_page_does_not_render_inline_upload_error_list(self):
+        payload = self._build_workbook_bytes([
+            ['Meter A', 'MTR-001', -5],
+            ['', '', 'not-a-number'],
+        ])
+        upload = SimpleUploadedFile(
+            'capacity-errors.xlsx',
+            payload,
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+
+        request = self._auth_post(
+            reverse('sitesync:settings_panel'),
+            data={
+                'capacity_upload_submit': '1',
+                'capacity_upload_file': upload,
+            },
+        )
+        response = settings_panel_view(request)
+
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode('utf-8')
+        self.assertIn('Capacity upload failed. No valid rows were imported.', content)
+        self.assertNotIn('upload-errors', content)
+
+    def test_settings_page_keeps_summary_and_download_action_for_admin(self):
+        run = CapacityUploadRun.objects.create(
+            uploaded_filename='capacity-latest.xlsx',
+            total_rows=2,
+            accepted_rows=1,
+            rejected_rows=1,
+            status=CapacityUploadRun.STATUS_PARTIAL_SUCCESS,
+            error_summary=['Row 3: Sample error'],
+        )
+        run.row_results.create(
+            source_row_number=2,
+            outcome='success',
+            explanation='',
+            original_columns={
+                'Name': 'Meter A',
+                'eSight Meter Code': 'MTR-001',
+                'Av Cap (kVA)': 20,
+            },
+        )
+
+        request = self.factory.get(reverse('sitesync:settings_panel'))
+        request.user = self.admin_user
+        response = settings_panel_view(request)
+
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode('utf-8')
+        self.assertIn('Capacity upload completed with warnings.', content)
+        self.assertIn('Latest file:', content)
+        self.assertIn('capacity-latest.xlsx', content)
+        self.assertIn('Download Upload Results (.xlsx)', content)
 
     def test_settings_page_shows_latest_upload_filename_summary(self):
         payload = self._build_workbook_bytes([

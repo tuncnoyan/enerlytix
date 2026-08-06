@@ -335,6 +335,39 @@ class CapacityUploadRun(models.Model):
         return f"CapacityUploadRun {self.uploaded_at.isoformat()} ({self.status})"
 
 
+class CapacityUploadRowResult(models.Model):
+    """Persists per-row upload outcomes for workbook export."""
+
+    OUTCOME_SUCCESS = 'success'
+    OUTCOME_FAILURE = 'failure'
+    OUTCOME_CHOICES = [
+        (OUTCOME_SUCCESS, 'Success'),
+        (OUTCOME_FAILURE, 'Failure'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    run = models.ForeignKey(
+        CapacityUploadRun,
+        on_delete=models.CASCADE,
+        related_name='row_results',
+    )
+    source_row_number = models.PositiveIntegerField()
+    outcome = models.CharField(max_length=20, choices=OUTCOME_CHOICES)
+    explanation = models.TextField(blank=True, default='')
+    original_columns = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['source_row_number', 'created_at']
+        indexes = [
+            models.Index(fields=['run', 'outcome']),
+            models.Index(fields=['run', 'source_row_number']),
+        ]
+
+    def __str__(self):
+        return f"CapacityUploadRowResult {self.run_id} row={self.source_row_number} ({self.outcome})"
+
+
 class ImportRun(models.Model):
     """Tracks import lifecycle and aggregate outcomes for a request."""
 
