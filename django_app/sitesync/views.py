@@ -149,6 +149,15 @@ REPORT_UTILITY_LABELS = {
     'gas': 'Gas',
     'water': 'Water',
 }
+SAVED_REPORT_STATUS_CHOICES = [
+    MonthlyReport.STATUS_DRAFT,
+    MonthlyReport.STATUS_FINAL,
+]
+SAVED_REPORT_VALIDATION_STATUS_CHOICES = [
+    MonthlyReport.VALIDATION_DRAFT,
+    MonthlyReport.VALIDATION_AWAITING,
+    MonthlyReport.VALIDATION_VALIDATED,
+]
 
 
 def _get_client_ip(request):
@@ -989,6 +998,76 @@ def report_view(request):
     return render(request, 'sitesync/report.html', context)
 
 
+def _is_truthy_param(raw_value):
+    return str(raw_value or '').strip().lower() in {'1', 'true', 'yes', 'on'}
+
+
+def _normalize_month_key(raw_value):
+    value = str(raw_value or '').strip()
+    if not value:
+        return ''
+    try:
+        return datetime.strptime(value, '%Y-%m').strftime('%Y-%m')
+    except ValueError:
+        return ''
+
+
+def _normalize_select_values(values, allowed_values):
+    normalized = {
+        str(value or '').strip().lower()
+        for value in values
+        if str(value or '').strip()
+    }
+    return [value for value in allowed_values if value in normalized]
+
+
+def _build_saved_report_filters(request):
+    site_query = str(request.GET.get('site_query') or '').strip()
+    user_query = str(request.GET.get('user_query') or '').strip()
+
+    raw_start_month = str(request.GET.get('start_month') or '').strip()
+    raw_end_month = str(request.GET.get('end_month') or '').strip()
+    start_month = _normalize_month_key(raw_start_month)
+    end_month = _normalize_month_key(raw_end_month)
+
+    report_status_applied = _is_truthy_param(request.GET.get('report_status_applied'))
+    validation_status_applied = _is_truthy_param(request.GET.get('validation_status_applied'))
+
+    selected_report_statuses = _normalize_select_values(
+        request.GET.getlist('report_status'),
+        SAVED_REPORT_STATUS_CHOICES,
+    )
+    selected_validation_statuses = _normalize_select_values(
+        request.GET.getlist('validation_status'),
+        SAVED_REPORT_VALIDATION_STATUS_CHOICES,
+    )
+
+    if not report_status_applied:
+        selected_report_statuses = list(SAVED_REPORT_STATUS_CHOICES)
+    if not validation_status_applied:
+        selected_validation_statuses = list(SAVED_REPORT_VALIDATION_STATUS_CHOICES)
+
+    filters = {
+        'site_query': site_query,
+        'user_query': user_query,
+        'start_month': start_month,
+        'end_month': end_month,
+        'report_statuses': selected_report_statuses,
+        'validation_statuses': selected_validation_statuses,
+        'report_status_applied': report_status_applied,
+        'validation_status_applied': validation_status_applied,
+    }
+
+    if raw_start_month and not start_month:
+        return filters, 'invalid_month_range', 'Start Month must be a valid YYYY-MM value'
+    if raw_end_month and not end_month:
+        return filters, 'invalid_month_range', 'End Month must be a valid YYYY-MM value'
+    if start_month and end_month and start_month > end_month:
+        return filters, 'invalid_month_range', 'Start Month must be earlier than or equal to End Month'
+
+    return filters, None, ''
+
+
 @login_required(login_url='/login/')
 def saved_reports_view(request):
     """Entry point for the saved reports browser with team-based access scoping."""
@@ -997,6 +1076,9 @@ def saved_reports_view(request):
     from django.db.models import Q
     import json
 
+    wants_json = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.GET.get('format') == 'json'
+    selected_filters, filters_error_code, filters_error_message = _build_saved_report_filters(request)
+
     user_has_teams = (
         UserTeamAssignment.objects.filter(user=request.user).exists()
         or Team.objects.filter(Q(manager=request.user) | Q(team_lead=request.user)).exists()
@@ -1004,35 +1086,65 @@ def saved_reports_view(request):
 
     # show empty state for unassigned authenticated user
     if not user_has_teams and not (request.user.is_staff or request.user.is_superuser):
+        if wants_json:
+            return JsonResponse({'reports': [], 'selected_filters': selected_filters})
         context = {
             'show_empty_state': True,
             'user_has_teams': False,
             'is_admin': _user_is_admin(request.user),
+            'selected_filters': selected_filters,
+            'selected_filters_json': json.dumps(selected_filters),
         }
         return render(request, 'sitesync/saved_reports.html', context)
 
     # Authenticated user with teams or admin - get accessible reports
     accessible_reports = get_accessible_reports(request.user)
     
-    user_has_teams = (
-        UserTeamAssignment.objects.filter(user=request.user).exists()
-        or Team.objects.filter(Q(manager=request.user) | Q(team_lead=request.user)).exists()
-    )
-    
-    raw_site_id = (request.GET.get('site_id') or '').strip()
-    site_id = None
-    if raw_site_id:
-        try:
-            site_id = int(raw_site_id)
-        except (TypeError, ValueError):
-            return JsonResponse({'detail': 'site_id must be an integer'}, status=400)
-    
-    # Filter by site if provided
-    if site_id:
-        accessible_reports = accessible_reports.filter(site_id=site_id)
-    
-    # Order reports
-    accessible_reports = accessible_reports.select_related('site', 'owner_user', 'created_by_user', 'last_modified_by_user').order_by('-reporting_month', 'site__name')
+    if filters_error_code:
+        if wants_json:
+            return JsonResponse(
+                {
+                    'detail': filters_error_message,
+                    'code': filters_error_code,
+                    'selected_filters': selected_filters,
+                },
+                status=400,
+            )
+        accessible_reports = accessible_reports.none()
+    else:
+        if selected_filters['site_query']:
+            accessible_reports = accessible_reports.filter(site__name__icontains=selected_filters['site_query'])
+
+        if selected_filters['user_query']:
+            user_lookup = selected_filters['user_query']
+            accessible_reports = accessible_reports.filter(
+                Q(owner_user__username__icontains=user_lookup)
+                | Q(last_modified_by_user__username__icontains=user_lookup)
+                | Q(validator_user__username__icontains=user_lookup)
+            )
+
+        if selected_filters['start_month']:
+            accessible_reports = accessible_reports.filter(reporting_month__gte=selected_filters['start_month'])
+        if selected_filters['end_month']:
+            accessible_reports = accessible_reports.filter(reporting_month__lte=selected_filters['end_month'])
+
+        if selected_filters['report_statuses']:
+            accessible_reports = accessible_reports.filter(current_status__in=selected_filters['report_statuses'])
+        else:
+            accessible_reports = accessible_reports.none()
+
+        if selected_filters['validation_statuses']:
+            accessible_reports = accessible_reports.filter(validation_status__in=selected_filters['validation_statuses'])
+        else:
+            accessible_reports = accessible_reports.none()
+
+    accessible_reports = accessible_reports.select_related(
+        'site',
+        'owner_user',
+        'created_by_user',
+        'last_modified_by_user',
+        'validator_user',
+    ).order_by('-reporting_month', 'site__name')
 
     reports_payload = []
     for report in accessible_reports:
@@ -1064,9 +1176,8 @@ def saved_reports_view(request):
             'open_url': open_url,
         })
     
-    wants_json = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.GET.get('format') == 'json'
     if wants_json:
-        return JsonResponse({'reports': reports_payload})
+        return JsonResponse({'reports': reports_payload, 'selected_filters': selected_filters})
 
     # Check for recent team assignment to show welcome message
     show_welcome = False
@@ -1086,7 +1197,11 @@ def saved_reports_view(request):
 
     return render(request, 'sitesync/saved_reports.html', {
         'reports_json': json.dumps(reports_payload),
-        'selected_site_id': site_id,
+        'selected_site_id': None,
+        'selected_filters': selected_filters,
+        'selected_filters_json': json.dumps(selected_filters),
+        'filters_error': filters_error_message,
+        'filters_error_code': filters_error_code,
         'user_has_teams': user_has_teams,
         'show_empty_state': False,
         'show_welcome': show_welcome,

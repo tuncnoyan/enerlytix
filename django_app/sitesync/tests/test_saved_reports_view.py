@@ -20,6 +20,10 @@ class SavedReportsViewTest(TestCase):
             is_staff=True,
             is_superuser=True,
         )
+        self.validator = get_user_model().objects.create_user(
+            username='savedreportsvalidator',
+            password='pass123',
+        )
         self.client.force_login(self.user)
         self.site = Site.objects.create(
             external_id='site-ext-saved-1',
@@ -66,6 +70,42 @@ class SavedReportsViewTest(TestCase):
         self.assertIn('site_id=', row['open_url'])
         self.assertIn('end_month=2026-05', row['open_url'])
         self.assertIn('supply_ids=supply-a,supply-b', row['open_url'])
+
+    def test_saved_reports_json_returns_default_selected_filters(self):
+        self._create_report('2026-05', kind='final')
+
+        response = self.client.get('/reports/?format=json')
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn('selected_filters', payload)
+        selected = payload['selected_filters']
+        self.assertEqual(selected['report_statuses'], ['draft', 'final'])
+        self.assertEqual(selected['validation_statuses'], ['draft', 'awaiting_validation', 'validated'])
+
+    def test_saved_reports_json_invalid_month_range_returns_contract_error(self):
+        self._create_report('2026-05', kind='final')
+
+        response = self.client.get('/reports/?format=json&start_month=2026-07&end_month=2026-06')
+
+        self.assertEqual(response.status_code, 400)
+        payload = response.json()
+        self.assertEqual(payload['code'], 'invalid_month_range')
+        self.assertIn('detail', payload)
+        self.assertIn('selected_filters', payload)
+
+    def test_saved_reports_page_renders_default_status_checkboxes_checked(self):
+        self._create_report('2026-05', kind='final')
+
+        response = self.client.get('/reports/')
+
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode('utf-8')
+        self.assertIn('name="report_status" value="draft" checked', html)
+        self.assertIn('name="report_status" value="final" checked', html)
+        self.assertIn('name="validation_status" value="draft" checked', html)
+        self.assertIn('name="validation_status" value="awaiting_validation" checked', html)
+        self.assertIn('name="validation_status" value="validated" checked', html)
 
 
 class SavedReportsDelegationModeConsistencyTest(TestCase):

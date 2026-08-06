@@ -75,6 +75,14 @@ Expected:
 - Fully unticked status group is allowed.
 - Empty state is shown with zero matching rows.
 
+UI labels to confirm in this scenario:
+- Site
+- User
+- Start Month
+- End Month
+- Report Status (Draft, Final)
+- Validation Status (Draft, Awaiting validation, Validated)
+
 ### Scenario 4: Combined restrictive filters empty state
 
 1. Apply multiple restrictive filters (site + user + month range + statuses) that intentionally produce no records.
@@ -90,3 +98,31 @@ For planning sign-off, capture:
 - Terminal output of Docker test command(s).
 - Screenshot(s) of default filter state and empty-state rendering.
 - One example URL/query combination proving combined criteria behavior.
+
+## Execution Log
+
+Date: 2026-08-06
+
+1. Targeted saved-reports suites
+
+```powershell
+docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test sitesync.tests.test_saved_reports_view sitesync.tests.test_saved_reports_ownership_listing sitesync.tests.test_saved_reports_team_context --verbosity 2
+```
+
+Result:
+- Status: PASS
+- Tests run: 17
+- Failures: 0
+- Errors: 0
+
+2. Full project regression suite
+
+```powershell
+docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test --verbosity 2
+```
+
+Result:
+- Status: PASS
+- Tests run: 225
+- Failures: 0
+- Errors: 0

@@ -109,3 +109,62 @@ class SavedReportsTeamContextTests(TestCase):
 
         visible_ids = set(get_accessible_reports(top_manager).values_list('id', flat=True))
         self.assertIn(subteam_report.id, visible_ids)
+
+    def test_saved_reports_combined_criteria_returns_expected_row(self):
+        validator = User.objects.create_user(username='combo_validator', password='pass123456')
+        self.report.current_status = MonthlyReport.STATUS_FINAL
+        self.report.validation_status = MonthlyReport.VALIDATION_VALIDATED
+        self.report.validator_user = validator
+        self.report.save(update_fields=['current_status', 'validation_status', 'validator_user'])
+
+        non_matching_site = Site.objects.create(external_id='team-site-2', name='Other Plant', team=self.team)
+        MonthlyReport.objects.create(
+            site=non_matching_site,
+            reporting_month='2026-04',
+            owner_user=self.owner,
+            created_by_user=self.owner,
+            last_modified_by_user=self.owner,
+            last_modified_at=timezone.now(),
+            current_status=MonthlyReport.STATUS_DRAFT,
+            validation_status=MonthlyReport.VALIDATION_DRAFT,
+        )
+
+        self.client.force_login(self.team_lead)
+        response = self.client.get(
+            reverse('sitesync:saved_reports'),
+            {
+                'format': 'json',
+                'site_query': 'scoped',
+                'user_query': 'validator',
+                'start_month': '2026-08',
+                'end_month': '2026-08',
+                'report_status': ['final'],
+                'validation_status': ['validated'],
+                'report_status_applied': '1',
+                'validation_status_applied': '1',
+            },
+        )
+        self.client.logout()
+
+        self.assertEqual(response.status_code, 200)
+        reports = response.json()['reports']
+        self.assertEqual(len(reports), 1)
+        self.assertEqual(reports[0]['id'], str(self.report.id))
+
+    def test_saved_reports_all_status_options_unticked_returns_zero_rows(self):
+        self.client.force_login(self.team_lead)
+        response = self.client.get(
+            reverse('sitesync:saved_reports'),
+            {
+                'format': 'json',
+                'report_status_applied': '1',
+                'validation_status_applied': '1',
+            },
+        )
+        self.client.logout()
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload['reports'], [])
+        self.assertEqual(payload['selected_filters']['report_statuses'], [])
+        self.assertEqual(payload['selected_filters']['validation_statuses'], [])

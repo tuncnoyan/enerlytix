@@ -1,6 +1,8 @@
 (function () {
     'use strict';
 
+    const FILTER_DEBOUNCE_MS = 320;
+
     function escapeHtml(text) {
         return String(text)
             .replaceAll('&', '&amp;')
@@ -61,7 +63,23 @@
         });
     }
 
-    function renderRows(reports) {
+    function hasActiveFilters(selectedFilters) {
+        if (!selectedFilters || typeof selectedFilters !== 'object') {
+            return false;
+        }
+
+        if (selectedFilters.site_query || selectedFilters.user_query || selectedFilters.start_month || selectedFilters.end_month) {
+            return true;
+        }
+
+        if (selectedFilters.report_status_applied || selectedFilters.validation_status_applied) {
+            return true;
+        }
+
+        return false;
+    }
+
+    function renderRows(reports, selectedFilters) {
         const tbody = document.getElementById('saved-reports-body');
         const empty = document.getElementById('saved-reports-empty');
         if (!tbody || !empty) {
@@ -70,6 +88,9 @@
 
         if (!reports || !reports.length) {
             tbody.innerHTML = '';
+            empty.textContent = hasActiveFilters(selectedFilters)
+                ? 'No saved reports match the current filters.'
+                : 'No saved reports found.';
             empty.style.display = 'block';
             return;
         }
@@ -93,6 +114,78 @@
         `).join('');
     }
 
+    function serializeFilterForm(form) {
+        const params = new URLSearchParams();
+        const formData = new FormData(form);
+
+        formData.forEach((value, key) => {
+            const normalized = String(value || '').trim();
+            if (!normalized) {
+                return;
+            }
+            params.append(key, normalized);
+        });
+
+        return params;
+    }
+
+    function navigateWithFilters(form) {
+        const params = serializeFilterForm(form);
+        const query = params.toString();
+        const target = query ? `${form.action}?${query}` : form.action;
+        window.location.assign(target);
+    }
+
+    function attachFilterFormBehavior(ctx) {
+        const form = document.getElementById('saved-reports-filters');
+        if (!form) {
+            return;
+        }
+
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            navigateWithFilters(form);
+        });
+
+        const siteInput = form.querySelector('#site_query');
+        const userInput = form.querySelector('#user_query');
+        const instantSelectors = [
+            '#start_month',
+            '#end_month',
+            'input[name="report_status"]',
+            'input[name="validation_status"]',
+        ];
+
+        let searchTimer = null;
+        function queueSearchSubmit() {
+            if (searchTimer) {
+                clearTimeout(searchTimer);
+            }
+            searchTimer = setTimeout(() => {
+                navigateWithFilters(form);
+            }, FILTER_DEBOUNCE_MS);
+        }
+
+        if (siteInput) {
+            siteInput.addEventListener('input', queueSearchSubmit);
+        }
+        if (userInput) {
+            userInput.addEventListener('input', queueSearchSubmit);
+        }
+
+        instantSelectors.forEach((selector) => {
+            form.querySelectorAll(selector).forEach((node) => {
+                node.addEventListener('change', () => navigateWithFilters(form));
+            });
+        });
+
+        // Keep default checkbox state explicit in runtime context.
+        if (!ctx.selectedFilters) {
+            ctx.selectedFilters = {};
+        }
+    }
+
     const ctx = window.ENERLYTIX_SAVED_REPORTS_CONTEXT || {};
-    renderRows(Array.isArray(ctx.reports) ? ctx.reports : []);
+    renderRows(Array.isArray(ctx.reports) ? ctx.reports : [], ctx.selectedFilters || null);
+    attachFilterFormBehavior(ctx);
 }());

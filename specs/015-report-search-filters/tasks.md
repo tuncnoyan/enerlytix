@@ -12,9 +12,9 @@
 
 **Purpose**: Prepare saved-reports filter scaffolding and shared defaults used by all stories
 
-- [ ] T001 Define saved-reports filter parameter names and status allowlists in `django_app/sitesync/views.py`
-- [ ] T002 Add month-key normalization and comparison helpers for start/end month criteria in `django_app/sitesync/views.py`
-- [ ] T003 Add filter-state serialization helper for HTML context and JSON responses in `django_app/sitesync/views.py`
+- [X] T001 Define saved-reports filter parameter names and status allowlists in `django_app/sitesync/views.py`
+- [X] T002 Add month-key normalization and comparison helpers for start/end month criteria in `django_app/sitesync/views.py`
+- [X] T003 Add filter-state serialization helper for HTML context and JSON responses in `django_app/sitesync/views.py`
 
 ---
 
@@ -24,10 +24,10 @@
 
 **CRITICAL**: No user story implementation should begin until this phase is complete
 
-- [ ] T004 Implement canonical query-param parsing for `site_query`, `user_query`, `start_month`, `end_month`, `report_status`, and `validation_status` in `django_app/sitesync/views.py`
-- [ ] T005 Implement invalid month-range guard (`start_month > end_month`) with deterministic error/feedback response in `django_app/sitesync/views.py`
-- [ ] T006 Build combined filter application pipeline over accessible reports queryset and payload rows in `django_app/sitesync/views.py`
-- [ ] T007 Return normalized `selected_filters` in JSON mode and filter state in template context from `django_app/sitesync/views.py`
+- [X] T004 Implement canonical query-param parsing for `site_query`, `user_query`, `start_month`, `end_month`, `report_status`, and `validation_status` in `django_app/sitesync/views.py`
+- [X] T005 Implement invalid month-range guard (`start_month > end_month`) with deterministic error/feedback response in `django_app/sitesync/views.py`
+- [X] T006 Build combined filter application pipeline over accessible reports queryset and payload rows in `django_app/sitesync/views.py`
+- [X] T007 Return normalized `selected_filters` in JSON mode and filter state in template context from `django_app/sitesync/views.py`
 
 **Checkpoint**: Shared filtering core is in place and user stories can be implemented safely
 
@@ -41,11 +41,11 @@
 
 ### Implementation for User Story 1
 
-- [ ] T008 [US1] Add Site and User search controls (single username box) to saved reports UI in `django_app/templates/sitesync/saved_reports.html`
-- [ ] T009 [US1] Apply case-insensitive contains matching for site-name filtering in `django_app/sitesync/views.py`
-- [ ] T010 [US1] Apply case-insensitive contains matching for cross-column user filtering (owner, last editor, validator) in `django_app/sitesync/views.py`
-- [ ] T011 [P] [US1] Render active search values back into input controls on page load in `django_app/templates/sitesync/saved_reports.html`
-- [ ] T012 [P] [US1] Add lightweight client behavior to submit search changes and preserve current criteria state in `django_app/static/sitesync/js/saved_reports.js`
+- [X] T008 [US1] Add Site and User search controls (single username box) to saved reports UI in `django_app/templates/sitesync/saved_reports.html`
+- [X] T009 [US1] Apply case-insensitive contains matching for site-name filtering in `django_app/sitesync/views.py`
+- [X] T010 [US1] Apply case-insensitive contains matching for cross-column user filtering (owner, last editor, validator) in `django_app/sitesync/views.py`
+- [X] T011 [P] [US1] Render active search values back into input controls on page load in `django_app/templates/sitesync/saved_reports.html`
+- [X] T012 [P] [US1] Add lightweight client behavior to submit search changes and preserve current criteria state in `django_app/static/sitesync/js/saved_reports.js`
 
 **Checkpoint**: User Story 1 is fully functional and independently testable
 
@@ -59,12 +59,12 @@
 
 ### Implementation for User Story 2
 
-- [ ] T013 [US2] Add Start Month and End Month filter controls (month-year precision) in `django_app/templates/sitesync/saved_reports.html`
-- [ ] T014 [US2] Add Report Status and Validation Status checkbox groups with default-all rendering logic in `django_app/templates/sitesync/saved_reports.html`
-- [ ] T015 [US2] Apply inclusive month-range filtering (`start_month <= reporting_month <= end_month`) in `django_app/sitesync/views.py`
-- [ ] T016 [US2] Apply report-status checkbox filtering (`draft`, `final`) in `django_app/sitesync/views.py`
-- [ ] T017 [US2] Apply validation-status checkbox filtering (`draft`, `awaiting_validation`, `validated`) in `django_app/sitesync/views.py`
-- [ ] T018 [P] [US2] Add client-side form serialization for repeated checkbox params and month filters in `django_app/static/sitesync/js/saved_reports.js`
+- [X] T013 [US2] Add Start Month and End Month filter controls (month-year precision) in `django_app/templates/sitesync/saved_reports.html`
+- [X] T014 [US2] Add Report Status and Validation Status checkbox groups with default-all rendering logic in `django_app/templates/sitesync/saved_reports.html`
+- [X] T015 [US2] Apply inclusive month-range filtering (`start_month <= reporting_month <= end_month`) in `django_app/sitesync/views.py`
+- [X] T016 [US2] Apply report-status checkbox filtering (`draft`, `final`) in `django_app/sitesync/views.py`
+- [X] T017 [US2] Apply validation-status checkbox filtering (`draft`, `awaiting_validation`, `validated`) in `django_app/sitesync/views.py`
+- [X] T018 [P] [US2] Add client-side form serialization for repeated checkbox params and month filters in `django_app/static/sitesync/js/saved_reports.js`
 
 **Checkpoint**: User Stories 1 and 2 both work independently with default and narrowed filter behavior
 
@@ -78,11 +78,11 @@
 
 ### Implementation for User Story 3
 
-- [ ] T019 [US3] Add explicit empty-state messaging for zero results under active criteria in `django_app/templates/sitesync/saved_reports.html`
-- [ ] T020 [US3] Ensure all-status-unticked behavior is treated as valid and yields zero rows in `django_app/sitesync/views.py`
-- [ ] T021 [US3] Add invalid month-range correction messaging (non-misleading) to saved reports page in `django_app/templates/sitesync/saved_reports.html`
-- [ ] T022 [P] [US3] Add clear/reset-filters action while preserving authorization-scoped listing behavior in `django_app/templates/sitesync/saved_reports.html`
-- [ ] T023 [P] [US3] Keep table and empty-state rendering synchronized after criteria changes in `django_app/static/sitesync/js/saved_reports.js`
+- [X] T019 [US3] Add explicit empty-state messaging for zero results under active criteria in `django_app/templates/sitesync/saved_reports.html`
+- [X] T020 [US3] Ensure all-status-unticked behavior is treated as valid and yields zero rows in `django_app/sitesync/views.py`
+- [X] T021 [US3] Add invalid month-range correction messaging (non-misleading) to saved reports page in `django_app/templates/sitesync/saved_reports.html`
+- [X] T022 [P] [US3] Add clear/reset-filters action while preserving authorization-scoped listing behavior in `django_app/templates/sitesync/saved_reports.html`
+- [X] T023 [P] [US3] Keep table and empty-state rendering synchronized after criteria changes in `django_app/static/sitesync/js/saved_reports.js`
 
 **Checkpoint**: All three user stories are independently functional and combined-filter UX is predictable
 
@@ -92,14 +92,14 @@
 
 **Purpose**: Final consistency, contract alignment, and Docker-native validation
 
-- [ ] T024 [P] Update saved-reports contract details if implementation-level parameter names or error semantics changed in `specs/015-report-search-filters/contracts/saved-reports-search-filters.md`
-- [ ] T025 [P] Update manual validation notes to reflect final UI labels and interactions in `specs/015-report-search-filters/quickstart.md`
-- [ ] T026 Run Docker-native targeted saved-reports regression command and capture output notes in `specs/015-report-search-filters/quickstart.md`
-- [ ] T027 Run Docker-native full regression command and log final pass/fail snapshot in `specs/015-report-search-filters/quickstart.md`
-- [ ] T028 Add saved reports filter contract tests for invalid month range and selected_filters payload in `django_app/sitesync/tests/test_saved_reports_view.py`
-- [ ] T029 Add integration tests for default checked statuses (report and validation groups) on first load in `django_app/sitesync/tests/test_saved_reports_view.py`
-- [ ] T030 Add integration tests for case-insensitive Site/User contains filtering across owner, last editor, and validator fields in `django_app/sitesync/tests/test_saved_reports_ownership_listing.py`
-- [ ] T031 Add integration tests for combined criteria accuracy and all-status-unticked zero-result behavior in `django_app/sitesync/tests/test_saved_reports_team_context.py`
+- [X] T024 [P] Update saved-reports contract details if implementation-level parameter names or error semantics changed in `specs/015-report-search-filters/contracts/saved-reports-search-filters.md`
+- [X] T025 [P] Update manual validation notes to reflect final UI labels and interactions in `specs/015-report-search-filters/quickstart.md`
+- [X] T026 Run Docker-native targeted saved-reports regression command and capture output notes in `specs/015-report-search-filters/quickstart.md`
+- [X] T027 Run Docker-native full regression command and log final pass/fail snapshot in `specs/015-report-search-filters/quickstart.md`
+- [X] T028 Add saved reports filter contract tests for invalid month range and selected_filters payload in `django_app/sitesync/tests/test_saved_reports_view.py`
+- [X] T029 Add integration tests for default checked statuses (report and validation groups) on first load in `django_app/sitesync/tests/test_saved_reports_view.py`
+- [X] T030 Add integration tests for case-insensitive Site/User contains filtering across owner, last editor, and validator fields in `django_app/sitesync/tests/test_saved_reports_ownership_listing.py`
+- [X] T031 Add integration tests for combined criteria accuracy and all-status-unticked zero-result behavior in `django_app/sitesync/tests/test_saved_reports_team_context.py`
 
 ---
 

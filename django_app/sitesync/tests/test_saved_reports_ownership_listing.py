@@ -57,3 +57,40 @@ class SavedReportsOwnershipListingTests(TestCase):
         self.assertEqual(response.status_code, 200)
         row = response.json()['reports'][0]
         self.assertEqual(row['access_mode'], 'collaborator')
+
+    def test_saved_reports_filters_case_insensitive_site_and_user_contains(self):
+        validator = User.objects.create_user(username='ValidationHero', email='validator@example.com', password='pw123456')
+        editor = User.objects.create_user(username='EditCaptain', email='editor@example.com', password='pw123456')
+
+        self.report.validator_user = validator
+        self.report.last_modified_by_user = editor
+        self.report.validation_status = MonthlyReport.VALIDATION_VALIDATED
+        self.report.save(update_fields=['validator_user', 'last_modified_by_user', 'validation_status'])
+
+        other_site = Site.objects.create(external_id='site-listing-2', name='North Complex', team=self.team)
+        MonthlyReport.objects.create(
+            site=other_site,
+            reporting_month='2026-07',
+            owner_user=self.owner,
+            created_by_user=self.owner,
+            last_modified_by_user=self.owner,
+            last_modified_at=timezone.now(),
+            current_status=MonthlyReport.STATUS_DRAFT,
+            validation_status=MonthlyReport.VALIDATION_DRAFT,
+        )
+
+        self.client.force_login(self.owner)
+        response = self.client.get(
+            reverse('sitesync:saved_reports'),
+            {
+                'format': 'json',
+                'site_query': 'listing',
+                'user_query': 'hero',
+            },
+        )
+        self.client.logout()
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()['reports']
+        self.assertEqual(len(payload), 1)
+        self.assertEqual(payload[0]['id'], str(self.report.id))
