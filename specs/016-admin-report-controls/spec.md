@@ -85,6 +85,7 @@ As a platform admin user, I want clear selection feedback and confirmation behav
 - **FR-002**: The system MUST allow platform admin users to select multiple reports and submit a single bulk-delete operation.
 - **FR-003**: The system MUST require platform admin users to re-enter their password before executing report deletion.
 - **FR-004**: The system MUST deny report deletion for all users who are not platform admins.
+- **FR-004a**: For this feature, platform admin MUST map to authenticated users where `is_staff` is true or `is_superuser` is true.
 - **FR-005**: If password confirmation fails, the system MUST not delete any selected reports and MUST return a clear error message.
 - **FR-006**: If no report is selected, the system MUST block deletion and display a clear "no reports selected" message.
 - **FR-007**: Every delete attempt (authorized or unauthorized, success or failure) MUST be written to the audit log with actor identity, action outcome, and target report references.
@@ -116,7 +117,7 @@ As a platform admin user, I want clear selection feedback and confirmation behav
 
 ## Assumptions
 
-- Existing admin role determination and authentication session management are already in place and can be reused for password re-confirmation checks.
+- Existing platform admin determination is the runtime boundary where `is_staff` is true or `is_superuser` is true, and this boundary is reused for bulk-delete authorization.
 - Deleting a report from this page means permanent removal from the saved reports list, not archive-only behavior.
 - Sort direction is fixed to field-based defaults for this feature and user-selectable direction controls are out of scope.
 - Audit logging infrastructure already exists and can store both successful and failed admin deletion attempts.
