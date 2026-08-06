@@ -1,4 +1,4 @@
-# Feature Specification: Capacity Upload Results UX
+reak# Feature Specification: Capacity Upload Results UX
 
 **Feature Branch**: `[017-capacity-upload-results]`
 
@@ -16,6 +16,7 @@
 - Q: What workbook structure should the upload results Excel file use? -> A: Use two sheets: Successes and Failures.
 - Q: How should multiple validation failures for one row be represented? -> A: One failed row with all failure reasons combined in a single explanation field.
 - Q: Which columns must be included in each exported result row? -> A: Row number, original upload columns, outcome, and explanation.
+- Q: Which users are authorized to download upload results? -> A: Authorized users for this feature are authenticated users where is_staff is true or is_superuser is true.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -87,7 +88,7 @@ As an admin user, I want each downloaded result row to be self-explanatory so th
 - **FR-007a**: If a failed row has multiple validation failures, the export MUST include all reasons combined in that row's explanation field.
 - **FR-007b**: Each exported result row MUST include the source row number and all original upload columns.
 - **FR-007c**: Each exported result row MUST include both an outcome field and an explanation field.
-- **FR-008**: The system MUST preserve current access control so only authorized users can view and download upload results.
+- **FR-008**: The system MUST allow viewing and downloading upload results only for authenticated users where is_staff is true or is_superuser is true.
 - **FR-009**: If full row results are unavailable for a completed upload, the system MUST return a clear user-facing message.
 
 ### Key Entities *(include if feature involves data)*
