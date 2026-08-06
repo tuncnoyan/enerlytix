@@ -30,7 +30,7 @@ As a report user, I want to search saved reports by site name and by user name s
 **Acceptance Scenarios**:
 
 1. **Given** the saved reports page contains reports from multiple sites, **When** the user enters text in the Site search box, **Then** only reports whose site names case-insensitively contain the search term are shown.
-2. **Given** reports have OWNER, LAST EDITED BY, and VALIDATOR values, **When** the user enters a username in the User search box, **Then** reports are shown if that username case-insensitively contains or is contained in at least one of those three column values.
+2. **Given** reports have OWNER, LAST EDITED BY, and VALIDATOR values, **When** the user enters a username in the User search box, **Then** reports are shown only when at least one of those three column values case-insensitively contains the entered username.
 3. **Given** both Site and User searches are populated, **When** the result list updates, **Then** only reports matching both search criteria are shown.
 
 ---
@@ -79,8 +79,8 @@ As a report user, I want predictable behavior when filters are combined or too r
 
 - **FR-001**: The saved reports page MUST provide a Site search input for matching reports by site name.
 - **FR-002**: The saved reports page MUST provide one User search input that searches across OWNER, LAST EDITED BY, and VALIDATOR values.
-- **FR-003**: A report MUST be included in User search results when the entered username matches at least one of OWNER, LAST EDITED BY, or VALIDATOR.
-- **FR-003a**: Site and User searches MUST use case-insensitive partial matching (contains) rather than prefix-only or exact-only matching.
+- **FR-003**: A report MUST be included in User search results only when at least one of OWNER, LAST EDITED BY, or VALIDATOR case-insensitively contains the entered username.
+- **FR-003a**: Site search MUST use case-insensitive partial matching (contains).
 - **FR-004**: The saved reports page MUST provide Reporting month range filters with Start Month and End Month inputs (month-year precision only).
 - **FR-005**: The saved reports page MUST provide a Report Status filter with Draft and Final checkbox options.
 - **FR-006**: The Report Status filter MUST default to both options selected when the page initially loads.
@@ -90,7 +90,7 @@ As a report user, I want predictable behavior when filters are combined or too r
 - **FR-010**: When Start Month and End Month are both provided, the results list MUST include only reports where Start Month <= reporting month <= End Month (both boundaries inclusive).
 - **FR-011**: When no reports match active search or filter criteria, the page MUST show an explicit empty-state result.
 - **FR-012**: The page MUST allow users to clear or adjust individual criteria and immediately receive recalculated results.
-- **FR-013**: If an invalid reporting month range is entered (Start Month after End Month), the page MUST prevent misleading results and clearly prompt the user to correct the range.
+- **FR-013**: If Start Month is after End Month, the page MUST enforce deterministic correction behavior: HTML mode shows inline validation with no rows; JSON mode returns HTTP 400 with a structured `invalid_month_range` error.
 - **FR-014**: The page MUST allow all status options in either status group to be unticked, and in that state MUST show zero matching reports with a clear empty-state message.
 
 ### Key Entities *(include if feature involves data)*
