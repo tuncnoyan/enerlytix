@@ -77,11 +77,9 @@ As an operations owner, I need production-mode security defaults and evidence ch
 
 ### Functional Requirements
 
-- **FR-001**: System MUST require authentication for all endpoints that expose report, consumption, import-run, or other business-sensitive operational data.
-- **FR-002**: System MUST enforce role-based authorization for all settings mutation, capacity upload, and manual synchronization actions.
+- **FR-001**: System MUST require authentication for all sensitive operational data endpoints, including import, report, consumption, and import-run detail surfaces.
+- **FR-002**: System MUST enforce role-based authorization for privileged actions, including sensitive import execution, settings mutation, capacity upload, and manual synchronization.
 - **FR-003**: System MUST deny unauthorized privileged actions with explicit non-success responses and without performing side effects, returning 401 for unauthenticated requests and 403 for authenticated-but-unauthorized requests.
-- **FR-004**: System MUST ensure sensitive data import operations cannot be invoked by anonymous users.
-- **FR-005**: System MUST ensure sensitive data import operations cannot be invoked by users outside the authorized administrative scope.
 - **FR-006**: System MUST replace any static or predictable administrator-triggered password reset behavior with a single-use recovery token valid for 15 minutes.
 - **FR-007**: System MUST enforce password quality requirements during invitation-based account activation.
 - **FR-008**: System MUST prevent open redirect behavior by allowing only validated internal redirect targets.
@@ -92,11 +90,31 @@ As an operations owner, I need production-mode security defaults and evidence ch
 - **FR-013**: System MUST log privileged security-relevant actions and denied attempts with sufficient actor and request context for audit purposes.
 - **FR-014**: System MUST include automated regression tests covering protected endpoint access, credential workflow safeguards, redirect validation, and safe error handling.
 
+### Sensitive Endpoint Baseline (normative)
+
+- `POST /api/consumption-import/`
+- `GET /api/consumption-display/`
+- `GET /api/report-data/`
+- `GET /api/import-runs/{import_run_id}/`
+- `POST /sync/`
+- `POST /settings/` (settings mutation path)
+- `POST /settings/` (capacity upload path)
+- `GET /settings/capacity-upload/results.xlsx`
+
 ### Key Entities *(include if feature involves data)*
 
 - **Security Finding**: A prioritized vulnerability record describing risk category, impact level, affected surface, and remediation status.
 - **Security Control Rule**: A policy record describing required authentication, authorization, input validation, redirect handling, error exposure behavior, and production safety constraints.
 - **Readiness Evidence**: A verifiable record of control validation results, including endpoint access test outcomes and deployment security check outcomes.
+
+### Required Production Security Controls (normative)
+
+- `SECRET_KEY` MUST not use any known default/fallback or insecure placeholder value.
+- `DEBUG=False` in production mode.
+- `SECURE_SSL_REDIRECT=True` in production mode.
+- `SESSION_COOKIE_SECURE=True` in production mode.
+- `CSRF_COOKIE_SECURE=True` in production mode.
+- HSTS MUST be enabled in production mode with non-zero `SECURE_HSTS_SECONDS`.
 
 ## Success Criteria *(mandatory)*
 
@@ -108,7 +126,7 @@ As an operations owner, I need production-mode security defaults and evidence ch
 - **SC-004**: 100% of invitation activation attempts with non-compliant passwords are rejected with validation feedback.
 - **SC-005**: 100% of tested redirect payloads containing external or scheme-relative targets are rejected or safely normalized to internal destinations.
 - **SC-006**: 0 end-user error responses in tested failure paths contain raw internal exception details.
-- **SC-007**: Deployment readiness checks in production-like mode complete with no unresolved critical security warnings related to secret handling, secure transport, and secure cookies.
+- **SC-007**: All Required Production Security Controls pass, and deployment security checks in production-like mode complete with zero failures for the defined control set.
 - **SC-008**: Security regression suite for this feature passes at 100% in CI and local pre-release verification.
 
 ## Assumptions
