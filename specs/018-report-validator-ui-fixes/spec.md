@@ -15,7 +15,7 @@
 
 ### Session 2026-08-07
 
-- Q: How should validator validation-note autosave behave? -> A: Autosave on field blur with short debounce.
+- Q: How should validator validation-note autosave behave? -> A: Autosave on field blur with 300 ms debounce.
 - Q: What should happen for users who are both validator and editor/admin on the same report? -> A: Enforce validator-only actions when assigned as validator for that report.
 - Q: Which roles should see row-selection checkboxes on Saved Reports? -> A: Admin-authorized users only.
 
@@ -51,7 +51,7 @@ As a validator, I need a review-focused, read-only report experience for report 
 1. **Given** a user is assigned as validator for a report, **When** the user opens the report, **Then** report content inputs are read-only.
 2. **Given** a validator is viewing a report, **When** they attempt to save as draft or finalize the report, **Then** those actions are not available and no report content save occurs.
 3. **Given** a validator is viewing a report, **When** they tick or untick page validation and enter validation notes, **Then** those validation interactions are allowed and persisted.
-4. **Given** a validator edits a validation note, **When** the note field loses focus, **Then** the note is automatically saved after a short debounce without requiring explicit save actions.
+4. **Given** a validator edits a validation note, **When** the note field loses focus, **Then** the note is automatically saved after a 300 ms debounce without requiring explicit save actions.
 5. **Given** a user has editor/admin privileges and is also assigned validator for the report, **When** they open that report in validation workflow context, **Then** only validator-allowed actions are enabled and content-edit/save actions remain blocked.
 
 ---
@@ -88,7 +88,7 @@ As a report reviewer, I need the first report page to show only the intended val
 - **FR-003**: System MUST present report business-content fields as read-only to users acting in validator role while they are in validation workflow context.
 - **FR-004**: System MUST prevent validator-role users from executing report save-as-draft and save-as-final actions.
 - **FR-005**: System MUST continue allowing validator-role users to mark page validation state and submit validation-note comments.
-- **FR-005a**: System MUST automatically persist validator validation-note text when the note field loses focus, using a short debounce to avoid redundant write operations.
+- **FR-005a**: System MUST automatically persist validator validation-note text when the note field loses focus, using a 300 ms debounce to avoid redundant write operations.
 - **FR-005b**: System MUST apply validator-only interaction restrictions for a report whenever the current user is assigned as that report's validator, including users who also hold editor or admin roles.
 - **FR-006**: System MUST display row-selection checkboxes on Saved Reports only for admin-authorized users.
 - **FR-007**: System MUST keep Saved Reports table headers and row cells structurally aligned so each value appears under the correct header in production and non-production environments.
@@ -108,7 +108,7 @@ As a report reviewer, I need the first report page to show only the intended val
 
 - **SC-001**: In production verification, 100% of sampled Saved Reports rows display a visible selection checkbox for admin-authorized users and show no header/data-column shift.
 - **SC-002**: In role-based acceptance testing, 100% of validator sessions are unable to perform draft/final save actions while retaining ability to update page validation state and validation notes.
-- **SC-002a**: In validator acceptance testing, validation notes are automatically saved on field blur with no explicit save action required in at least 95% of sampled interactions.
+- **SC-002a**: In validator acceptance testing, validation notes are automatically saved on field blur with a 300 ms debounce and no explicit save action required in at least 95% of sampled interactions.
 - **SC-003**: On the first overview page, duplicate validation/comment block occurrence rate is 0% across tested reports.
 - **SC-004**: Reviewers confirm the first-page remaining validation/comment block visually matches standard page-width behavior used on at least three other report pages.
 - **SC-005**: Post-release, no new high-priority incidents are raised for these three behaviors during the first 14 days of production use.
