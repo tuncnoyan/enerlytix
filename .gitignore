@@ -58,6 +58,7 @@ htmlcov/
 
 # Static files
 /staticfiles/
+django_app/staticfiles/
 *.css.map
 *.js.map
 
