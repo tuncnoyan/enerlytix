@@ -58,3 +58,26 @@ class ReportValidationPageMarkContractTests(TestCase):
         )
         self.assertEqual(response.status_code, 403)
         self.assertIn('detail', response.json())
+
+    def test_legacy_overview_key_accepts_overview_table_toggle(self):
+        legacy_report = get_or_create_monthly_report(self.site, '2026-12', actor_user=self.owner)
+        create_report_version(
+            report=legacy_report,
+            version_kind='draft',
+            comments={'overview': 'Legacy overview text'},
+            derived_from_version=None,
+            actor_user=self.owner,
+        )
+        assign_report_validator(report=legacy_report, validator_user=self.validator, assigned_by_user=self.owner)
+
+        self.client.force_login(self.validator)
+        response = self.client.post(
+            reverse('sitesync:report_validation_page_toggle', kwargs={'report_id': legacy_report.id, 'page_key': 'overview-table'}),
+            {'is_validated': 'true'},
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload['success'])
+        self.assertEqual(payload['page_key'], 'overview')

@@ -1008,11 +1008,35 @@
         } catch (_e) { return ts; }
     }
 
+    function resolveOverviewCommentKeys() {
+        const ctx = getContext();
+        const knownKeys = new Set([
+            ...Array.from(state.comments.keys()),
+            ...Array.from(state.validationComments.keys()),
+            ...Object.keys(ctx.validationSummary?.pages_validation || {}),
+            ...Object.keys(ctx.validationComments || {}),
+            ...Object.keys(ctx.validationCommentThreads || {}),
+        ].map((key) => String(key || '').trim()).filter(Boolean));
+
+        if (knownKeys.has('overview') && !knownKeys.has('overview-table') && !knownKeys.has('overview-chart')) {
+            return {
+                tableKey: 'overview',
+                chartKey: null,
+            };
+        }
+
+        return {
+            tableKey: knownKeys.has('overview-table') ? 'overview-table' : 'overview',
+            chartKey: knownKeys.has('overview-chart') ? 'overview-chart' : 'overview-chart',
+        };
+    }
+
     // ─── Overview section ─────────────────────────────────────────────────────
 
     function renderOverviewSection(reportData) {
         const id = 'overview';
         const chartId = 'overview-chart';
+        const overviewKeys = resolveOverviewCommentKeys();
         const allItems = reportData.overview?.by_utility || [];
         // Only show utilities that actually have cost data
         const items = allItems.filter((it) => Number(it.total_cost || 0) > 0);
@@ -1062,11 +1086,11 @@
                             </thead>
                             <tbody>${tableBody || '<tr><td colspan="3">No cost data available.</td></tr>'}</tbody>
                         </table>
-                        ${createCommentBox('overview-table')}
+                        ${createCommentBox(overviewKeys.tableKey)}
                     </div>
                     <div>
                         ${createChartSlot(chartId, '22rem')}
-                        ${createCommentBox('overview-chart')}
+                        ${overviewKeys.chartKey ? createCommentBox(overviewKeys.chartKey) : ''}
                     </div>
                 </div>
             </section>`;

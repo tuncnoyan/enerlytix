@@ -5,7 +5,7 @@ nixPkgs = ["python312", "python312Packages.pip"]
 cmds = ["pip3 install --break-system-packages -r requirements.txt"]
 
 [phases.build]
-cmds = ["cd django_app && python3 manage.py collectstatic --noinput"]
+cmds = ["cd django_app && python3 manage.py collectstatic --noinput --clear"]
 
 [start]
 cmd = "cd django_app && python3 manage.py migrate --noinput && python3 -m gunicorn --timeout 300 --graceful-timeout 30 --bind 0.0.0.0:$PORT config.wsgi:application"

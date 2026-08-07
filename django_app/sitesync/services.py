@@ -1474,6 +1474,56 @@ def get_report_validation_page_keys(report: MonthlyReport) -> List[str]:
     return list(version.comments.order_by('visual_key').values_list('visual_key', flat=True))
 
 
+def _normalize_report_validation_page_key(value: str) -> str:
+    """Return a case-insensitive token used for legacy page-key matching."""
+    return ''.join(ch for ch in str(value or '').lower() if ch.isalnum())
+
+
+def _resolve_report_validation_page_key(*, requested_key: str, allowed_page_keys: List[str]) -> Optional[str]:
+    """Resolve a requested key to a canonical page key, including legacy aliases."""
+    normalized_requested = str(requested_key or '').strip()
+    if not normalized_requested:
+        return None
+
+    if normalized_requested in allowed_page_keys:
+        return normalized_requested
+
+    if not allowed_page_keys:
+        return normalized_requested
+
+    normalized_lookup = {}
+    for key in allowed_page_keys:
+        token = _normalize_report_validation_page_key(key)
+        normalized_lookup.setdefault(token, []).append(key)
+
+    requested_token = _normalize_report_validation_page_key(normalized_requested)
+    token_matches = normalized_lookup.get(requested_token, [])
+    if len(token_matches) == 1:
+        return token_matches[0]
+
+    legacy_overview_tokens = {'overview', 'overviewtable', 'overviewchart'}
+    if requested_token in legacy_overview_tokens:
+        preferred = []
+        if requested_token == 'overviewtable':
+            preferred = [key for key in allowed_page_keys if _normalize_report_validation_page_key(key).endswith('table')]
+        elif requested_token == 'overviewchart':
+            preferred = [key for key in allowed_page_keys if _normalize_report_validation_page_key(key).endswith('chart')]
+
+        if len(preferred) == 1:
+            return preferred[0]
+
+        overview_candidates = [
+            key for key in allowed_page_keys
+            if _normalize_report_validation_page_key(key).startswith('overview')
+        ]
+        if len(overview_candidates) == 1:
+            return overview_candidates[0]
+        if len(overview_candidates) > 1:
+            return sorted(overview_candidates)[0]
+
+    return None
+
+
 def ensure_report_validation_rows(report: MonthlyReport) -> List[ReportPageValidationState]:
     """Ensure every canonical page key has a validation state row."""
     existing_qs = ReportPageValidationState.objects.filter(report=report)
@@ -1586,14 +1636,22 @@ def upsert_report_validation_comments(*, report: MonthlyReport, comments_by_page
     if not comments_by_page:
         return
 
-    allowed_page_keys = set(get_report_validation_page_keys(report))
+    allowed_page_keys = get_report_validation_page_keys(report)
+    resolved_comments_by_page = {}
     if allowed_page_keys:
-        unknown_keys = sorted(set(comments_by_page).difference(allowed_page_keys))
-        if unknown_keys:
-            raise ValueError(f'Unknown report page key: {unknown_keys[0]}')
+        for requested_key, text in comments_by_page.items():
+            resolved_key = _resolve_report_validation_page_key(
+                requested_key=requested_key,
+                allowed_page_keys=allowed_page_keys,
+            )
+            if resolved_key is None:
+                raise ValueError(f'Unknown report page key: {requested_key}')
+            resolved_comments_by_page[resolved_key] = text
+    else:
+        resolved_comments_by_page = comments_by_page
 
     now = dj_timezone.now()
-    for page_key, text in comments_by_page.items():
+    for page_key, text in resolved_comments_by_page.items():
         normalized_text = str(text or '')
         comment, _created = ReportValidationComment.objects.get_or_create(
             report=report,
@@ -1832,17 +1890,32 @@ def mark_report_page_validation_state(
     if report.validator_user_id != getattr(actor_user, 'id', None):
         raise PermissionError('Only the assigned validator can mark report pages validated')
 
-    page_keys = set(get_report_validation_page_keys(report))
-    if page_keys and page_key not in page_keys:
+    allowed_page_keys = get_report_validation_page_keys(report)
+    resolved_page_key = _resolve_report_validation_page_key(
+        requested_key=page_key,
+        allowed_page_keys=allowed_page_keys,
+    )
+    if allowed_page_keys and resolved_page_key is None:
         raise ValueError('Unknown report page key')
 
+    if resolved_page_key is None:
+        resolved_page_key = page_key
+
     if known_page_keys:
-        ensure_report_validation_rows_for_keys(report, known_page_keys)
+        resolved_known_page_keys = []
+        for key in known_page_keys:
+            resolved_key = _resolve_report_validation_page_key(
+                requested_key=key,
+                allowed_page_keys=allowed_page_keys,
+            )
+            if resolved_key:
+                resolved_known_page_keys.append(resolved_key)
+        ensure_report_validation_rows_for_keys(report, resolved_known_page_keys)
 
     row_map = {row.page_key: row for row in _validation_page_rows(report)}
-    row = row_map.get(page_key)
+    row = row_map.get(resolved_page_key)
     if row is None:
-        row = ReportPageValidationState.objects.create(report=report, page_key=page_key)
+        row = ReportPageValidationState.objects.create(report=report, page_key=resolved_page_key)
     now = dj_timezone.now()
 
     if is_validated:
@@ -1854,7 +1927,7 @@ def mark_report_page_validation_state(
         row.save(update_fields=['is_validated', 'validated_by_user', 'validated_at', 'reset_reason', 'reset_at'])
         ReportValidationEvent.objects.create(
             report=report,
-            page_key=page_key,
+            page_key=resolved_page_key,
             event_type=ReportValidationEvent.EVENT_PAGE_VALIDATED,
             event_by_user=actor_user,
             metadata={'validated': True},
@@ -1868,7 +1941,7 @@ def mark_report_page_validation_state(
         row.save(update_fields=['is_validated', 'validated_by_user', 'validated_at', 'reset_reason', 'reset_at'])
         ReportValidationEvent.objects.create(
             report=report,
-            page_key=page_key,
+            page_key=resolved_page_key,
             event_type=ReportValidationEvent.EVENT_PAGE_RESET,
             event_by_user=actor_user,
             metadata={'reason': 'manual_unvalidate'},
