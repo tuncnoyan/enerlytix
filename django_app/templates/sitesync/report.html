@@ -757,10 +757,10 @@
                 <p id="report-subtitle">Generating report...</p>
             </div>
             <div class="hero-actions">
-                <span id="report-readonly-label" class="read-only-pill" {% if report_access_mode != 'read_only' %}style="display:none;"{% endif %}>Read Only</span>
-                <span id="report-readonly-help" class="read-only-help" title="Only owner, collaborator, or admin access can save this report." aria-label="Read-only help" {% if report_access_mode != 'read_only' %}style="display:none;"{% endif %}>?</span>
-                <button id="save-draft-button" class="button button-primary" type="button" {% if report_access_mode == 'read_only' %}disabled aria-disabled="true" title="Read-only access"{% endif %}>Save Draft</button>
-                <button id="save-final-button" class="button button-secondary" type="button" {% if report_access_mode == 'read_only' %}disabled aria-disabled="true" title="Read-only access"{% endif %}>Save Final</button>
+                <span id="report-readonly-label" class="read-only-pill" {% if report_context.canSaveReportContent %}style="display:none;"{% endif %}>Read Only</span>
+                <span id="report-readonly-help" class="read-only-help" title="Only owner, collaborator, or admin access can save report content. Assigned validators can only validate pages and add validation notes." aria-label="Read-only help" {% if report_context.canSaveReportContent %}style="display:none;"{% endif %}>?</span>
+                <button id="save-draft-button" class="button button-primary" type="button" {% if not report_context.canSaveReportContent %}disabled aria-disabled="true" title="Content save is disabled in this session"{% endif %}>Save Draft</button>
+                <button id="save-final-button" class="button button-secondary" type="button" {% if not report_context.canSaveReportContent %}disabled aria-disabled="true" title="Content save is disabled in this session"{% endif %}>Save Final</button>
                 <button id="download-pdf-button" class="button button-secondary" type="button">Download as PDF</button>
                 <button id="download-pptx-button" class="button button-secondary" type="button">Download as PPTX</button>
             </div>

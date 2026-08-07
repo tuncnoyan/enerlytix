@@ -12,9 +12,9 @@
 
 **Purpose**: Prepare execution baseline and test scaffolding for this feature.
 
-- [ ] T001 Capture baseline failing scenarios and expected outcomes in specs/018-report-validator-ui-fixes/quickstart.md
-- [ ] T002 [P] Add feature-focused test module scaffold in django_app/sitesync/tests/test_report_validation.py
-- [ ] T003 [P] Add feature-focused contract test scaffold in django_app/tests/contract/test_report_validation_page_mark_contract.py
+- [X] T001 Capture baseline failing scenarios and expected outcomes in specs/018-report-validator-ui-fixes/quickstart.md
+- [X] T002 [P] Add feature-focused test module scaffold in django_app/sitesync/tests/test_report_validation.py
+- [X] T003 [P] Add feature-focused contract test scaffold in django_app/tests/contract/test_report_validation_page_mark_contract.py
 
 ---
 
@@ -24,10 +24,10 @@
 
 **⚠️ CRITICAL**: Complete this phase before user story implementation.
 
-- [ ] T004 Implement shared validator-restricted session helper in django_app/sitesync/services.py
-- [ ] T005 [P] Expose validator-restricted and admin flags in report and saved-reports contexts in django_app/sitesync/views.py
-- [ ] T006 [P] Wire context flags into templates for client-side consumption in django_app/templates/sitesync/report.html and django_app/templates/sitesync/saved_reports.html
-- [ ] T007 Add foundational regression assertions for context contract in django_app/sitesync/tests/test_report_validation.py
+- [X] T004 Implement shared validator-restricted session helper in django_app/sitesync/services.py
+- [X] T005 [P] Expose validator-restricted and admin flags in report and saved-reports contexts in django_app/sitesync/views.py
+- [X] T006 [P] Wire context flags into templates for client-side consumption in django_app/templates/sitesync/report.html and django_app/templates/sitesync/saved_reports.html
+- [X] T007 Add foundational regression assertions for context contract in django_app/sitesync/tests/test_report_validation.py
 
 **Checkpoint**: Permission/context foundation complete. User stories can proceed.
 
@@ -41,15 +41,15 @@
 
 ### Tests for User Story 1
 
-- [ ] T008 [P] [US1] Add admin vs non-admin control visibility tests in django_app/sitesync/tests/test_saved_reports_view.py
-- [ ] T009 [P] [US1] Add saved-reports row/header alignment and selection payload tests in django_app/sitesync/tests/test_saved_reports_view.py
+- [X] T008 [P] [US1] Add admin vs non-admin control visibility tests in django_app/sitesync/tests/test_saved_reports_view.py
+- [X] T009 [P] [US1] Add saved-reports row/header alignment and selection payload tests in django_app/sitesync/tests/test_saved_reports_view.py
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Enforce admin-only selection-column rendering contract in django_app/templates/sitesync/saved_reports.html
-- [ ] T011 [US1] Fix row rendering and selected_report_ids synchronization for admin mode in django_app/static/sitesync/js/saved_reports.js
-- [ ] T012 [US1] Ensure saved-reports JSON/template context aligns with admin-only checkbox behavior in django_app/sitesync/views.py
-- [ ] T013 [US1] Sync built saved-reports static assets in django_app/staticfiles/sitesync/js/saved_reports.js and django_app/staticfiles/sitesync/js/saved_reports.b00baf3601a0.js
+- [X] T010 [US1] Enforce admin-only selection-column rendering contract in django_app/templates/sitesync/saved_reports.html
+- [X] T011 [US1] Fix row rendering and selected_report_ids synchronization for admin mode in django_app/static/sitesync/js/saved_reports.js
+- [X] T012 [US1] Ensure saved-reports JSON/template context aligns with admin-only checkbox behavior in django_app/sitesync/views.py
+- [X] T013 [US1] Sync built saved-reports static assets in django_app/staticfiles/sitesync/js/saved_reports.js and django_app/staticfiles/sitesync/js/saved_reports.b00baf3601a0.js
 
 **Checkpoint**: Saved Reports selection and alignment are stable and independently testable.
 
@@ -63,19 +63,19 @@
 
 ### Tests for User Story 2
 
-- [ ] T014 [P] [US2] Add validator save-denial and dual-role precedence tests in django_app/sitesync/tests/test_report_validation.py
-- [ ] T015 [P] [US2] Add validation-note autosave persistence tests in django_app/sitesync/tests/test_report_validation.py
-- [ ] T016 [P] [US2] Add contract test coverage for validator-restricted save attempts in django_app/tests/contract/test_report_validation_page_mark_contract.py
-- [ ] T030 [P] [US2] Add validation-note autosave failure-state test coverage (text retained and retry feedback shown) in django_app/sitesync/tests/test_report_validation.py
+- [X] T014 [P] [US2] Add validator save-denial and dual-role precedence tests in django_app/sitesync/tests/test_report_validation.py
+- [X] T015 [P] [US2] Add validation-note autosave persistence tests in django_app/sitesync/tests/test_report_validation.py
+- [X] T016 [P] [US2] Add contract test coverage for validator-restricted save attempts in django_app/tests/contract/test_report_validation_page_mark_contract.py
+- [X] T030 [P] [US2] Add validation-note autosave failure-state test coverage (text retained and retry feedback shown) in django_app/sitesync/tests/test_report_validation.py
 
 ### Implementation for User Story 2
 
-- [ ] T017 [US2] Block draft/final save POST operations for validator-restricted sessions in django_app/sitesync/views.py
-- [ ] T018 [US2] Update report template controls to hide/disable content-save actions for validator-restricted sessions in django_app/templates/sitesync/report.html
-- [ ] T019 [US2] Implement blur-triggered debounced validation-note autosave behavior in django_app/static/sitesync/js/report.js
-- [ ] T031 [US2] Implement validation-note autosave failure handling UI (retain note text and show retry feedback) in django_app/static/sitesync/js/report.js and django_app/templates/sitesync/report.html
-- [ ] T020 [US2] Preserve allowed validation checkbox and note endpoints for validator-restricted sessions in django_app/sitesync/views.py and django_app/sitesync/services.py
-- [ ] T021 [US2] Sync built report static assets in django_app/staticfiles/sitesync/js/report.js and django_app/staticfiles/sitesync/js/report.4eda9705ccbe.js
+- [X] T017 [US2] Block draft/final save POST operations for validator-restricted sessions in django_app/sitesync/views.py
+- [X] T018 [US2] Update report template controls to hide/disable content-save actions for validator-restricted sessions in django_app/templates/sitesync/report.html
+- [X] T019 [US2] Implement blur-triggered debounced validation-note autosave behavior in django_app/static/sitesync/js/report.js
+- [X] T031 [US2] Implement validation-note autosave failure handling UI (retain note text and show retry feedback) in django_app/static/sitesync/js/report.js and django_app/templates/sitesync/report.html
+- [X] T020 [US2] Preserve allowed validation checkbox and note endpoints for validator-restricted sessions in django_app/sitesync/views.py and django_app/sitesync/services.py
+- [X] T021 [US2] Sync built report static assets in django_app/staticfiles/sitesync/js/report.js and django_app/staticfiles/sitesync/js/report.4eda9705ccbe.js
 
 **Checkpoint**: Validator-restricted workflow is independently functional and testable.
 
@@ -89,13 +89,13 @@
 
 ### Tests for User Story 3
 
-- [ ] T022 [P] [US3] Add overview validation block rendering regression coverage in django_app/sitesync/tests/test_report_validation.py
+- [X] T022 [P] [US3] Add overview validation block rendering regression coverage in django_app/sitesync/tests/test_report_validation.py
 
 ### Implementation for User Story 3
 
-- [ ] T023 [US3] Remove duplicate first overview validation/comment block render path in django_app/static/sitesync/js/report.js
-- [ ] T024 [US3] Align first overview validation/comment block sizing with standard page layout in django_app/templates/sitesync/report.html and django_app/static/sitesync/js/report.js
-- [ ] T025 [US3] Sync built report static assets after overview layout fix in django_app/staticfiles/sitesync/js/report.js and django_app/staticfiles/sitesync/js/report.4eda9705ccbe.js
+- [X] T023 [US3] Remove duplicate first overview validation/comment block render path in django_app/static/sitesync/js/report.js
+- [X] T024 [US3] Align first overview validation/comment block sizing with standard page layout in django_app/templates/sitesync/report.html and django_app/static/sitesync/js/report.js
+- [X] T025 [US3] Sync built report static assets after overview layout fix in django_app/staticfiles/sitesync/js/report.js and django_app/staticfiles/sitesync/js/report.4eda9705ccbe.js
 
 **Checkpoint**: First overview page layout is cleaned and consistent with other report pages.
 
@@ -105,10 +105,10 @@
 
 **Purpose**: Final consistency checks, docs, and release-readiness validation.
 
-- [ ] T026 [P] Update release verification steps and production smoke scenarios in specs/018-report-validator-ui-fixes/quickstart.md
-- [ ] T027 [P] Validate deployment static rebuild assumptions in nixpacks.toml and django_app/config/settings.py
-- [ ] T028 Run focused Docker regression suite and capture outcomes in ./test-results.txt
-- [ ] T029 Run full Docker report/saved-reports regression suite for sign-off in django_app/sitesync/tests/test_saved_reports_view.py and django_app/sitesync/tests/test_report_validation.py
+- [X] T026 [P] Update release verification steps and production smoke scenarios in specs/018-report-validator-ui-fixes/quickstart.md
+- [X] T027 [P] Validate deployment static rebuild assumptions in nixpacks.toml and django_app/config/settings.py
+- [X] T028 Run focused Docker regression suite and capture outcomes in ./test-results.txt
+- [X] T029 Run full Docker report/saved-reports regression suite for sign-off in django_app/sitesync/tests/test_saved_reports_view.py and django_app/sitesync/tests/test_report_validation.py
 
 ---
 
@@ -184,3 +184,4 @@
    - Developer B: US2
    - Developer C: US3
 3. Rejoin for Phase 6 regression and production smoke validation.
+

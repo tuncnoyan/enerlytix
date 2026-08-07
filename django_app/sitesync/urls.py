@@ -17,6 +17,7 @@ urlpatterns = [
     path('reports/bulk-delete/', views.saved_reports_bulk_delete_view, name='saved_reports_bulk_delete'),
     path('reports/<uuid:report_id>/validation/assign/', views.report_validation_assign_view, name='report_validation_assign'),
     path('reports/<uuid:report_id>/validation/pages/<slug:page_key>/mark/', views.report_validation_page_toggle_view, name='report_validation_page_toggle'),
+    path('reports/<uuid:report_id>/validation/comments/upsert/', views.report_validation_comment_upsert_view, name='report_validation_comment_upsert'),
     path('reports/<uuid:report_id>/validation/regrant-write/', views.report_validation_regrant_write_view, name='report_validation_regrant_write'),
     path('reports/<uuid:report_id>/delegations/', views.report_delegations_view, name='report_delegations'),
     path('reports/<uuid:report_id>/delegations/grant/', views.report_delegation_grant_view, name='report_delegation_grant'),

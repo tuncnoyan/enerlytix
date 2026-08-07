@@ -67,25 +67,33 @@ class ReportValidationCommentTests(TestCase):
         self.assertTrue(self.report.page_validation_states.get(page_key='overview-table').is_validated)
         self.assertTrue(self.report.page_validation_states.get(page_key='usage-chart').is_validated)
 
-    def test_assigned_validator_can_save_draft_with_validation_comments(self):
+    def test_assigned_validator_cannot_save_draft_but_can_upsert_validation_note(self):
         self.client.force_login(self.validator)
-        response = self.client.post(
+        save_response = self.client.post(
             reverse('sitesync:report'),
             {
                 'site_id': str(self.site.id),
                 'end_month': '2026-07',
                 'save_mode': 'draft',
                 'comments': json.dumps({'overview-table': 'Alpha', 'usage-chart': 'Beta'}),
-                'validation_comments': json.dumps({
-                    'overview-table': 'Validator note.',
-                }),
+                'validation_comments': json.dumps({'overview-table': 'Validator note.'}),
+            },
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+
+        upsert_response = self.client.post(
+            reverse('sitesync:report_validation_comment_upsert', kwargs={'report_id': self.report.id}),
+            {
+                'page_key': 'overview-table',
+                'comment_text': 'Validator note.',
             },
             HTTP_X_REQUESTED_WITH='XMLHttpRequest',
         )
         self.client.logout()
 
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()['access_mode'], 'validator')
+        self.assertEqual(save_response.status_code, 403)
+        self.assertEqual(save_response.json().get('code'), 'validator_restricted_session')
+        self.assertEqual(upsert_response.status_code, 200)
         self.assertEqual(
             ReportValidationComment.objects.get(report=self.report, page_key='overview-table', authored_by_user=self.validator).comment_text,
             'Validator note.',

@@ -81,3 +81,21 @@ class ReportValidationPageMarkContractTests(TestCase):
         payload = response.json()
         self.assertTrue(payload['success'])
         self.assertEqual(payload['page_key'], 'overview')
+
+    def test_assigned_validator_cannot_save_report_content(self):
+        self.client.force_login(self.validator)
+        response = self.client.post(
+            reverse('sitesync:report'),
+            {
+                'site_id': str(self.site.id),
+                'end_month': '2026-11',
+                'save_mode': 'draft',
+                'comments': '{"overview-table":"attempted edit"}',
+            },
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+
+        self.assertEqual(response.status_code, 403)
+        payload = response.json()
+        self.assertEqual(payload.get('code'), 'validator_restricted_session')
+        self.assertIn('Assigned validators cannot save draft or final report content', payload.get('detail', ''))

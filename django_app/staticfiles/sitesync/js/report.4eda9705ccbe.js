@@ -24,6 +24,7 @@
         reportData: null,
         comments: new Map(),
         validationComments: new Map(),
+        validationCommentSaveTimers: new Map(),
         validationCommentThreads: new Map(),
         validationPages: new Map(),
         referenceCommentKeys: new Set(),
@@ -446,9 +447,28 @@
         });
     }
 
+    function canSaveReportContent() {
+        return Boolean(getContext().canSaveReportContent);
+    }
+
+    function canEditValidationNotes() {
+        return Boolean(getContext().canEditValidationNotes);
+    }
+
+    function canTogglePageValidationControls() {
+        return Boolean(getContext().canTogglePageValidation);
+    }
+
+    function getValidationCommentsDebounceMs() {
+        const raw = Number(getContext().validationCommentsDebounceMs);
+        if (!Number.isFinite(raw) || raw < 0) {
+            return 300;
+        }
+        return raw;
+    }
+
     function isReportReadOnly() {
-        const mode = String(getContext().accessMode || 'read_only').toLowerCase();
-        return mode !== 'owner' && mode !== 'collaborator' && mode !== 'validator' && mode !== 'admin';
+        return !canSaveReportContent();
     }
 
     function setReadOnlyHeroLabel() {
@@ -478,9 +498,15 @@
 
         const ctx = getContext();
         const mode = String(ctx.accessMode || 'read_only').toLowerCase();
-        if (mode === 'owner' || mode === 'collaborator' || mode === 'validator' || mode === 'admin') {
+        if (mode === 'owner' || mode === 'collaborator' || mode === 'admin') {
             banner.style.display = 'block';
             banner.textContent = `Access mode: ${mode.replaceAll('_', ' ')} (editable)`;
+            return;
+        }
+
+        if (mode === 'validator') {
+            banner.style.display = 'block';
+            banner.textContent = 'Access mode: validator. Report content is read only; you can still toggle page validation and update validation notes.';
             return;
         }
 
@@ -500,7 +526,7 @@
     }
 
     function applyReadOnlyToCoverEditor() {
-        if (!isReportReadOnly()) {
+        if (canSaveReportContent()) {
             return;
         }
         const root = document.getElementById('cover-editor');
@@ -537,7 +563,7 @@
     }());
 
     async function saveDraftReport() {
-        if (isReportReadOnly()) {
+        if (!canSaveReportContent()) {
             window.alert('You have read-only access to this report.');
             return;
         }
@@ -574,7 +600,7 @@
     }
 
     async function saveFinalReport(confirmFinalEdit = false) {
-        if (isReportReadOnly()) {
+        if (!canSaveReportContent()) {
             window.alert('You have read-only access to this report.');
             return;
         }
@@ -612,16 +638,23 @@
             body: payload.toString(),
         });
 
+        const body = await response.json().catch(() => ({}));
+
         if (response.status === 409 && !confirmFinalEdit) {
-            const accepted = window.confirm('This report is already final and may have been shared. Continue and save a replacement final version?');
-            if (accepted) {
-                await saveFinalReport(true);
+            if (body && body.warning_required) {
+                const accepted = window.confirm('This report is already final and may have been shared. Continue and save a replacement final version?');
+                if (accepted) {
+                    await saveFinalReport(true);
+                }
+                return;
             }
+
+            window.alert(body.detail || "This report is unvalidated and can't be saved as final.");
             return;
         }
 
         if (!response.ok) {
-            window.alert('Unable to save final report.');
+            window.alert(body.detail || 'Unable to save final report.');
             return;
         }
 
@@ -809,7 +842,7 @@
                     </div>
                 `).join('')}</div>`
             : `<div class="validation-comment-thread" style="margin-top:0.55rem;color:#64748b;font-size:0.78rem;">No validation notes yet.</div>`;
-        const canToggle = isCurrentValidator() && !isReportReadOnly();
+        const canToggle = isCurrentValidator() && canTogglePageValidationControls();
         const toggleChecked = validationState.is_validated ? 'checked' : '';
         const toggleDisabled = canToggle ? '' : 'disabled aria-disabled="true"';
         const toggleHint = isCurrentValidator()
@@ -831,15 +864,81 @@
                 <div style="margin-top:0.35rem;font-size:0.76rem;color:#64748b;">${escapeHtml(toggleHint)}</div>
                 <div style="margin-top:0.35rem;font-size:0.76rem;color:#64748b;">Notes here are informational only and do not count as validation approval.</div>
                 <textarea class="validation-comment-box" data-validation-page-key="${escapeHtml(id)}" placeholder="Add a validation note..." style="margin-top:0.55rem;width:100%;min-height:4rem;border-radius:0.45rem;border:1px solid var(--cxg-border);padding:0.65rem;font:inherit;resize:vertical;"></textarea>
+                <div class="validation-comment-feedback" data-validation-feedback-key="${escapeHtml(id)}" style="margin-top:0.35rem;font-size:0.76rem;color:#64748b;"></div>
                 ${threadHtml}
             </div>`;
+    }
+
+    function setValidationCommentFeedback(feedbackEl, message, isError = false) {
+        if (!feedbackEl) {
+            return;
+        }
+        feedbackEl.textContent = String(message || '');
+        feedbackEl.style.color = isError ? '#991b1b' : '#64748b';
+    }
+
+    async function persistValidationComment(pageKey, commentText) {
+        const ctx = getContext();
+        if (!ctx.reportId) {
+            throw new Error('Save a draft before adding validation notes.');
+        }
+
+        const payload = new URLSearchParams();
+        payload.set('page_key', String(pageKey || ''));
+        payload.set('comment_text', String(commentText || ''));
+
+        const response = await fetch(`/reports/${encodeURIComponent(ctx.reportId)}/validation/comments/upsert/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: payload.toString(),
+        });
+
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(body.detail || 'Autosave failed. Blur again to retry.');
+        }
+
+        return body;
+    }
+
+    function queueValidationCommentAutosave(pageKey, textarea, feedbackEl) {
+        if (!canEditValidationNotes()) {
+            return;
+        }
+
+        const existingTimer = state.validationCommentSaveTimers.get(pageKey);
+        if (existingTimer) {
+            window.clearTimeout(existingTimer);
+        }
+
+        const timer = window.setTimeout(async () => {
+            state.validationCommentSaveTimers.delete(pageKey);
+            try {
+                setValidationCommentFeedback(feedbackEl, 'Saving...');
+                await persistValidationComment(pageKey, textarea.value);
+                setValidationCommentFeedback(feedbackEl, 'Saved');
+                window.setTimeout(() => setValidationCommentFeedback(feedbackEl, ''), 1200);
+            } catch (error) {
+                setValidationCommentFeedback(
+                    feedbackEl,
+                    error?.message || 'Autosave failed. Your note is kept locally; blur again to retry.',
+                    true,
+                );
+            }
+        }, getValidationCommentsDebounceMs());
+
+        state.validationCommentSaveTimers.set(pageKey, timer);
     }
 
     function registerCommentBoxes(root) {
         root.querySelectorAll('.comment-box').forEach((ta) => {
             const sid = ta.dataset.sectionId;
             if (sid && state.comments.has(sid)) { ta.value = state.comments.get(sid); }
-            if (isReportReadOnly()) {
+            if (!canSaveReportContent()) {
                 ta.readOnly = true;
                 ta.setAttribute('aria-readonly', 'true');
                 ta.title = 'Read-only comment';
@@ -849,10 +948,15 @@
         root.querySelectorAll('.validation-comment-box').forEach((ta) => {
             const sid = ta.dataset.validationPageKey;
             if (sid && state.validationComments.has(sid)) { ta.value = state.validationComments.get(sid); }
-            if (isReportReadOnly()) {
+            const feedbackEl = root.querySelector(`.validation-comment-feedback[data-validation-feedback-key="${sid}"]`);
+            if (!canEditValidationNotes()) {
                 ta.readOnly = true;
                 ta.setAttribute('aria-readonly', 'true');
                 ta.title = 'Read-only validation comment';
+            } else {
+                ta.addEventListener('blur', () => {
+                    queueValidationCommentAutosave(sid, ta, feedbackEl);
+                });
             }
             ta.addEventListener('input', () => state.validationComments.set(sid, ta.value));
         });
@@ -860,7 +964,7 @@
             const pageKey = cb.dataset.pageKey;
             const stateRow = getPageValidationState(pageKey);
             cb.checked = Boolean(stateRow.is_validated);
-            if (!isCurrentValidator() || isReportReadOnly()) {
+            if (!isCurrentValidator() || !canTogglePageValidationControls()) {
                 cb.disabled = true;
                 cb.setAttribute('aria-disabled', 'true');
                 return;
@@ -1020,14 +1124,24 @@
 
         if (knownKeys.has('overview') && !knownKeys.has('overview-table') && !knownKeys.has('overview-chart')) {
             return {
-                tableKey: 'overview',
-                chartKey: null,
+                primaryKey: 'overview',
+            };
+        }
+
+        if (knownKeys.has('overview-chart')) {
+            return {
+                primaryKey: 'overview-chart',
+            };
+        }
+
+        if (knownKeys.has('overview-table')) {
+            return {
+                primaryKey: 'overview-table',
             };
         }
 
         return {
-            tableKey: knownKeys.has('overview-table') ? 'overview-table' : 'overview',
-            chartKey: knownKeys.has('overview-chart') ? 'overview-chart' : 'overview-chart',
+            primaryKey: 'overview',
         };
     }
 
@@ -1086,12 +1200,13 @@
                             </thead>
                             <tbody>${tableBody || '<tr><td colspan="3">No cost data available.</td></tr>'}</tbody>
                         </table>
-                        ${createCommentBox(overviewKeys.tableKey)}
                     </div>
                     <div>
                         ${createChartSlot(chartId, '22rem')}
-                        ${overviewKeys.chartKey ? createCommentBox(overviewKeys.chartKey) : ''}
                     </div>
+                </div>
+                <div style="margin-top:0.7rem;text-align:left;">
+                    ${createCommentBox(overviewKeys.primaryKey)}
                 </div>
             </section>`;
 

@@ -1058,3 +1058,10 @@ Notes: Expected warning-level request logs for denied-write (403) and no-candida
 === 2026-08-03 Convergence Task Validation ===
 Command: docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test sitesync.tests.test_report_scope_convergence sitesync.tests.test_report_ownership_access sitesync.tests.test_saved_reports_ownership_listing sitesync.tests.test_report_owner_fallback_transfer
 Result: Ran 8 tests in 2.359s - OK.
+
+=== 2026-08-07 Feature 018 Regression Runs ===
+Command: docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test sitesync.tests.test_saved_reports_view sitesync.tests.test_report_validation tests.contract.test_report_validation_page_mark_contract
+Result: OK (22 tests, 23.786s)
+
+Command: docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test sitesync.tests.test_saved_reports_view sitesync.tests.test_report_validation
+Result: OK (17 tests, 16.277s)

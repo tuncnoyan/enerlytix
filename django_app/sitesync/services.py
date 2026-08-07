@@ -1471,7 +1471,40 @@ def get_report_validation_page_keys(report: MonthlyReport) -> List[str]:
         version = report.current_final_version
     if version is None:
         return []
-    return list(version.comments.order_by('visual_key').values_list('visual_key', flat=True))
+    page_keys = list(version.comments.order_by('visual_key').values_list('visual_key', flat=True))
+
+    # Keep only one first-overview validation key so the page has a single
+    # validator interaction block and finalization cannot be blocked by a hidden duplicate key.
+    overview_tokens = {'overview', 'overviewtable', 'overviewchart'}
+    overview_candidates = [
+        key for key in page_keys
+        if _normalize_report_validation_page_key(key) in overview_tokens
+    ]
+    if len(overview_candidates) > 1:
+        preferred_overview_key = None
+        for key in overview_candidates:
+            token = _normalize_report_validation_page_key(key)
+            if token == 'overviewchart':
+                preferred_overview_key = key
+                break
+        if preferred_overview_key is None:
+            for key in overview_candidates:
+                token = _normalize_report_validation_page_key(key)
+                if token == 'overviewtable':
+                    preferred_overview_key = key
+                    break
+        if preferred_overview_key is None:
+            preferred_overview_key = sorted(overview_candidates)[0]
+
+        filtered = []
+        for key in page_keys:
+            token = _normalize_report_validation_page_key(key)
+            if token in overview_tokens and key != preferred_overview_key:
+                continue
+            filtered.append(key)
+        page_keys = filtered
+
+    return page_keys
 
 
 def _normalize_report_validation_page_key(value: str) -> str:
@@ -1631,24 +1664,40 @@ def get_report_validation_comment_snapshot(report: MonthlyReport) -> Dict[str, o
     }
 
 
-def upsert_report_validation_comments(*, report: MonthlyReport, comments_by_page: Dict[str, str], actor_user) -> None:
+def upsert_report_validation_comments(
+    *,
+    report: MonthlyReport,
+    comments_by_page: Dict[str, str],
+    actor_user,
+    strict_unknown_keys: bool = True,
+) -> None:
     """Persist validation comments without affecting business-content validation state."""
     if not comments_by_page:
         return
 
     allowed_page_keys = get_report_validation_page_keys(report)
+    existing_state_page_keys = list(
+        ReportPageValidationState.objects.filter(report=report).values_list('page_key', flat=True)
+    )
     resolved_comments_by_page = {}
-    if allowed_page_keys:
-        for requested_key, text in comments_by_page.items():
+    for requested_key, text in comments_by_page.items():
+        resolved_key = _resolve_report_validation_page_key(
+            requested_key=requested_key,
+            allowed_page_keys=allowed_page_keys,
+        )
+
+        if resolved_key is None and existing_state_page_keys:
             resolved_key = _resolve_report_validation_page_key(
                 requested_key=requested_key,
-                allowed_page_keys=allowed_page_keys,
+                allowed_page_keys=existing_state_page_keys,
             )
-            if resolved_key is None:
+
+        if resolved_key is None:
+            if strict_unknown_keys:
                 raise ValueError(f'Unknown report page key: {requested_key}')
-            resolved_comments_by_page[resolved_key] = text
-    else:
-        resolved_comments_by_page = comments_by_page
+            continue
+
+        resolved_comments_by_page[resolved_key] = text
 
     now = dj_timezone.now()
     for page_key, text in resolved_comments_by_page.items():
@@ -1891,10 +1940,20 @@ def mark_report_page_validation_state(
         raise PermissionError('Only the assigned validator can mark report pages validated')
 
     allowed_page_keys = get_report_validation_page_keys(report)
+    existing_state_page_keys = list(
+        ReportPageValidationState.objects.filter(report=report).values_list('page_key', flat=True)
+    )
     resolved_page_key = _resolve_report_validation_page_key(
         requested_key=page_key,
         allowed_page_keys=allowed_page_keys,
     )
+
+    if resolved_page_key is None and existing_state_page_keys:
+        resolved_page_key = _resolve_report_validation_page_key(
+            requested_key=page_key,
+            allowed_page_keys=existing_state_page_keys,
+        )
+
     if allowed_page_keys and resolved_page_key is None:
         raise ValueError('Unknown report page key')
 
@@ -1908,6 +1967,11 @@ def mark_report_page_validation_state(
                 requested_key=key,
                 allowed_page_keys=allowed_page_keys,
             )
+            if resolved_key is None and existing_state_page_keys:
+                resolved_key = _resolve_report_validation_page_key(
+                    requested_key=key,
+                    allowed_page_keys=existing_state_page_keys,
+                )
             if resolved_key:
                 resolved_known_page_keys.append(resolved_key)
         ensure_report_validation_rows_for_keys(report, resolved_known_page_keys)
@@ -1915,7 +1979,10 @@ def mark_report_page_validation_state(
     row_map = {row.page_key: row for row in _validation_page_rows(report)}
     row = row_map.get(resolved_page_key)
     if row is None:
-        row = ReportPageValidationState.objects.create(report=report, page_key=resolved_page_key)
+        row, _created = ReportPageValidationState.objects.get_or_create(
+            report=report,
+            page_key=resolved_page_key,
+        )
     now = dj_timezone.now()
 
     if is_validated:
@@ -2428,10 +2495,10 @@ def get_report_access_mode(report: MonthlyReport, user) -> str:
         ):
             return 'read_only'
 
-    if report.owner_user_id == user.id:
-        return 'owner'
     if report.validator_user_id == user.id:
         return 'validator'
+    if report.owner_user_id == user.id:
+        return 'owner'
     if get_report_write_grant(report, user) is not None:
         return 'collaborator'
     if user.is_staff or user.is_superuser:
@@ -2439,9 +2506,19 @@ def get_report_access_mode(report: MonthlyReport, user) -> str:
     return 'read_only'
 
 
+def is_validator_restricted_report_session(report: MonthlyReport, user) -> bool:
+    """Return True when validator-only constraints must apply for the report session."""
+    return bool(
+        report
+        and user
+        and getattr(user, 'is_authenticated', False)
+        and report.validator_user_id == getattr(user, 'id', None)
+    )
+
+
 def user_can_write_report(report: MonthlyReport, user) -> bool:
     """Return True if user is authorized to edit report content."""
-    return get_report_access_mode(report, user) in {'owner', 'collaborator', 'validator', 'admin'}
+    return get_report_access_mode(report, user) in {'owner', 'collaborator', 'admin'}
 
 
 def grant_report_write_access(*, report: MonthlyReport, granted_user, granted_by) -> ReportWriteGrant:

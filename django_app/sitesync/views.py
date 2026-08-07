@@ -41,6 +41,7 @@ from .models import (
     InvoiceCost,
     MonthlyReport,
     MonthlyReportVersion,
+    ReportValidationComment,
     ReportWriteGrant,
     Invitation,
     AuditLogEntry,
@@ -135,6 +136,7 @@ from .services import (
     mark_report_page_validation_state,
     reset_report_page_validation_state,
     upsert_report_validation_comments,
+    is_validator_restricted_report_session,
     user_can_write_report,
     revoke_report_write_access,
 )
@@ -622,11 +624,20 @@ def _report_editor_context(raw_site_id, raw_end_month, raw_reporting_month, raw_
     can_assign_validator = bool(monthly_report is not None and user is not None and getattr(user, 'is_authenticated', False) and can_user_assign_report_validator(monthly_report, user))
 
     access_mode = 'read_only'
+    validator_restricted = False
+    can_save_report_content = False
+    can_edit_validation_notes = False
+    can_toggle_page_validation = False
     if monthly_report is not None:
         access_mode = get_report_access_mode(monthly_report, user)
+        validator_restricted = is_validator_restricted_report_session(monthly_report, user)
+        can_save_report_content = access_mode in {'owner', 'collaborator', 'admin'} and not validator_restricted
+        can_edit_validation_notes = validator_restricted
+        can_toggle_page_validation = validator_restricted
     elif user is not None and getattr(user, 'is_authenticated', False):
         # New unsaved report sessions should be editable so the first save can establish ownership.
         access_mode = 'owner'
+        can_save_report_content = True
 
     active_delegations = []
     delegation_candidates = []
@@ -672,6 +683,11 @@ def _report_editor_context(raw_site_id, raw_end_month, raw_reporting_month, raw_
         'currentUserId': request.user.id if request is not None and getattr(request.user, 'is_authenticated', False) else None,
         'activeDelegations': active_delegations,
         'canManageDelegations': can_manage_delegations,
+        'validatorRestrictedSession': validator_restricted,
+        'canSaveReportContent': can_save_report_content,
+        'canEditValidationNotes': can_edit_validation_notes,
+        'canTogglePageValidation': can_toggle_page_validation,
+        'validationCommentsDebounceMs': 300,
         'coverDefaults': build_report_cover_set(site.name if site else '', end_month),
     }
 
@@ -887,6 +903,15 @@ def report_view(request):
             # affected by supplies added to (or removed from) the site afterwards.
             selected_supply_ids = _default_report_supply_external_ids(site)
         access_mode = get_report_access_mode(report, request.user)
+        if is_validator_restricted_report_session(report, request.user):
+            return JsonResponse(
+                {
+                    'detail': 'Assigned validators cannot save draft or final report content in validation mode.',
+                    'access_mode': access_mode,
+                    'code': 'validator_restricted_session',
+                },
+                status=403,
+            )
         if not user_can_write_report(report, request.user):
             _log_audit_event(
                 request,
@@ -954,7 +979,7 @@ def report_view(request):
                     },
                 )
                 return JsonResponse({
-                    'detail': 'All report pages must be validated before saving final.',
+                    'detail': "This report is unvalidated and can't be saved as final.",
                     'can_save_final': False,
                     'validation_status': validation_summary['validation_status'],
                     'validated_page_count': validation_summary['validated_page_count'],
@@ -1002,6 +1027,7 @@ def report_view(request):
                 report=report,
                 comments_by_page=validation_comments_payload,
                 actor_user=request.user,
+                strict_unknown_keys=False,
             )
 
         copied_reference_comments = 0
@@ -1852,6 +1878,46 @@ def report_validation_page_toggle_view(request, report_id, page_key):
             'pages_validation': summary['pages_validation'],
         },
     })
+
+
+@login_required(login_url='/login/')
+def report_validation_comment_upsert_view(request, report_id):
+    """Persist one validation note update for the assigned validator session."""
+    if request.method != 'POST':
+        return JsonResponse({'detail': 'Method not allowed'}, status=405)
+
+    report = get_object_or_404(MonthlyReport, id=report_id)
+    if report.validator_user_id != getattr(request.user, 'id', None):
+        return JsonResponse({'detail': 'Only the assigned validator can update validation notes.'}, status=403)
+
+    page_key = str(request.POST.get('page_key') or '').strip()
+    if not page_key:
+        return JsonResponse({'detail': 'page_key is required'}, status=400)
+
+    comment_text = str(request.POST.get('comment_text') or '')
+    try:
+        upsert_report_validation_comments(
+            report=report,
+            comments_by_page={page_key: comment_text},
+            actor_user=request.user,
+        )
+    except ValueError as exc:
+        return JsonResponse({'detail': str(exc)}, status=400)
+
+    saved = ReportValidationComment.objects.filter(
+        report=report,
+        page_key=page_key,
+        authored_by_user=request.user,
+    ).first()
+
+    return JsonResponse(
+        {
+            'success': True,
+            'page_key': page_key,
+            'comment_text': comment_text,
+            'updated_at': saved.updated_at.isoformat() if saved else None,
+        }
+    )
 
 
 @login_required(login_url='/login/')

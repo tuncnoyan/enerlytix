@@ -2,6 +2,20 @@
 
 This guide validates the feature end-to-end after implementation.
 
+## Baseline Defect Scenarios (Pre-Fix)
+
+Use these as explicit before/after references during validation:
+
+1. Saved Reports in production omitted first-column row-selection checkboxes for admin users and table columns appeared shifted.
+2. Assigned validators could still submit draft/final content saves instead of being limited to validation actions.
+3. First overview section could render duplicate validation/comment controls with inconsistent width.
+
+Expected post-fix outcomes:
+
+- Admin-authorized sessions show aligned checkbox column and row data.
+- Validator-restricted sessions block draft/final save while allowing page-validation toggles and note autosave.
+- First overview section renders a single validation/comment block with standard width behavior.
+
 ## Prerequisites
 
 - Docker Desktop running.
@@ -105,6 +119,26 @@ After deployment approval and release:
 1. Hard-refresh browser session.
 2. Repeat Scenarios B, D, and E in production.
 3. Verify no regression in validation note persistence, role restrictions, or saved-reports alignment.
+
+## Release Verification Checklist
+
+1. Run focused Docker tests:
+
+```bash
+docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test sitesync.tests.test_saved_reports_view sitesync.tests.test_report_validation tests.contract.test_report_validation_page_mark_contract
+```
+
+2. Run broader report/saved-reports regression sweep:
+
+```bash
+docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test sitesync.tests.test_saved_reports_view sitesync.tests.test_report_validation
+```
+
+3. Rebuild static assets and verify manifest-backed files are updated:
+
+```bash
+cd django_app && python manage.py collectstatic --noinput --clear
+```
 
 ## Related Artifacts
 
