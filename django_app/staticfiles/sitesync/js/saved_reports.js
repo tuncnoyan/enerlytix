@@ -85,6 +85,22 @@
         return false;
     }
 
+    function resolveIsAdmin(ctx) {
+        if (ctx && typeof ctx.isAdmin !== 'undefined') {
+            return Boolean(ctx.isAdmin);
+        }
+        if (ctx && typeof ctx.is_admin !== 'undefined') {
+            return Boolean(ctx.is_admin);
+        }
+
+        // Server-rendered admin-only controls are a reliable fallback in case
+        // runtime context gets stale or a production artifact serves older fields.
+        return Boolean(
+            document.getElementById('saved-reports-select-all')
+            || document.getElementById('saved-reports-bulk-delete-form')
+        );
+    }
+
     function renderRows(reports, selectedFilters, ctx) {
         const tbody = document.getElementById('saved-reports-body');
         const empty = document.getElementById('saved-reports-empty');
@@ -102,7 +118,7 @@
         }
 
         empty.style.display = 'none';
-        const isAdmin = Boolean(ctx && ctx.isAdmin);
+        const isAdmin = resolveIsAdmin(ctx);
         tbody.innerHTML = reports.map((report) => `
             <tr>
             ${isAdmin ? `<td class="row-select"><input type="checkbox" class="saved-report-row-select" data-report-id="${escapeHtml(report.id || '')}" ${report._selected ? 'checked' : ''} aria-label="Select report ${escapeHtml(report.site_name || '')} ${escapeHtml(report.reporting_month || '')}" /></td>` : ''}
@@ -170,7 +186,7 @@
     }
 
     function attachBulkDeleteBehavior(ctx) {
-        if (!ctx || !ctx.isAdmin) {
+        if (!ctx || !resolveIsAdmin(ctx)) {
             return;
         }
         const form = document.getElementById('saved-reports-bulk-delete-form');
@@ -303,6 +319,7 @@
     }
 
     const ctx = window.ENERLYTIX_SAVED_REPORTS_CONTEXT || {};
+    ctx.isAdmin = resolveIsAdmin(ctx);
     if (!Array.isArray(ctx.reports)) {
         ctx.reports = [];
     }
