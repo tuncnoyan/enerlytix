@@ -65,7 +65,6 @@ from .forms import (
 from .config_service import SettingsConfigService
 from .auth_service import build_invitation_email, send_admin_password_recovery_email
 from .security import (
-    api_forbidden_response,
     ensure_api_authenticated,
     is_safe_internal_redirect_target,
     resolve_request_client_ip,
@@ -2776,18 +2775,6 @@ def consumption_import_view(request):
     auth_response = ensure_api_authenticated(request)
     if auth_response is not None:
         return auth_response
-    if not _is_platform_admin(request.user):
-        _log_audit_event(
-            request,
-            action_type=AUDIT_ACTION_ACCESS_DENIED,
-            action_outcome=AuditLogEntry.OUTCOME_DENIED,
-            target_entity_type='import',
-            target_entity_id='consumption_import',
-            target_entity_label='consumption_import',
-            message='Denied consumption import trigger.',
-            metadata={'reason': 'admin_required'},
-        )
-        return api_forbidden_response('Admin access required.')
 
     serializer = ConsumptionImportRequestSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)

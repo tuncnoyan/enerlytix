@@ -47,14 +47,28 @@ class PenTestHardeningAccessTests(TestCase):
         )
         self.assertEqual(response.status_code, 401)
 
-    def test_consumption_import_requires_admin(self):
+    @patch('sitesync.views.ConsumptionImportService')
+    def test_consumption_import_allows_authenticated_user(self, service_cls):
         self.client.force_login(self.standard_user)
+        service = service_cls.return_value
+        service.run.return_value = SimpleNamespace(
+            id='run-2',
+            status='success',
+            affected_supply_count=1,
+            started_at=None,
+            completed_at=None,
+            records_imported=5,
+            records_failed=0,
+            retry_count=0,
+            error_details={},
+            outcome_details=[],
+        )
         response = self.client.post(
             reverse('sitesync:consumption_import'),
             {'supply_ids': [self.supply.external_id], 'reporting_month': '2026-07'},
             content_type='application/json',
         )
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 200)
 
     @patch('sitesync.views.ConsumptionImportService')
     def test_consumption_import_admin_success(self, service_cls):
