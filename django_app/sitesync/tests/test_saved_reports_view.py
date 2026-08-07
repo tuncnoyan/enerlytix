@@ -6,7 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 from uuid import uuid4
 
-from sitesync.models import AuditLogEntry, MonthlyReport, ReportWriteGrant, Site, Team, UserTeamAssignment
+from sitesync.models import AuditLogEntry, MonthlyReport, ReportWriteGrant, RoleAssignment, Site, Team, UserTeamAssignment
 from sitesync.services import AUDIT_ACTION_REPORT_BULK_DELETE, AUDIT_ACTION_REPORT_BULK_DELETE_DENIED
 from sitesync.services import create_report_version, get_or_create_monthly_report
 
@@ -128,6 +128,29 @@ class SavedReportsViewTest(TestCase):
         self.assertEqual(member_response.status_code, 200)
         self.assertNotContains(member_response, 'saved-reports-bulk-delete-form')
         self.assertNotContains(member_response, 'saved-reports-select-all')
+
+    def test_saved_reports_role_assigned_admin_sees_admin_controls(self):
+        self._create_report('2026-05', kind='final')
+        team = Team.objects.create(name='Saved Reports Role Admin Team', level=1)
+        self.site.team = team
+        self.site.save(update_fields=['team'])
+
+        role_admin = get_user_model().objects.create_user(
+            username='savedreportsroleadmin',
+            password='pass123',
+            is_staff=False,
+            is_superuser=False,
+        )
+        RoleAssignment.objects.create(user=role_admin, role_name=RoleAssignment.ROLE_ADMIN)
+        UserTeamAssignment.objects.create(user=role_admin, team=team)
+
+        self.client.force_login(role_admin)
+        response = self.client.get('/reports/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'saved-reports-bulk-delete-form')
+        self.assertContains(response, 'saved-reports-select-all')
+        self.assertContains(response, 'isAdmin: true')
 
     def test_saved_reports_sort_unknown_field_falls_back_to_reporting_month(self):
         self._create_report('2026-04', kind='final')

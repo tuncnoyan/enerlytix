@@ -1095,9 +1095,9 @@ def _is_truthy_param(raw_value):
 
 
 def _is_platform_admin(user):
-    if not user or not user.is_authenticated:
-        return False
-    return bool(user.is_staff or user.is_superuser)
+    # Keep admin checks consistent across templates and APIs: role-assigned
+    # admins should receive the same admin-only controls as staff/superusers.
+    return _user_is_admin(user)
 
 
 def _normalize_month_key(raw_value):
