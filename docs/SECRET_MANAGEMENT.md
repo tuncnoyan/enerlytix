@@ -22,6 +22,22 @@
 - `DATABASE_URL`
 - `DATABASE_SSLMODE`
 - `ALLOWED_HOSTS`
+- `TRUSTED_PROXY_CIDRS`
+- `ENVIRONMENT_NAME`
+- `IS_PRODUCTION_ENVIRONMENT`
+
+## Production startup hardening gate
+
+- In production mode, startup must fail closed if required security controls are missing.
+- Required controls:
+	- `SECRET_KEY` is non-default/non-placeholder.
+	- `DEBUG=False`.
+	- `SECURE_SSL_REDIRECT=True`.
+	- `SESSION_COOKIE_SECURE=True`.
+	- `CSRF_COOKIE_SECURE=True`.
+	- `SECURE_HSTS_SECONDS > 0`.
+- Recommended pre-release verification:
+	- `docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py check --deploy`
 
 ## Audit log data handling
 

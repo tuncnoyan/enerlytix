@@ -20,11 +20,11 @@
 
 **Purpose**: Prepare feature-specific scaffolding and shared security test harness.
 
-- [ ] T001 Create security hardening implementation notes and endpoint inventory in `specs/019-pen-test-hardening/research.md`
-- [ ] T001a Define and freeze the Sensitive Endpoint Baseline in `specs/019-pen-test-hardening/spec.md`
-- [ ] T002 Create security regression test module scaffold in `django_app/sitesync/tests/test_pen_test_hardening_access.py`
-- [ ] T003 [P] Create credential hardening test module scaffold in `django_app/sitesync/tests/test_pen_test_hardening_credentials.py`
-- [ ] T004 [P] Create deployment-gate and trust-boundary test module scaffold in `django_app/sitesync/tests/test_pen_test_hardening_runtime.py`
+- [X] T001 Create security hardening implementation notes and endpoint inventory in `specs/019-pen-test-hardening/research.md`
+- [X] T001a Define and freeze the Sensitive Endpoint Baseline in `specs/019-pen-test-hardening/spec.md`
+- [X] T002 Create security regression test module scaffold in `django_app/sitesync/tests/test_pen_test_hardening_access.py`
+- [X] T003 [P] Create credential hardening test module scaffold in `django_app/sitesync/tests/test_pen_test_hardening_credentials.py`
+- [X] T004 [P] Create deployment-gate and trust-boundary test module scaffold in `django_app/sitesync/tests/test_pen_test_hardening_runtime.py`
 
 ---
 
@@ -34,12 +34,12 @@
 
 **⚠️ CRITICAL**: No user story implementation starts until this phase is complete.
 
-- [ ] T005 Implement shared protected-endpoint policy helpers in `django_app/sitesync/security.py`
-- [ ] T006 Implement trusted-proxy CIDR parsing and source-IP resolution utility in `django_app/sitesync/security.py`
-- [ ] T007 Implement standardized 401/403 JSON denial helpers for API endpoints in `django_app/sitesync/security.py`
-- [ ] T008 Wire production fail-closed security validator entrypoint in `django_app/sitesync/apps.py`
-- [ ] T009 Add production security gate settings and validation configuration in `django_app/config/settings.py`
-- [ ] T010 Add startup/runtime gate tests for security validator behavior in `django_app/sitesync/tests/test_pen_test_hardening_runtime.py`
+- [X] T005 Implement shared protected-endpoint policy helpers in `django_app/sitesync/security.py`
+- [X] T006 Implement trusted-proxy CIDR parsing and source-IP resolution utility in `django_app/sitesync/security.py`
+- [X] T007 Implement standardized 401/403 JSON denial helpers for API endpoints in `django_app/sitesync/security.py`
+- [X] T008 Wire production fail-closed security validator entrypoint in `django_app/sitesync/apps.py`
+- [X] T009 Add production security gate settings and validation configuration in `django_app/config/settings.py`
+- [X] T010 Add startup/runtime gate tests for security validator behavior in `django_app/sitesync/tests/test_pen_test_hardening_runtime.py`
 
 **Checkpoint**: Shared security primitives and production gate foundation are complete.
 
@@ -53,20 +53,20 @@
 
 ### Tests for User Story 1
 
-- [ ] T011 [US1] Add API access-control tests for import/report/consumption endpoints in `django_app/sitesync/tests/test_pen_test_hardening_access.py`
-- [ ] T012 [US1] Add settings and manual-sync authorization tests in `django_app/sitesync/tests/test_pen_test_hardening_access.py`
-- [ ] T013 [US1] Add import-run detail endpoint authorization tests in `django_app/sitesync/tests/test_pen_test_hardening_access.py`
+- [X] T011 [US1] Add API access-control tests for import/report/consumption endpoints in `django_app/sitesync/tests/test_pen_test_hardening_access.py`
+- [X] T012 [US1] Add settings and manual-sync authorization tests in `django_app/sitesync/tests/test_pen_test_hardening_access.py`
+- [X] T013 [US1] Add import-run detail endpoint authorization tests in `django_app/sitesync/tests/test_pen_test_hardening_access.py`
 
 ### Implementation for User Story 1
 
-- [ ] T014 [US1] Enforce authenticated permission class for `consumption_import_view` in `django_app/sitesync/views.py`
-- [ ] T015 [US1] Enforce authenticated permission class for `consumption_display_api_view` and `report_data_api_view` in `django_app/sitesync/views.py`
-- [ ] T016 [US1] Enforce authenticated permission class for `import_run_detail_view` with 401/403 behavior in `django_app/sitesync/views.py`
-- [ ] T017 [US1] Add admin-role authorization checks for `manual_sync_view` in `django_app/sitesync/views.py`
-- [ ] T018 [US1] Add admin-role authorization checks for settings mutation and capacity upload paths in `django_app/sitesync/views.py`
-- [ ] T019 [US1] Apply shared protected-endpoint helpers across sensitive route handlers in `django_app/sitesync/views.py`
-- [ ] T020 [US1] Add/adjust denied-access audit event coverage for newly protected surfaces in `django_app/sitesync/views.py`
-- [ ] T021 [US1] Align protected route expectations documentation in `specs/019-pen-test-hardening/contracts/security-hardening-contract.md`
+- [X] T014 [US1] Enforce authenticated permission class for `consumption_import_view` in `django_app/sitesync/views.py`
+- [X] T015 [US1] Enforce authenticated permission class for `consumption_display_api_view` and `report_data_api_view` in `django_app/sitesync/views.py`
+- [X] T016 [US1] Enforce authenticated permission class for `import_run_detail_view` with 401/403 behavior in `django_app/sitesync/views.py`
+- [X] T017 [US1] Add admin-role authorization checks for `manual_sync_view` in `django_app/sitesync/views.py`
+- [X] T018 [US1] Add admin-role authorization checks for settings mutation and capacity upload paths in `django_app/sitesync/views.py`
+- [X] T019 [US1] Apply shared protected-endpoint helpers across sensitive route handlers in `django_app/sitesync/views.py`
+- [X] T020 [US1] Add/adjust denied-access audit event coverage for newly protected surfaces in `django_app/sitesync/views.py`
+- [X] T021 [US1] Align protected route expectations documentation in `specs/019-pen-test-hardening/contracts/security-hardening-contract.md`
 
 **Checkpoint**: User Story 1 is independently functional and testable.
 
@@ -80,17 +80,17 @@
 
 ### Tests for User Story 2
 
-- [ ] T022 [US2] Add admin reset-flow tests ensuring no static password assignment in `django_app/sitesync/tests/test_pen_test_hardening_credentials.py`
-- [ ] T023 [US2] Add one-time 15-minute token lifecycle tests in `django_app/sitesync/tests/test_pen_test_hardening_credentials.py`
-- [ ] T024 [US2] Add invitation acceptance password-strength validation tests in `django_app/sitesync/tests/test_pen_test_hardening_credentials.py`
+- [X] T022 [US2] Add admin reset-flow tests ensuring no static password assignment in `django_app/sitesync/tests/test_pen_test_hardening_credentials.py`
+- [X] T023 [US2] Add one-time 15-minute token lifecycle tests in `django_app/sitesync/tests/test_pen_test_hardening_credentials.py`
+- [X] T024 [US2] Add invitation acceptance password-strength validation tests in `django_app/sitesync/tests/test_pen_test_hardening_credentials.py`
 
 ### Implementation for User Story 2
 
-- [ ] T025 [US2] Replace static password reset behavior in admin account action flow in `django_app/sitesync/views.py`
-- [ ] T026 [US2] Implement single-use 15-minute recovery issuance and invalidation logic in `django_app/sitesync/auth_service.py`
-- [ ] T027 [US2] Integrate secure recovery email generation/sending for reset flow in `django_app/sitesync/auth_service.py`
-- [ ] T028 [US2] Enforce Django password validators during invitation acceptance in `django_app/sitesync/views.py`
-- [ ] T029 [US2] Add invitation/reset failure audit metadata sanitization updates in `django_app/sitesync/views.py`
+- [X] T025 [US2] Replace static password reset behavior in admin account action flow in `django_app/sitesync/views.py`
+- [X] T026 [US2] Implement single-use 15-minute recovery issuance and invalidation logic in `django_app/sitesync/auth_service.py`
+- [X] T027 [US2] Integrate secure recovery email generation/sending for reset flow in `django_app/sitesync/auth_service.py`
+- [X] T028 [US2] Enforce Django password validators during invitation acceptance in `django_app/sitesync/views.py`
+- [X] T029 [US2] Add invitation/reset failure audit metadata sanitization updates in `django_app/sitesync/views.py`
 
 **Checkpoint**: User Story 2 is independently functional and testable.
 
@@ -104,18 +104,18 @@
 
 ### Tests for User Story 3
 
-- [ ] T030 [US3] Add open-redirect rejection tests for manual sync return path in `django_app/sitesync/tests/test_pen_test_hardening_runtime.py`
-- [ ] T031 [US3] Add sanitized error-response tests for sync and other failure paths in `django_app/sitesync/tests/test_pen_test_hardening_runtime.py`
-- [ ] T032 [US3] Add forwarded-header trust boundary tests for proxy CIDR allowlist behavior in `django_app/sitesync/tests/test_pen_test_hardening_runtime.py`
-- [ ] T033 [US3] Add deploy-check and startup-block expectation tests in `django_app/sitesync/tests/test_pen_test_hardening_runtime.py`
+- [X] T030 [US3] Add open-redirect rejection tests for manual sync return path in `django_app/sitesync/tests/test_pen_test_hardening_runtime.py`
+- [X] T031 [US3] Add sanitized error-response tests for sync and other failure paths in `django_app/sitesync/tests/test_pen_test_hardening_runtime.py`
+- [X] T032 [US3] Add forwarded-header trust boundary tests for proxy CIDR allowlist behavior in `django_app/sitesync/tests/test_pen_test_hardening_runtime.py`
+- [X] T033 [US3] Add deploy-check and startup-block expectation tests in `django_app/sitesync/tests/test_pen_test_hardening_runtime.py`
 
 ### Implementation for User Story 3
 
-- [ ] T034 [US3] Harden manual sync `next` redirect validation against scheme-relative and external targets in `django_app/sitesync/views.py`
-- [ ] T035 [US3] Replace raw exception detail responses with sanitized payloads and internal logging in `django_app/sitesync/views.py`
-- [ ] T036 [US3] Apply trusted proxy CIDR allowlist to `_get_client_ip` resolution flow in `django_app/sitesync/views.py`
-- [ ] T037 [US3] Enforce secure production defaults and fail-closed checks for secret/transport/cookie controls in `django_app/config/settings.py`
-- [ ] T038 [US3] Update deployment security check guidance with startup blocking rules in `deployment/SECURITY_CHECKLIST.md`
+- [X] T034 [US3] Harden manual sync `next` redirect validation against scheme-relative and external targets in `django_app/sitesync/views.py`
+- [X] T035 [US3] Replace raw exception detail responses with sanitized payloads and internal logging in `django_app/sitesync/views.py`
+- [X] T036 [US3] Apply trusted proxy CIDR allowlist to `_get_client_ip` resolution flow in `django_app/sitesync/views.py`
+- [X] T037 [US3] Enforce secure production defaults and fail-closed checks for secret/transport/cookie controls in `django_app/config/settings.py`
+- [X] T038 [US3] Update deployment security check guidance with startup blocking rules in `deployment/SECURITY_CHECKLIST.md`
 
 **Checkpoint**: User Story 3 is independently functional and testable.
 
@@ -125,11 +125,11 @@
 
 **Purpose**: Final verification, documentation sync, and release readiness evidence.
 
-- [ ] T039 [P] Update secret and trust-boundary operational guidance in `docs/SECRET_MANAGEMENT.md`
-- [ ] T040 [P] Update platform hardening checklist controls for 401/403 and protected endpoints in `deployment/PLATFORM_FOUNDATION_CHECKLIST.md`
-- [ ] T041 Execute quickstart validation scenarios and record outcomes in `specs/019-pen-test-hardening/quickstart.md`
-- [ ] T042 Run full regression and deploy checks in Docker, validate 100% Sensitive Endpoint Baseline coverage for SC-001, and document pass evidence in `specs/019-pen-test-hardening/research.md`
-- [ ] T043 Map FR-011 Required Production Security Controls to explicit runtime validator checks and CI assertions in `django_app/config/settings.py` and `django_app/sitesync/tests/test_pen_test_hardening_runtime.py`
+- [X] T039 [P] Update secret and trust-boundary operational guidance in `docs/SECRET_MANAGEMENT.md`
+- [X] T040 [P] Update platform hardening checklist controls for 401/403 and protected endpoints in `deployment/PLATFORM_FOUNDATION_CHECKLIST.md`
+- [X] T041 Execute quickstart validation scenarios and record outcomes in `specs/019-pen-test-hardening/quickstart.md`
+- [X] T042 Run full regression and deploy checks in Docker, validate 100% Sensitive Endpoint Baseline coverage for SC-001, and document pass evidence in `specs/019-pen-test-hardening/research.md`
+- [X] T043 Map FR-011 Required Production Security Controls to explicit runtime validator checks and CI assertions in `django_app/config/settings.py` and `django_app/sitesync/tests/test_pen_test_hardening_runtime.py`
 
 ---
 

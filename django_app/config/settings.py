@@ -229,6 +229,7 @@ else:
     CONFIGURED_EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
 
 EMAIL_BACKEND = CONFIGURED_EMAIL_BACKEND
+PASSWORD_RESET_TIMEOUT = int(os.getenv('PASSWORD_RESET_TIMEOUT', '900'))
 
 # Security Settings
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -250,12 +251,19 @@ CSRF_TRUSTED_ORIGINS = csrf_trusted_origins
 # Enforce TLS/HTTPS in production when explicitly configured.
 # Keep the default disabled during tests and local development unless the environment requests it.
 if not DEBUG:
-    SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'False') == 'True'
-    SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'False') == 'True'
-    CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE', 'False') == 'True'
+    SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'True') == 'True'
+    SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'True') == 'True'
+    CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE', 'True') == 'True'
     SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '31536000'))
     SECURE_HSTS_INCLUDE_SUBDOMAINS = os.getenv('SECURE_HSTS_INCLUDE_SUBDOMAINS', 'True') == 'True'
     SECURE_HSTS_PRELOAD = os.getenv('SECURE_HSTS_PRELOAD', 'True') == 'True'
+
+_trusted_proxy_cidrs_raw = os.getenv('TRUSTED_PROXY_CIDRS', '127.0.0.1/32,::1/128')
+TRUSTED_PROXY_CIDRS = [part.strip() for part in _trusted_proxy_cidrs_raw.split(',') if part.strip()]
+
+PRODUCTION_ENVIRONMENT_NAMES = {'production', 'prod'}
+ENVIRONMENT_NAME = (os.getenv('ENVIRONMENT') or os.getenv('APP_ENV') or os.getenv('DJANGO_ENV') or '').strip().lower()
+IS_PRODUCTION_ENVIRONMENT = ENVIRONMENT_NAME in PRODUCTION_ENVIRONMENT_NAMES
 
 # Ensure logs directory exists
 os.makedirs(BASE_DIR / 'logs', exist_ok=True)

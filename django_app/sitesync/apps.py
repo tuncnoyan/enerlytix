@@ -3,6 +3,7 @@ App configuration for sitesync.
 """
 
 from django.apps import AppConfig
+from django.conf import settings
 
 
 class SitesyncConfig(AppConfig):
@@ -17,6 +18,10 @@ class SitesyncConfig(AppConfig):
         import os
         logger = logging.getLogger(__name__)
         logger.info("Sitesync app ready")
+
+        if getattr(settings, 'IS_PRODUCTION_ENVIRONMENT', False):
+            from .security import validate_production_security_posture_or_raise
+            validate_production_security_posture_or_raise()
         
         # Avoid running sync during management commands like 'migrate' or tests
         if any(cmd in sys.argv for cmd in ['makemigrations', 'migrate', 'test']):

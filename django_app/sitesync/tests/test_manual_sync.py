@@ -16,7 +16,11 @@ class ManualSyncViewTest(TestCase):
 
     def setUp(self):
         self.factory = RequestFactory()
-        self.user = get_user_model().objects.create_user(username='syncuser', password='pass123')
+        self.user = get_user_model().objects.create_user(
+            username='syncuser',
+            password='pass123',
+            is_staff=True,
+        )
 
     @patch('sitesync.views.EtainaibleSyncService')
     def test_manual_sync_redirects_on_success(self, mock_service_class):
@@ -48,4 +52,4 @@ class ManualSyncViewTest(TestCase):
         self.assertEqual(response.status_code, 500)
         payload = json.loads(response.content.decode('utf-8'))
         self.assertEqual(payload['error']['message'], 'Unable to complete sync')
-        self.assertIn('boom', payload['error']['details'])
+        self.assertNotIn('details', payload['error'])

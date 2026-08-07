@@ -75,16 +75,14 @@ class CapacityUploadResultsExportTests(TestCase):
     def test_export_requires_authentication(self):
         response = self.client.get(reverse('sitesync:capacity_upload_results_export'))
 
-        self.assertEqual(response.status_code, 302)
-        self.assertIn('/login/', response.url)
+        self.assertEqual(response.status_code, 401)
 
     def test_export_denies_non_admin_user(self):
         self.client.force_login(self.regular_user)
 
         response = self.client.get(reverse('sitesync:capacity_upload_results_export'))
 
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, reverse('sitesync:settings_panel'))
+        self.assertEqual(response.status_code, 403)
 
     def test_export_returns_xlsx_for_admin(self):
         self._create_run_with_results()

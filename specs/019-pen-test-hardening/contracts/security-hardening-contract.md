@@ -20,6 +20,15 @@ Sensitive routes include, at minimum:
 - Capacity upload and export of sensitive operational outcomes
 - Manual synchronization trigger
 
+Baseline routes and expected denials:
+- `POST /api/consumption-import/`: 401 unauthenticated, 403 authenticated non-admin
+- `GET /api/consumption-display/`: 401 unauthenticated
+- `GET /api/report-data/`: 401 unauthenticated
+- `GET /api/import-runs/{import_run_id}/`: 401 unauthenticated
+- `POST /sync/`: 401 unauthenticated, 403 authenticated non-admin
+- `POST /settings/` mutation paths: 401 unauthenticated, 403 authenticated non-admin
+- `GET /settings/capacity-upload/results.xlsx`: 401 unauthenticated, 403 authenticated non-admin
+
 ## 2. Credential Recovery Contract
 
 | Contract Field | Required Value |

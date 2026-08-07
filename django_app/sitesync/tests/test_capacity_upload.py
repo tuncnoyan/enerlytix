@@ -26,7 +26,11 @@ class CapacityUploadTests(TestCase):
     def setUp(self):
         AppSettings.objects.create()
         self.factory = RequestFactory()
-        self.user = get_user_model().objects.create_user(username='capacityuser', password='pass123')
+        self.user = get_user_model().objects.create_user(
+            username='capacityuser',
+            password='pass123',
+            is_staff=True,
+        )
         self.client.force_login(self.user)
 
     def _auth_post(self, path, data):
@@ -208,6 +212,7 @@ class CapacityUploadTests(TestCase):
             last_imported_at=datetime(2026, 7, 17, 10, 0, tzinfo=timezone.utc),
         )
 
+        self.client.force_login(self.user)
         response = self.client.get(
             reverse('sitesync:report_data_api'),
             {'site_id': site.id, 'end_month': '2026-06'},

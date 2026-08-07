@@ -14,6 +14,7 @@ from urllib.parse import urlencode
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.password_validation import validate_password
 from django.conf import settings
 from django.core.mail import EmailMessage
 from django.core.paginator import Paginator
@@ -23,12 +24,11 @@ from django.http import JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
 from django.utils import timezone as dj_timezone
+from django.core.exceptions import ValidationError
 from django.views.decorators.cache import never_cache
 from openpyxl import Workbook
 from rest_framework import viewsets
 from rest_framework.decorators import api_view
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework.decorators import permission_classes
 from rest_framework.response import Response
 from .models import (
     Benchmark,
@@ -63,7 +63,13 @@ from .forms import (
     SettingsForm,
 )
 from .config_service import SettingsConfigService
-from .auth_service import build_invitation_email
+from .auth_service import build_invitation_email, send_admin_password_recovery_email
+from .security import (
+    api_forbidden_response,
+    ensure_api_authenticated,
+    is_safe_internal_redirect_target,
+    resolve_request_client_ip,
+)
 from .services import EtainaibleSyncService
 from .services import (
     AUDIT_ACTION_ACCESS_DENIED,
@@ -230,13 +236,9 @@ SAVED_REPORT_SORT_FIELD_DEFINITIONS = {
 
 
 def _get_client_ip(request):
-    """Resolve the best-effort client IP from forwarding headers."""
+    """Resolve client IP while trusting forwarding headers only via trusted proxies."""
 
-    forwarded_for = (request.META.get('HTTP_X_FORWARDED_FOR') or '').strip()
-    if forwarded_for:
-        return forwarded_for.split(',')[0].strip()
-    remote_addr = (request.META.get('REMOTE_ADDR') or '').strip()
-    return remote_addr or None
+    return resolve_request_client_ip(request)
 
 
 def _log_denied_admin_panel_access(request):
@@ -2117,6 +2119,10 @@ def report_approve_unavailable_owner_view(request, report_id):
 
 @api_view(['GET'])
 def report_data_api_view(request):
+    auth_response = ensure_api_authenticated(request)
+    if auth_response is not None:
+        return auth_response
+
     raw_site_id = request.query_params.get('site_id')
     end_month = (request.query_params.get('end_month') or '').strip()
     supply_ids_raw = (request.query_params.get('supply_ids') or '').strip()
@@ -2222,6 +2228,13 @@ def accept_invitation_view(request, invitation_id):
             return render(request, 'sitesync/invite_accept.html', {
                 'invitation': invitation,
                 'error': 'That username is already taken.',
+            })
+        try:
+            validate_password(password)
+        except ValidationError as exc:
+            return render(request, 'sitesync/invite_accept.html', {
+                'invitation': invitation,
+                'error': ' '.join(exc.messages),
             })
         user = user_model.objects.create_user(
             username=username,
@@ -2486,9 +2499,23 @@ def supply_list_view(request):
     })
 
 
-@login_required(login_url='/login/')
 def manual_sync_view(request):
     """Trigger a manual sync and return to the site list."""
+    if not getattr(request, 'user', None) or not request.user.is_authenticated:
+        return JsonResponse({'detail': 'Authentication credentials were not provided.'}, status=401)
+    if not _is_platform_admin(request.user):
+        _log_audit_event(
+            request,
+            action_type=AUDIT_ACTION_ACCESS_DENIED,
+            action_outcome=AuditLogEntry.OUTCOME_DENIED,
+            target_entity_type='sync',
+            target_entity_id='manual',
+            target_entity_label='manual_sync',
+            message='Denied manual sync trigger.',
+            metadata={'reason': 'admin_required'},
+        )
+        return JsonResponse({'detail': 'Admin access required.'}, status=403)
+
     if request.method != 'POST':
         return JsonResponse({
             'error': {
@@ -2497,7 +2524,7 @@ def manual_sync_view(request):
         }, status=405)
 
     next_url = (request.POST.get('next') or '').strip()
-    if not next_url.startswith('/'):
+    if not is_safe_internal_redirect_target(next_url):
         next_url = reverse('sitesync:site_list')
 
     def _redirect_with_sync_status(status_value):
@@ -2551,21 +2578,35 @@ def manual_sync_view(request):
                 target_entity_id='manual',
                 target_entity_label='manual_sync',
                 message='Manual sync failed.',
-                metadata={'error': str(exc)},
+                metadata={'error': type(exc).__name__},
             )
         except Exception:
             logger.exception("Failed to write manual sync failure audit event")
         return JsonResponse({
             'error': {
                 'message': 'Unable to complete sync',
-                'details': str(exc),
             }
         }, status=500)
 
 
-@login_required(login_url='/login/')
 def settings_panel_view(request):
     """Display and update runtime configuration settings."""
+    if not getattr(request, 'user', None) or not request.user.is_authenticated:
+        return JsonResponse({'detail': 'Authentication credentials were not provided.'}, status=401)
+
+    if request.method == 'POST' and not _is_platform_admin(request.user):
+        _log_audit_event(
+            request,
+            action_type=AUDIT_ACTION_ACCESS_DENIED,
+            action_outcome=AuditLogEntry.OUTCOME_DENIED,
+            target_entity_type='settings',
+            target_entity_id='app_settings',
+            target_entity_label='application_settings',
+            message='Denied settings mutation.',
+            metadata={'reason': 'admin_required'},
+        )
+        return JsonResponse({'detail': 'Admin access required.'}, status=403)
+
     settings_instance = SettingsConfigService.get_settings()
     capacity_upload_result = None
     latest_capacity_run = get_latest_completed_capacity_upload_run()
@@ -2681,13 +2722,24 @@ def settings_panel_view(request):
     })
 
 
-@login_required(login_url='/login/')
 def capacity_upload_results_export_view(request):
     """Export the latest capacity upload row-level outcomes as XLSX."""
 
+    if not getattr(request, 'user', None) or not request.user.is_authenticated:
+        return JsonResponse({'detail': 'Authentication credentials were not provided.'}, status=401)
+
     if not _is_platform_admin(request.user):
-        messages.error(request, 'Admin access required.')
-        return redirect('sitesync:settings_panel')
+        _log_audit_event(
+            request,
+            action_type=AUDIT_ACTION_ACCESS_DENIED,
+            action_outcome=AuditLogEntry.OUTCOME_DENIED,
+            target_entity_type='settings',
+            target_entity_id='capacity_upload',
+            target_entity_label='capacity_upload_results_export',
+            message='Denied capacity upload results export.',
+            metadata={'reason': 'admin_required'},
+        )
+        return JsonResponse({'detail': 'Admin access required.'}, status=403)
 
     latest_capacity_run = get_latest_completed_capacity_upload_run()
     if latest_capacity_run is None:
@@ -2720,8 +2772,23 @@ class AppSettingsViewSet(viewsets.ModelViewSet):
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
 def consumption_import_view(request):
+    auth_response = ensure_api_authenticated(request)
+    if auth_response is not None:
+        return auth_response
+    if not _is_platform_admin(request.user):
+        _log_audit_event(
+            request,
+            action_type=AUDIT_ACTION_ACCESS_DENIED,
+            action_outcome=AuditLogEntry.OUTCOME_DENIED,
+            target_entity_type='import',
+            target_entity_id='consumption_import',
+            target_entity_label='consumption_import',
+            message='Denied consumption import trigger.',
+            metadata={'reason': 'admin_required'},
+        )
+        return api_forbidden_response('Admin access required.')
+
     serializer = ConsumptionImportRequestSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
 
@@ -2749,6 +2816,10 @@ def consumption_import_view(request):
 
 @api_view(['GET'])
 def consumption_display_api_view(request):
+    auth_response = ensure_api_authenticated(request)
+    if auth_response is not None:
+        return auth_response
+
     serializer = ConsumptionDisplayQuerySerializer(data=request.query_params)
     serializer.is_valid(raise_exception=True)
     validated = serializer.validated_data
@@ -3061,8 +3132,11 @@ def admin_import_review_export_xlsx_view(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def import_run_detail_view(request, import_run_id):
+    auth_response = ensure_api_authenticated(request)
+    if auth_response is not None:
+        return auth_response
+
     try:
         run = ImportRun.objects.get(id=import_run_id)
     except ImportRun.DoesNotExist:
@@ -3699,10 +3773,14 @@ def admin_users_view(request):
                         action_type = AUDIT_ACTION_ADMIN_DISABLE_USER
                         message = f"Disabled user {target_user_label}."
                     elif action == 'reset_password':
-                        target_user.set_password('TempPassword123!')
+                        target_user.set_unusable_password()
                         target_user.save(update_fields=['password'])
+                        recovery_sent = send_admin_password_recovery_email(request, target_user)
                         action_type = AUDIT_ACTION_ADMIN_RESET_PASSWORD
-                        message = f"Reset password for user {target_user_label}."
+                        if recovery_sent:
+                            message = f"Issued one-time password recovery for user {target_user_label}."
+                        else:
+                            message = f"Unable to send password recovery email for user {target_user_label}."
                     elif action == 'delete':
                         action_type = AUDIT_ACTION_ADMIN_DELETE_USER
                         message = f"Deleted user {target_user_label}."

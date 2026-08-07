@@ -93,3 +93,18 @@ docker compose -f django_app/docker/docker-compose.yml exec -T web python manage
 - Redirect and error response behaviors are hardened.
 - Trusted-proxy IP attribution behavior is deterministic and spoof-resistant.
 - Deployment-grade security checks and regression tests pass for release readiness.
+
+## Recorded Validation Run
+
+Date: 2026-08-07
+
+- Command:
+	- `docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test sitesync.tests.test_pen_test_hardening_access sitesync.tests.test_pen_test_hardening_credentials sitesync.tests.test_pen_test_hardening_runtime --verbosity 2`
+	- Result: `Ran 25 tests ... OK`
+- Scenario outcomes:
+	- Scenario A: PASS (401/403 semantics verified for baseline routes)
+	- Scenario B: PASS (no static reset password assignment; recovery issuance path verified)
+	- Scenario C: PASS (weak invitation passwords rejected; strong password accepted)
+	- Scenario D: PASS (scheme-relative redirect rejected; failure responses sanitized)
+	- Scenario E: PASS (forwarded headers trusted only when source proxy CIDR is trusted)
+	- Scenario F: PARTIAL in non-production config (`check --deploy` produced warnings for DEBUG/SSL/cookie/HSTS/secret defaults as expected outside production)

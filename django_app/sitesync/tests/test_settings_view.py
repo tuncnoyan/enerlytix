@@ -54,7 +54,7 @@ class SettingsViewIntegrationTest(TestCase):
 
     def _auth_post(self, path='/settings/', data=None):
         request = self.factory.post(path, data=data or {})
-        request.user = self.user
+        request.user = self.admin_user
         return request
 
     def test_settings_page_renders_current_values(self):

@@ -2,6 +2,7 @@
 
 from django.test import Client, TestCase
 from django.urls import reverse
+from django.contrib.auth import get_user_model
 
 from sitesync.models import Site
 
@@ -11,6 +12,11 @@ class ReportCoverExportContractTest(TestCase):
 
     def setUp(self):
         self.client = Client()
+        self.user = get_user_model().objects.create_user(
+            username='cover_export_user',
+            password='StrongPass123!',
+        )
+        self.client.force_login(self.user)
         self.site = Site.objects.create(
             external_id='cover-export-site',
             name='4 Lakeside Business Park',

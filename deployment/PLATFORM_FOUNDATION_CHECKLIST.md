@@ -95,6 +95,14 @@ Validated by: _________________ Date: _______ Result: ☐ PASS / ☐ FAIL
 - [ ] Role assignment views require admin check
 - [ ] No anonymous access to user/team/role management endpoints
 - [ ] 403 responses for unauthorized requests (not 500 or 200)
+- [ ] Pen-test sensitive endpoint baseline enforced:
+  - [ ] `POST /api/consumption-import/` returns 401 when unauthenticated and 403 for non-admin
+  - [ ] `GET /api/consumption-display/` returns 401 when unauthenticated
+  - [ ] `GET /api/report-data/` returns 401 when unauthenticated
+  - [ ] `GET /api/import-runs/{import_run_id}/` returns 401 when unauthenticated
+  - [ ] `POST /sync/` returns 401 when unauthenticated and 403 for non-admin
+  - [ ] `POST /settings/` mutation paths return 401 when unauthenticated and 403 for non-admin
+  - [ ] `GET /settings/capacity-upload/results.xlsx` returns 401 when unauthenticated and 403 for non-admin
 
 ### Data Protection
 - [ ] No passwords or tokens in server logs

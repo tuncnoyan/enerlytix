@@ -2,6 +2,7 @@
 
 from django.conf import settings
 from django.core.mail import EmailMessage
+from django.contrib.auth.forms import PasswordResetForm
 from django.template.loader import render_to_string
 
 
@@ -51,3 +52,26 @@ def build_invitation_email(request, invitation):
         },
     }
     return message, accept_url
+
+
+def send_admin_password_recovery_email(request, user) -> bool:
+    """Send a one-time password recovery link (single-use token) for an existing user."""
+
+    email = (getattr(user, "email", "") or "").strip()
+    if not email:
+        return False
+
+    form = PasswordResetForm(data={"email": email})
+    if not form.is_valid():
+        return False
+
+    form.save(
+        request=request,
+        use_https=request.is_secure(),
+        from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "hello@demomailtrap.co"),
+        email_template_name="registration/password_reset_email.txt",
+        html_email_template_name="registration/password_reset_email.html",
+        subject_template_name="registration/password_reset_subject.txt",
+        extra_email_context={"brand_name": "Enerlytix"},
+    )
+    return True

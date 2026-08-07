@@ -71,3 +71,47 @@
 - Alternatives considered:
   - Local host-only ad hoc checks: rejected due to environment drift risk.
   - Partial manual verification without automated tests: rejected due to regression risk.
+
+## Implementation Evidence (2026-08-07)
+
+### Automated security regression execution
+
+- Command executed:
+  - `docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test sitesync.tests.test_pen_test_hardening_access sitesync.tests.test_pen_test_hardening_credentials sitesync.tests.test_pen_test_hardening_runtime --verbosity 2`
+- Result:
+  - `Ran 25 tests ... OK`
+- Full app regression command executed:
+  - `docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test sitesync.tests --verbosity 1`
+- Full app regression result:
+  - `Ran 281 tests ... OK`
+
+### SC-001 Sensitive Endpoint Baseline coverage mapping
+
+- `POST /api/consumption-import/`:
+  - unauthenticated denied (`401`) in `test_consumption_import_requires_authentication`
+  - non-admin denied (`403`) in `test_consumption_import_requires_admin`
+- `GET /api/consumption-display/`:
+  - unauthenticated denied (`401`) in `test_consumption_display_requires_authentication`
+- `GET /api/report-data/`:
+  - unauthenticated denied (`401`) in `test_report_data_requires_authentication`
+- `GET /api/import-runs/{import_run_id}/`:
+  - unauthenticated denied (`401`) in `test_import_run_detail_requires_authentication`
+- `POST /sync/`:
+  - unauthenticated denied (`401`) in `test_manual_sync_requires_authentication`
+  - non-admin denied (`403`) in `test_manual_sync_requires_admin`
+- `POST /settings/` mutation path:
+  - unauthenticated denied (`401`) in `test_settings_post_requires_authentication`
+  - non-admin denied (`403`) in `test_settings_post_requires_admin`
+- `GET /settings/capacity-upload/results.xlsx`:
+  - unauthenticated denied (`401`) in `test_capacity_results_export_requires_authentication`
+  - non-admin denied (`403`) in `test_capacity_results_export_requires_admin`
+
+Coverage result: 8/8 baseline endpoints verified for denied unauthenticated access; admin-scoped subset verified for authenticated non-admin denial.
+
+### Deploy security check evidence
+
+- Command executed:
+  - `docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py check --deploy`
+- Result summary (non-production configuration):
+  - Reported warnings for `DEBUG=True`, insecure/default `SECRET_KEY`, `SECURE_SSL_REDIRECT=False`, `SESSION_COOKIE_SECURE=False`, `CSRF_COOKIE_SECURE=False`, and `SECURE_HSTS_SECONDS` unset.
+  - This confirms detection path for FR-011 controls is active and fail conditions are visible in runtime verification.
