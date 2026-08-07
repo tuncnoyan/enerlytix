@@ -57,6 +57,16 @@ App URL:
 
 - http://localhost:8080/
 
+Local profile behavior:
+
+- `.env` is the default local-development profile.
+- Local profile keeps `DEBUG=True`, disables HTTPS redirect, and uses `DATABASE_SSLMODE=prefer` so the bundled Docker Postgres service works without TLS.
+
+Production-check profile:
+
+- `.env.production.check` is a hardened validation profile for deploy checks.
+- Use it only for security validation commands, not for normal browser-driven local development.
+
 ## Railway deployment
 
 Enerlytix is ready for Railway with a production-style Django entrypoint and static file serving.
@@ -92,6 +102,14 @@ Services:
 To stop:
 
 - docker compose -f django_app/docker/docker-compose.yml down
+
+### Production-check validation
+
+Run zero-warning deploy checks with the production-check override:
+
+- docker compose -f django_app/docker/docker-compose.yml -f django_app/docker/docker-compose.production-check.yml run --rm web python manage.py check --deploy
+
+This keeps normal local browsing on `http://localhost:8080/` while still providing a reproducible hardened validation path.
 
 ### Private image via GHCR
 
@@ -210,6 +228,7 @@ Run checks and tests in Docker only:
 
 - docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py check
 - docker compose -f django_app/docker/docker-compose.yml exec -T web python manage.py test
+- docker compose -f django_app/docker/docker-compose.yml -f django_app/docker/docker-compose.production-check.yml run --rm web python manage.py check --deploy
 
 ### Docker-only verification for report ownership implementation
 
