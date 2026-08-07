@@ -23,6 +23,7 @@ from django.http import JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
 from django.utils import timezone as dj_timezone
+from django.views.decorators.cache import never_cache
 from openpyxl import Workbook
 from rest_framework import viewsets
 from rest_framework.decorators import api_view
@@ -853,6 +854,7 @@ def _report_payload(site, end_month, supply_external_ids=None):
     }
 
 
+@never_cache
 @login_required(login_url='/login/')
 def report_view(request):
     if request.method == 'POST':
@@ -1264,6 +1266,7 @@ def _build_saved_report_filters(request):
     return filters, None, ''
 
 
+@never_cache
 @login_required(login_url='/login/')
 def saved_reports_view(request):
     """Entry point for the saved reports browser with team-based access scoping."""
